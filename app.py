@@ -29,6 +29,8 @@ import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+print("banco usado:",app.config["SQLALCHEMY_DATABASE_URI"])
 db.init_app(app)
 
 # ======================
@@ -1328,6 +1330,12 @@ def escala_publica(token):
         missa=escala.missa,
         ministro=escala.ministro
     )
+
+@app.route("/init-db")
+def init_db():
+    db.create_all()
+    return "Banco PostgreSQL Criado!"
+
 # ======================
 # EXECUÇÃO
 # ======================
