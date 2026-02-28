@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Nova Missa</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <input type="date" name="data" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <input type="text" name="horario" class="form-control" placeholder="Horário">
+    </div>
+
+    <div class="mb-3">
+        <input type="text" name="comunidade" class="form-control" placeholder="Comunidade">
+    </div>
+
+    <div class="mb-3">
+        <input type="number" name="qtd" class="form-control" placeholder="Qtd Ministros">
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Salvar
+    </button>
+</form>
+
+{% endblock %}

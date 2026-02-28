@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Selecionar Ministros</h2>
+
+<form method="POST">
+
+    {% for m in ministros %}
+        <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="ministros"
+                   value="{{ m.id }}">
+            <label class="form-check-label">
+                {{ m.nome }}
+            </label>
+        </div>
+    {% endfor %}
+
+    <br>
+    <button type="submit" class="btn btn-primary">
+        Salvar Escala
+    </button>
+
+</form>
+
+{% endblock %}

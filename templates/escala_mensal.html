@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Escala Mensal - {{ mes }}/{{ ano }}</h3>
+
+<table class="table table-bordered text-center">
+
+<tr class="table-dark">
+    <th>Seg</th>
+    <th>Ter</th>
+    <th>Qua</th>
+    <th>Qui</th>
+    <th>Sex</th>
+    <th>Sáb</th>
+    <th>Dom</th>
+</tr>
+
+{% for semana in cal %}
+<tr>
+    {% for dia in semana %}
+        <td>{{ dia if dia != 0 else "" }}</td>
+    {% endfor %}
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

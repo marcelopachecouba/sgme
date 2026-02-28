@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Editar Escala Fixa</h3>
+
+<form method="post">
+
+<label>Semana</label>
+<input type="number" name="semana" class="form-control"
+value="{{ fixa.semana }}">
+
+<br>
+
+<label>Dia da Semana</label>
+<select name="dia_semana" class="form-control">
+
+<option value="">Todos</option>
+
+<option value="0" {% if fixa.dia_semana==0 %}selected{% endif %}>0 - Segunda-feira</option>
+<option value="1" {% if fixa.dia_semana==1 %}selected{% endif %}>1 - Terça-feira</option>
+<option value="2" {% if fixa.dia_semana==2 %}selected{% endif %}>2 - Quarta-feira</option>
+<option value="3" {% if fixa.dia_semana==3 %}selected{% endif %}>3 - Quinta-feira</option>
+<option value="4" {% if fixa.dia_semana==4 %}selected{% endif %}>4 - Sexta-feira</option>
+<option value="5" {% if fixa.dia_semana==5 %}selected{% endif %}>5 - Sábado</option>
+<option value="6" {% if fixa.dia_semana==6 %}selected{% endif %}>6 - Domingo</option>
+
+</select>
+
+<br>
+
+<label>Horário</label>
+<input type="text" name="horario" class="form-control"
+value="{{ fixa.horario }}">
+
+<br>
+
+<label>Comunidade</label>
+<input type="text" name="comunidade" class="form-control"
+value="{{ fixa.comunidade }}">
+
+<br>
+
+<button class="btn btn-primary">Atualizar</button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Pré-visualização Escala {{ mes }}/{{ ano }}</h3>
+
+<form method="POST" action="{{ url_for('salvar_mensal') }}">
+
+<input type="hidden" name="mes" value="{{ mes }}">
+<input type="hidden" name="ano" value="{{ ano }}">
+
+<table class="table table-bordered">
+
+<tr class="table-dark">
+    <th>Data</th>
+    <th>Horário</th>
+    <th>Comunidade</th>
+    <th>Ministro</th>
+</tr>
+
+{% for item in preview %}
+<tr>
+    <td>{{ item.data }}</td>
+    <td>{{ item.horario }}</td>
+    <td>{{ item.comunidade }}</td>
+    <td>{{ item.ministro }}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+<button class="btn btn-success">
+    ✅ Confirmar e Salvar
+</button>
+
+<button onclick="window.print()" class="btn btn-secondary">
+    🖨️ Imprimir PDF
+</button>
+
+</form>
+
+{% endblock %}

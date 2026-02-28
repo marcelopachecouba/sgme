@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Ministros</h2>
+
+<a href="{{ url_for('novo_ministro') }}" class="btn btn-success mb-3">
+    Novo Ministro
+</a>
+
+<table class="table table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Email</th>
+            <th>Nascimento</th>
+            <th>Tempo Ministério</th>
+            <th>Cadastro</th>
+            <th style="width: 200px;">Ações</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for ministro in ministros %}
+        <tr>
+            <td>{{ ministro.nome }}</td>
+            <td>{{ ministro.telefone }}</td>
+            <td>{{ ministro.email }}</td>
+            <td>{{ ministro.data_nascimento }}</td>
+            <td>{{ ministro.tempo_ministerio }} anos</td>
+            <td>{{ ministro.data_cadastro }}</td>
+            <td>
+
+                <a href="{{ url_for('editar_ministro', id=ministro.id) }}"
+                   class="btn btn-sm btn-warning">
+                   Editar
+                </a>
+
+                <a href="{{ url_for('excluir_ministro', id=ministro.id) }}"
+                   class="btn btn-sm btn-danger"
+                   onclick="return confirm('Deseja excluir este ministro?')">
+                   Excluir
+                </a>
+
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

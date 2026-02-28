@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Escala Fixa - Organização Geral</h2>
+
+<button onclick="window.print()" class="btn btn-success mb-4">
+    🖨️ Imprimir
+</button>
+
+{% set dias = {
+    -1: "Todos",
+    0: "Segunda",
+    1: "Terça",
+    2: "Quarta",
+    3: "Quinta",
+    4: "Sexta",
+    5: "Sábado",
+    6: "Domingo"
+} %}
+
+{% for semana, dias_dict in estrutura.items() %}
+
+<div class="card shadow mb-5">
+
+    <div class="card-header bg-dark text-white text-center">
+        {% if semana == 0 %}
+            Todas as Semanas
+        {% else %}
+            {{ semana }}ª SEMANA
+        {% endif %}
+    </div>
+
+    <div class="card-body">
+
+        <div class="row">
+
+        {% for dia, horarios in dias_dict.items() %}
+
+            {% for horario, ministros in horarios.items() %}
+
+            <div class="col-md-4 mb-4">
+                <div class="border rounded p-3 bg-light h-100">
+
+                    <h5 class="text-primary text-center">
+                        {{ dias[dia] }}
+                        <br>
+                        <small>{{ horario }}</small>
+                    </h5>
+
+                    <hr>
+
+                    <ul class="list-unstyled text-center">
+                        {% for nome in ministros|sort %}
+                            <li>{{ nome }}</li>
+                        {% endfor %}
+                    </ul>
+
+                </div>
+            </div>
+
+            {% endfor %}
+
+        {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+{% endblock %}

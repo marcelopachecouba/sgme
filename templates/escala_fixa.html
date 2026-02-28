@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Escala Fixa</h2>
+
+<div class="card shadow mb-4">
+    <div class="card-body">
+
+<form method="POST" class="row g-3">
+
+    <div class="col-md-2">
+        <label>Semana</label>
+        <select name="semana" class="form-control">
+            <option value="">Todas</option>
+            <option value="1">1ª Semana</option>
+            <option value="2">2ª Semana</option>
+            <option value="3">3ª Semana</option>
+            <option value="4">4ª Semana</option>
+            <option value="5">5ª Semana</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label>Dia da Semana</label>
+        <select name="dia_semana" class="form-control">
+            <option value="">Todos</option>
+            <option value="0">0 - Segunda-feira</option>
+            <option value="1">1 - Terça-feira</option>
+            <option value="2">2 - Quarta-feira</option>
+            <option value="3">3 - Quinta-feira</option>
+            <option value="4">4 - Sexta-feira</option>
+            <option value="5">5 - Sábado</option>
+            <option value="6">6 - Domingo</option>
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <label>Horário</label>
+        <input type="text" name="horario" class="form-control" placeholder="19:00">
+    </div>
+
+    <div class="col-md-3">
+        <label>Comunidade</label>
+        <input type="text" name="comunidade" class="form-control">
+    </div>
+
+    <div class="col-12">
+        <label><strong>Selecionar Ministros</strong></label>
+
+        <div style="max-height:220px; overflow-y:auto; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f9f9f9;">
+
+            {% for m in ministros|sort(attribute='nome') %}
+            <div class="form-check">
+                <input class="form-check-input"
+                       type="checkbox"
+                       name="ministros"
+                       value="{{ m.id }}">
+                <label class="form-check-label">
+                    {{ m.nome }}
+                </label>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+    <div class="col-12">
+        <button class="btn btn-primary">Salvar</button>
+    </div>
+
+</form>
+    </div>
+</div>
+
+
+<h4>Regras Cadastradas</h4>
+
+<table class="table table-bordered">
+    <tr>
+        <th>Semana</th>
+        <th>Dia</th>
+        <th>Horário</th>
+        <th>Comunidade</th>
+        <th>Ministro</th>
+        <th>Ação</th>
+    </tr>
+
+    {% for f in fixos %}
+    <tr>
+        <td>{{ f.semana if f.semana else "Todas" }}</td>
+        
+        <td>
+        {% if f.dia_semana == 0 %}Segunda-feira
+        {% elif f.dia_semana == 1 %}Terça-feira
+        {% elif f.dia_semana == 2 %}Quarta-feira
+        {% elif f.dia_semana == 3 %}Quinta-feira
+        {% elif f.dia_semana == 4 %}Sexta-feira
+        {% elif f.dia_semana == 5 %}Sábado
+        {% elif f.dia_semana == 6 %}Domingo
+        {% else %}Todos{% endif %}
+        </td>
+
+
+        <td>{{ f.horario if f.horario else "Todos" }}</td>
+        <td>{{ f.comunidade if f.comunidade else "Todas" }}</td>
+        <td>{{ f.ministro.nome }}</td>
+        <td>
+            <a href="{{ url_for('excluir_escala_fixa', id=f.id) }}"
+               class="btn btn-sm btn-danger">
+               Excluir
+            </a>
+
+            <a href="{{ url_for('editar_escala_fixa', id=f.id) }}"
+               class="btn btn-warning btn-sm">
+               Editar
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

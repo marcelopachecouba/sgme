@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3 class="mb-4">Visão Organizada das Missas</h3>
+
+{% set dias = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"] %}
+
+{% for semana, dias_dict in estrutura.items()|sort %}
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-dark text-white">
+        Semana {{ semana }}
+    </div>
+
+    <div class="card-body">
+
+        {% for dia, horarios in dias_dict.items()|sort %}
+            <h5 class="mt-3">{{ dias[dia] }}</h5>
+
+            {% for horario, lista_missas in horarios.items()|sort %}
+                <div class="ms-3 mb-3">
+                    <strong>{{ horario }}</strong>
+
+                    <ul>
+                        {% for missa in lista_missas %}
+                            <li>
+                                {{ missa.data.strftime('%d/%m/%Y') }} -
+                                {{ missa.comunidade }} -
+                                {{ missa.qtd_ministros }} ministros
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                </div>
+            {% endfor %}
+
+        {% endfor %}
+
+    </div>
+</div>
+
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Editar Ministro</h3>
+
+<form method="post">
+
+<div class="mb-3">
+<label>Nome</label>
+<input type="text" name="nome" class="form-control"
+value="{{ ministro.nome }}" required>
+</div>
+
+<div class="mb-3">
+<label>Telefone</label>
+<input type="text" name="telefone" class="form-control"
+value="{{ ministro.telefone }}">
+</div>
+
+<div class="mb-3">
+<label>Email</label>
+<input type="email" name="email" class="form-control"
+value="{{ ministro.email or '' }}">
+</div>
+
+<div class="mb-3">
+<label>Data de Nascimento</label>
+<input type="date" name="data_nascimento" class="form-control"
+value="{{ ministro.data_nascimento.strftime('%Y-%m-%d') if ministro.data_nascimento else '' }}">
+</div>
+
+<div class="mb-3">
+<label>Tempo de Ministério (anos)</label>
+<input type="number" name="tempo_ministerio" class="form-control"
+value="{{ ministro.tempo_ministerio or 0 }}">
+</div>
+
+<div class="mb-3">
+<label>Data de Cadastro</label>
+<input type="text" class="form-control"
+value="{{ ministro.data_cadastro.strftime('%d/%m/%Y') if ministro.data_cadastro else '' }}"
+disabled>
+</div>
+
+<button class="btn btn-primary">Atualizar</button>
+
+</form>
+
+{% endblock %}

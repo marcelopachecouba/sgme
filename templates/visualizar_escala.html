@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Escala da Missa</h2>
+
+<div class="card p-3 mb-4 shadow-sm">
+    <p><strong>Data:</strong> {{ missa.data.strftime('%d/%m/%Y') }}</p>
+    <p><strong>Horário:</strong> {{ missa.horario }}</p>
+    <p><strong>Comunidade:</strong> {{ missa.comunidade }}</p>
+</div>
+
+<h4>Ministros Escalados ({{ escalas|length }}/{{ missa.qtd_ministros }})</h4>
+
+<table class="table table-bordered table-striped">
+
+    <thead class="table-dark">
+        <tr>
+            <th>Ministro</th>
+            <th>Status</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for e in escalas %}
+        <tr>
+            <td>{{ e.ministro.nome }}</td>
+
+            <td>
+                {% if e.confirmado %}
+                    <span class="badge bg-success">Confirmado</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Pendente</span>
+                {% endif %}
+            </td>
+
+            <td>
+                <a href="{{ url_for('remover_ministro_escala', escala_id=e.id) }}"
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('Remover ministro da escala?')">
+                   Remover
+                </a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+
+</table>
+
+<hr>
+
+<h5>Adicionar Ministro</h5>
+
+<form method="POST"
+      action="{{ url_for('adicionar_ministro_escala', missa_id=missa.id) }}">
+
+    <div class="row">
+
+        <div class="col-md-6">
+            <select name="ministro_id" class="form-control" required>
+                {% for ministro in ministros %}
+                    <option value="{{ ministro.id }}">
+                        {{ ministro.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <button class="btn btn-primary">
+                Adicionar
+            </button>
+        </div>
+
+    </div>
+
+</form>
+
+<a href="{{ url_for('missas') }}" class="btn btn-secondary mt-3">
+    Voltar
+</a>
+
+{% endblock %}

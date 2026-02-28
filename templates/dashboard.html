@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Dashboard Premium</h2>
+
+<div class="row mb-4">
+
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow">
+            <div class="card-body">
+                <h6>Total Escalas</h6>
+                <h3>{{ total_escalas }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow">
+            <div class="card-body">
+                <h6>Confirmadas</h6>
+                <h3>{{ confirmadas }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-info text-white shadow">
+            <div class="card-body">
+                <h6>Mais Escalado</h6>
+                <h6>{{ mais_escalado }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning text-white shadow">
+            <div class="card-body">
+                <h6>Menos Escalado</h6>
+                <h6>{{ menos_escalado }}</h6>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row">
+
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <img src="data:image/png;base64,{{ grafico_barra }}" class="img-fluid">
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <img src="data:image/png;base64,{{ grafico_pizza }}" class="img-fluid">
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

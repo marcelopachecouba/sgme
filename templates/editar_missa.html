@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card shadow p-4">
+    <h3 class="mb-4">Editar Missa</h3>
+
+    <form method="POST">
+
+        <div class="row">
+
+            <div class="col-md-3 mb-3">
+                <label>Data</label>
+                <input type="date" name="data"
+                       value="{{ missa.data.strftime('%Y-%m-%d') }}"
+                       class="form-control" required>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label>Horário</label>
+                <input type="text" name="horario"
+                       value="{{ missa.horario }}"
+                       class="form-control" required>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label>Comunidade</label>
+                <input type="text" name="comunidade"
+                       value="{{ missa.comunidade }}"
+                       class="form-control">
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label>Qtd. Ministros</label>
+                <input type="number" name="qtd"
+                       value="{{ missa.qtd_ministros }}"
+                       class="form-control" required>
+            </div>
+
+        </div>
+
+        <button class="btn btn-primary">
+            💾 Salvar Alterações
+        </button>
+
+        <a href="{{ url_for('missas') }}"
+           class="btn btn-secondary">
+           Cancelar
+        </a>
+
+    </form>
+</div>
+
+{% endblock %}

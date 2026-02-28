@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3 class="mb-4">
+    Calendário de Missas - {{ mes }}/{{ ano }}
+</h3>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <form method="get">
+            <div class="input-group">
+                <input type="number" name="mes" min="1" max="12" value="{{ mes }}" class="form-control">
+                <input type="number" name="ano" value="{{ ano }}" class="form-control">
+                <button class="btn btn-primary">Atualizar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-bordered text-center align-middle">
+
+    <thead class="table-dark">
+        <tr>
+            <th>Seg</th>
+            <th>Ter</th>
+            <th>Qua</th>
+            <th>Qui</th>
+            <th>Sex</th>
+            <th>Sáb</th>
+            <th>Dom</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% for semana in cal %}
+        <tr>
+        {% for dia in semana %}
+            <td style="height:150px; vertical-align:top;">
+
+                {% if dia != 0 %}
+
+                    <div class="fw-bold mb-2">
+                        {{ dia }}
+                    </div>
+
+                    {% if dia in estrutura %}
+
+                        {% for missa in estrutura[dia] %}
+
+                            <div class="card mb-2 shadow-sm p-1">
+
+                                <small>
+                                    <strong>{{ missa.horario }}</strong><br>
+                                    {{ missa.comunidade }}
+                                </small>
+
+                                <hr class="m-1">
+
+                                {% for nome in missa.ministros %}
+                                    <div style="font-size:12px;">
+                                        • {{ nome }}
+                                    </div>
+                                {% endfor %}
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% endif %}
+
+                {% endif %}
+
+            </td>
+        {% endfor %}
+        </tr>
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% endblock %}

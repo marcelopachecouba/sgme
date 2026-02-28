@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<h2 class="mb-4">Missas</h2>
+
+<a href="{{ url_for('nova_missa') }}" class="btn btn-success mb-3">
+    Nova Missa
+</a>
+
+
+
+<div class="btn-group mb-3">
+    <a href="{{ url_for('missas') }}" class="btn btn-primary">Lista</a>
+    <a href="{{ url_for('visao_missas') }}" class="btn btn-secondary">Visão Organizada</a>
+    <a href="{{ url_for('calendario_missas') }}" class="btn btn-success">Calendário</a>
+</div>
+
+<table class="table table-striped table-bordered align-middle">
+
+    <thead class="table-dark">
+        <tr>
+            <th>Data</th>
+            <th>Dia</th>
+            <th>Semana</th>
+            <th>Horário</th>
+            <th>Comunidade</th>
+            <th>Qtd Ministros</th>
+            <th style="width: 380px;">Ações</th>
+        </tr>
+    </thead>
+
+
+    <tbody>
+        {% for m in missas %}
+        <tr>
+            <td>{{ m.data.strftime('%d/%m/%Y') }}</td>
+
+            <td>
+                {{ ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][m.data.weekday()] }}
+            </td>
+
+            <td>
+                {{ ((m.data.day - 1) // 7) + 1 }}ª
+            </td>
+
+            <td>{{ m.horario }}</td>
+            <td>{{ m.comunidade }}</td>
+            <td>{{ m.qtd_ministros }}</td>
+
+            <td>
+
+                <a href="{{ url_for('gerar_escala', missa_id=m.id) }}"
+                   class="btn btn-sm btn-warning">
+                   Selecionar
+                </a>
+
+                <a href="{{ url_for('visualizar_escala', missa_id=m.id) }}"
+                   class="btn btn-sm btn-info">
+                   Ver Escala
+                </a>
+
+                <a href="{{ url_for('gerar_escala_auto', missa_id=m.id) }}"
+                   class="btn btn-sm btn-danger">
+                   Auto
+                </a>
+
+                <a href="{{ url_for('editar_missa', id=m.id) }}"
+                   class="btn btn-sm btn-secondary">
+                   Editar
+                </a>
+
+                <a href="{{ url_for('excluir_missa', id=m.id) }}"
+                   class="btn btn-sm btn-dark"
+                   onclick="return confirm('Tem certeza que deseja excluir esta missa?')">
+                   Excluir
+                </a>
+
+
+        </tr>
+        {% endfor %}
+    </tbody>
+
+</table>
+
+
+{% endblock %}

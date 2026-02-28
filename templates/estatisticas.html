@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Estatísticas por Ministro</h2>
+
+<div class="card shadow p-3 mb-4">
+    <form method="POST" class="row g-3">
+
+        <div class="col-md-3">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicio"
+                   value="{{ data_inicio }}"
+                   class="form-control">
+        </div>
+
+        <div class="col-md-3">
+            <label>Data Final</label>
+            <input type="date" name="data_fim"
+                   value="{{ data_fim }}"
+                   class="form-control">
+        </div>
+
+        <div class="col-md-4 align-self-end">
+            <button class="btn btn-primary">
+                Filtrar
+            </button>
+
+            <button formaction="{{ url_for('estatisticas_pdf') }}"
+               class="btn btn-danger">
+               Gerar PDF
+             </button>
+
+             <button formaction="{{ url_for('whatsapp_periodo') }}"
+               class="btn btn-success">
+               Enviar WhatsApp para Todos
+             </button>
+             
+             <button formaction="{{ url_for('whatsapp_periodo') }}"
+               class="btn btn-success">
+               WhatsApp Pendentes
+             </button>
+
+             <button formaction="{{ url_for('estatisticas_pdf') }}"
+               class="btn btn-danger">
+               Gerar PDF
+             </button>
+
+        </div>
+
+    </form>
+</div>
+
+
+{% for nome, info in dados.items() %}
+
+<div class="card shadow mb-4">
+
+    <div class="card-header bg-dark text-white">
+        <strong>{{ nome }}</strong>
+        <span class="badge bg-warning text-dark float-end">
+            Total no período: {{ info.total }}
+        </span>
+    </div>
+
+    <div class="card-body p-0">
+
+        <table class="table table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Data</th>
+                    <th>Dia</th>
+                    <th>Horário</th>
+                    <th>Comunidade</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+
+            {% for e in info.missas %}
+                <tr>
+                    <td>{{ e.missa.data.strftime('%d/%m/%Y') }}</td>
+
+                    <td>
+                        {{ ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"][e.missa.data.weekday()] }}
+                        -
+                        {{ ((e.missa.data.day - 1) // 7) + 1 }}ª Semana
+                    </td>
+                    
+                    <td>{{ e.missa.horario }}</td>
+                    <td>{{ e.missa.comunidade }}</td>
+
+                    <td>
+                        {% if e.confirmado %}
+                            <span class="badge bg-success">Confirmado</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                        {% endif %}
+     
+                            <br><br>
+
+                        <a target="_blank"
+                            href="https://wa.me/55{{ e.ministro.telefone }}?text=Olá {{ e.ministro.nome }}, você está escalado dia {{ e.missa.data.strftime('%d/%m/%Y') }} às {{ e.missa.horario }} na {{ e.missa.comunidade }}."
+                            class="btn btn-success btn-sm">
+                            WhatsApp
+                        </a> 
+                    </td>
+
+                    <td>
+  
+
+               </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+{% endblock %}

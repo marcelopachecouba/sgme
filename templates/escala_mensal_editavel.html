@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+
+/* Remove aparência Bootstrap da área central */
+.container, .content, .card {
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.folha {
+    background-color: #f1e2c6;
+    padding: 25px;
+    border: 2px solid #555;
+}
+
+/* Cabeçalho */
+.cabecalho {
+    text-align: center;
+    background-color: #e6d5b8;
+    padding: 15px;
+    font-weight: bold;
+    font-size: 18px;
+    border: 2px solid #555;
+    margin-bottom: 10px;
+}
+
+.subtitulo {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* Tabela */
+.tabela-escala {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #f7ead2;
+}
+
+.tabela-escala th,
+.tabela-escala td {
+    border: 1px solid #555;
+    padding: 6px;
+    vertical-align: top;
+    text-align: center;
+}
+
+.titulo-domingo {
+    background-color: #e6d5b8;
+    font-weight: bold;
+}
+
+.horario {
+    font-weight: bold;
+    background-color: #efe1c6;
+}
+
+.lider {
+    background-color: yellow;
+    font-weight: bold;
+    display: inline-block;
+    padding: 2px 6px;
+}
+
+</style>
+
+<div class="folha">
+
+<div class="cabecalho">
+ESCALA DOS MINISTROS {{ ano }} – MATRIZ NOSSA SENHORA APARECIDA
+</div>
+
+<div class="subtitulo">
+DOMINGO DO SENHOR – {{ mes }}/{{ ano }}
+</div>
+
+<table class="tabela-escala">
+
+<tr>
+{% for semana, dados in estrutura.items() %}
+    <th class="titulo-domingo">
+        {{ semana }}º DOMINGO<br>
+        {{ dados.data.strftime("%d/%m/%Y") }}
+    </th>
+{% endfor %}
+</tr>
+
+<tr>
+{% for semana, dados in estrutura.items() %}
+<td>
+
+<div class="horario">MANHÃ – 08:00</div>
+
+{% for nome in dados.manha %}
+    {{ nome }}<br>
+{% endfor %}
+
+{% if dados.manha %}
+<div class="lider">
+LÍDER – {{ dados.manha[0] }}
+</div>
+{% endif %}
+
+<br><br>
+
+<div class="horario">NOITE – 19:30</div>
+
+{% for nome in dados.noite %}
+    {{ nome }}<br>
+{% endfor %}
+
+{% if dados.noite %}
+<div class="lider">
+LÍDER – {{ dados.noite[0] }}
+</div>
+{% endif %}
+
+</td>
+{% endfor %}
+</tr>
+
+</table>
+
+</div>
+
+{% endblock %}
