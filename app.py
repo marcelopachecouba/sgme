@@ -30,7 +30,6 @@ import os
 app = Flask(__name__)
 app.config.from_object(Config)
 
-print("banco usado:",app.config["SQLALCHEMY_DATABASE_URI"])
 db.init_app(app)
 
 with app.app_context():
