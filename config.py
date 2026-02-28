@@ -1,8 +1,7 @@
 import os
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
 class Config:
-    SECRET_KEY = "supersecretkey"
-    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(BASE_DIR, "sgme.db")
+    SECRET_KEY = os.environ.get("SECRET_KEY","minha_cave_secreta")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL","sqlite:///sgme.db")
