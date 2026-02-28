@@ -33,6 +33,9 @@ app.config.from_object(Config)
 print("banco usado:",app.config["SQLALCHEMY_DATABASE_URI"])
 db.init_app(app)
 
+with app.app_context():
+    db.create_all()
+
 # ======================
 # LOGIN CONFIG
 # ======================
@@ -1331,10 +1334,6 @@ def escala_publica(token):
         ministro=escala.ministro
     )
 
-@app.route("/init-db")
-def init_db():
-    db.create_all()
-    return "Banco PostgreSQL Criado!"
 
 # ======================
 # EXECUÇÃO
