@@ -26,14 +26,14 @@ from reportlab.lib.styles import getSampleStyleSheet
 from flask import send_file
 import tempfile
 import os
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config.from_object(Config)
 
-db.init_app(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-with app.app_context():
-    db.create_all()
 
 # ======================
 # LOGIN CONFIG
@@ -43,31 +43,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-@login_manager.user_loader
-def load_user(user_id):
-    return Usuario.query.get(int(user_id))
-
-# ======================
-# BANCO INICIAL
-# ======================
-
-with app.app_context():
-    db.create_all()
-
-    if not Usuario.query.first():
-        paroquia = Paroquia(nome="Paróquia São José")
-        db.session.add(paroquia)
-        db.session.commit()
-
-        user = Usuario(
-            nome="Marcelo",
-            email="marcelosouzapacheco@gmail.com",
-            tipo="SUPERADMIN",
-            id_paroquia=paroquia.id
-        )
-        user.set_senha("123456")
-        db.session.add(user)
-        db.session.commit()
+# @login_manager.user_loader
+# def load_user(user_id):
+#    return Usuario.query.get(int(user_id))
 
 # ======================
 # LOGIN
@@ -1333,6 +1311,10 @@ def escala_publica(token):
         ministro=escala.ministro
     )
 
+@app.route("/init-db")
+def init_db():
+    db.create_all()
+    return "Banco criado com sucesso"
 
 # ======================
 # EXECUÇÃO
