@@ -26,30 +26,41 @@ from reportlab.lib.styles import getSampleStyleSheet
 from flask import send_file
 import tempfile
 import os
-from flask_sqlalchemy import SQLAlchemy
+from models import db
+import uuid
+from flask_migrate import Migrate
 
+
+# ======================
+# CRIA APP
+# ======================
 app = Flask(__name__)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
+app.config.from_object(Config)
 
 # ======================
-# LOGIN CONFIG
+# INICIALIZA BANCO
 # ======================
+db.init_app(app)
 
+migrate = Migrate(app, db)
+
+#======================
+# LOGIN MANAGER
+# ======================
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-# @login_manager.user_loader
-# def load_user(user_id):
-#    return Usuario.query.get(int(user_id))
+# 🔥 IMPORTANTE: isso registra no current_app
+app.login_manager = login_manager
 
 # ======================
-# LOGIN
+# USER LOADER
 # ======================
+@login_manager.user_loader
+def load_user(user_id):
+    return Usuario.query.get(int(user_id))
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -1321,6 +1332,6 @@ def init_db():
 # ======================
 
 if __name__ == "__main__":
-    port= int(os.environ.get("PORT",5000))
-    app.run(host="0.0.0.0", port=port)
-
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
