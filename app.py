@@ -1327,6 +1327,35 @@ def init_db():
     db.create_all()
     return "Banco criado com sucesso"
 
+
+@app.route("/criar-admin")
+def criar_admin():
+    from models import Usuario, Paroquia
+
+    paroquia = Paroquia.query.first()
+
+    if not paroquia:
+        paroquia = Paroquia(nome="Paróquia Matriz")
+        db.session.add(paroquia)
+        db.session.commit()
+
+    user_existente = Usuario.query.filter_by(
+        email="marcelosouzapacheco@gmail.com"
+    ).first()
+
+    if not user_existente:
+        user = Usuario(
+            nome="Marcelo",
+            email="marcelosouzapacheco@gmail.com",
+            tipo="admin",
+            id_paroquia=paroquia.id
+        )
+        user.set_senha("123456")
+        db.session.add(user)
+        db.session.commit()
+        return "Admin criado com sucesso!"
+    
+    return "Admin já existe!"
 # ======================
 # EXECUÇÃO
 # ======================
