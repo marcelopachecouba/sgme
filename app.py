@@ -1327,7 +1327,6 @@ def init_db():
     db.create_all()
     return "Banco criado com sucesso"
 
-
 @app.route("/criar-admin")
 def criar_admin():
     from models import Usuario, Paroquia
