@@ -1322,10 +1322,10 @@ def escala_publica(token):
         ministro=escala.ministro
     )
 
-@app.route("/init-db")
-def init_db():
-    db.create_all()
-    return "Banco criado com sucesso"
+#@app.route("/init-db")
+#def init_db():
+#    db.create_all()
+#    return "Banco criado com sucesso"
 
 @app.route("/criar-admin")
 def criar_admin():
@@ -1360,6 +1360,6 @@ def criar_admin():
 # ======================
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
+   # with app.app_context():
+   #     db.create_all()
     app.run(debug=True)
