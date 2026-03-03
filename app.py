@@ -174,9 +174,9 @@ def novo_ministro():
             email=email,
             data_nascimento=datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None,
             tempo_ministerio=int(tempo_ministerio) if tempo_ministerio else 0,
-            id_paroquia=current_user.id_paroquia,
             cpf=cpf,
-            comunidade=comunidade
+            comunidade=comunidade,
+            id_paroquia=current_user.id_paroquia
         )
         novo.gerar_token()
 
