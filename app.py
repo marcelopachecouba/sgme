@@ -162,9 +162,11 @@ def novo_ministro():
         email = request.form.get("email")
         data_nascimento = request.form.get("data_nascimento")
         tempo_ministerio = request.form.get("tempo_ministerio")
+        cpf = request.form.get("cpf")
+        comunidade = request.form.get("comunidade")
 
         print("DEBUG:")
-        print(nome, telefone, email, data_nascimento, tempo_ministerio)
+        print(nome, telefone, email, data_nascimento, tempo_ministerio,cpf,comunidade)
 
         novo = Ministro(
             nome=nome,
@@ -172,7 +174,9 @@ def novo_ministro():
             email=email,
             data_nascimento=datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None,
             tempo_ministerio=int(tempo_ministerio) if tempo_ministerio else 0,
-            id_paroquia=current_user.id_paroquia
+            id_paroquia=current_user.id_paroquia,
+            cpf=cpf,
+            comunidade=comunidade
         )
         novo.gerar_token()
 
