@@ -9,6 +9,8 @@
 </a>
 {% endif %}
 
+
+
 <table class="table table-striped">
     <thead class="table-dark">
         <tr>
@@ -21,6 +23,7 @@
             <th>Cpf</th>
             <th>Comunidade</th>
             <th style="width: 200px;">Ações</th>
+            <th>Acesso</th>
         </tr>
     </thead>
 
@@ -50,6 +53,19 @@
                 {% endif %}  
 
             </td>
+
+            <td>
+                {% if ministro.pode_logar %}
+                    Liberado
+                {% else %}
+                    Pendente
+                    {% if current_user.tipo == "admin" %}
+                        <a href="{{ url_for('ativar_usuario', id=ministro.id) }}" class="btn btn-sm btn-success">
+                            Liberar
+                        </a>
+                    {% endif %}
+                {% endif %}
+                </td>
         </tr>
         {% endfor %}
     </tbody>
