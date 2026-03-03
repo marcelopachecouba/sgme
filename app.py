@@ -676,6 +676,8 @@ def editar_ministro(id):
         email = request.form["email"]
         data_nascimento = request.form["data_nascimento"]
         tempo_ministerio = request.form["tempo_ministerio"]
+        cpf = request.form["cpf"]
+        comunidade = request.form["comunidade"]
 
         existe = Ministro.query.filter(
             Ministro.nome == novo_nome,
@@ -692,6 +694,8 @@ def editar_ministro(id):
         ministro.email = email
         ministro.data_nascimento = datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None
         ministro.tempo_ministerio = int(tempo_ministerio) if tempo_ministerio else 0
+        cpf = cpf
+        comunidade = comunidade
 
         db.session.commit()
         return redirect(url_for("ministros"))
