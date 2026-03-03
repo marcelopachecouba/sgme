@@ -21,7 +21,7 @@ class Ministro(db.Model):
     data_cadastro = db.Column(db.Date, default=date.today)
     id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))
     token_publico = db.Column(db.String(120), unique=True,default=lambda: str(uuid.uuid4()))
-    cpf = db.column(db.String(14))
+    cpf = db.Column(db.String(14))
     comunidade = db.Column(db.String(30))
 
     def gerar_token(self):
