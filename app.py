@@ -694,8 +694,8 @@ def editar_ministro(id):
         ministro.email = email
         ministro.data_nascimento = datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None
         ministro.tempo_ministerio = int(tempo_ministerio) if tempo_ministerio else 0
-        cpf = cpf
-        comunidade = comunidade
+        ministro.cpf = cpf
+        ministro.comunidade = comunidade
 
         db.session.commit()
         return redirect(url_for("ministros"))
