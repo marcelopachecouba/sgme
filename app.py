@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, request, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from config import Config
-from models import db, Usuario, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
+from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
 from datetime import datetime, date
 from calendar import monthrange
 from datetime import timedelta
@@ -59,25 +59,43 @@ app.login_manager = login_manager
 # ======================
 @login_manager.user_loader
 def load_user(user_id):
-    return Usuario.query.get(int(user_id))
+    return Ministro.query.get(int(user_id))
 
+from functools import wraps
+from flask import abort
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.tipo != "admin":
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+
     if request.method == "POST":
         email = request.form["email"]
         senha = request.form["senha"]
 
-        user = Usuario.query.filter_by(email=email).first()
+        user = Ministro.query.filter_by(email=email).first()
 
-        if user and user.check_senha(senha):
+        # 🔐 Verifica se pode logar
+        if user and user.pode_logar and user.check_senha(senha):
+
             login_user(user)
+
+            # Obriga trocar senha no primeiro acesso
+            if user.primeiro_acesso:
+                return redirect(url_for("trocar_senha"))
+
             return redirect(url_for("home"))
+
         else:
-            flash("Email ou senha inválidos.")
+            flash("Email ou senha inválidos ou sem permissão de acesso.")
 
     return render_template("login.html")
-
 @app.route("/logout")
 @login_required
 def logout():
@@ -153,6 +171,7 @@ def ministros():
 
 @app.route("/ministros/novo", methods=["GET", "POST"])
 @login_required
+@admin_required
 def novo_ministro():
 
     if request.method == "POST":
@@ -196,6 +215,7 @@ def novo_ministro():
 
 @app.route("/ministros/excluir/<int:id>")
 @login_required
+@admin_required
 def excluir_ministro(id):
 
     ministro = Ministro.query.get_or_404(id)
@@ -270,6 +290,7 @@ def calendario_missas():
 
 @app.route("/missas/nova", methods=["GET", "POST"])
 @login_required
+@admin_required
 def nova_missa():
     if request.method == "POST":
         data = datetime.strptime(request.form["data"], "%Y-%m-%d")
@@ -314,6 +335,7 @@ def editar_missa(id):
 
 @app.route("/missas/excluir/<int:id>")
 @login_required
+@admin_required
 def excluir_missa(id):
 
     missa = Missa.query.get_or_404(id)
@@ -398,6 +420,7 @@ def gerar_escala(missa_id):
 
 @app.route("/escala/auto/<int:missa_id>")
 @login_required
+@admin_required
 def gerar_escala_auto(missa_id):
 
     missa = Missa.query.get_or_404(missa_id)
@@ -533,6 +556,7 @@ def visualizar_escala(missa_id):
     )
 @app.route("/escala_fixa", methods=["GET", "POST"])
 @login_required
+@admin_required
 def escala_fixa():
 
     ministros = Ministro.query.filter_by(
@@ -821,6 +845,7 @@ def visao_escala_fixa():
 
 @app.route("/gerar_mensal", methods=["GET", "POST"])
 @login_required
+@admin_required
 def gerar_mensal():
 
     if request.method == "POST":
@@ -1337,7 +1362,6 @@ def escala_publica(token):
 
 @app.route("/criar-admin")
 def criar_admin():
-    from models import Usuario, Paroquia
 
     paroquia = Paroquia.query.first()
 
@@ -1346,23 +1370,32 @@ def criar_admin():
         db.session.add(paroquia)
         db.session.commit()
 
-    user_existente = Usuario.query.filter_by(
+    admin_existente = Ministro.query.filter_by(
         email="marcelosouzapacheco@gmail.com"
     ).first()
 
-    if not user_existente:
-        user = Usuario(
+    if not admin_existente:
+        admin = Ministro(
             nome="Marcelo",
             email="marcelosouzapacheco@gmail.com",
             tipo="admin",
+            pode_logar=True,
             id_paroquia=paroquia.id
         )
-        user.set_senha("123456")
-        db.session.add(user)
+        admin.set_senha("123456")
+        admin.primeiro_acesso = True
+
+        db.session.add(admin)
         db.session.commit()
+
         return "Admin criado com sucesso!"
-    
+
     return "Admin já existe!"
+
+@app.errorhandler(403)
+def acesso_negado(e):
+    return render_template("403.html"), 403
+
 # ======================
 # EXECUÇÃO
 # ======================
