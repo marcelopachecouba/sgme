@@ -3,9 +3,11 @@
 
 <h2 class="mb-4">Ministros</h2>
 
+{% if current_user.tipo == "admin" %}
 <a href="{{ url_for('novo_ministro') }}" class="btn btn-success mb-3">
     Novo Ministro
 </a>
+{% endif %}
 
 <table class="table table-striped">
     <thead class="table-dark">
@@ -34,17 +36,18 @@
             <td>{{ ministro.cpf }}</td>
             <td>{{ ministro.comunidade }}</td>
             <td>
+                {% if current_user.tipo == "admin" %}
+                 <a href="{{ url_for('editar_ministro', id=ministro.id) }}"
+                    class="btn btn-sm btn-warning">
+                    Editar
+                 </a>
 
-                <a href="{{ url_for('editar_ministro', id=ministro.id) }}"
-                   class="btn btn-sm btn-warning">
-                   Editar
-                </a>
-
-                <a href="{{ url_for('excluir_ministro', id=ministro.id) }}"
-                   class="btn btn-sm btn-danger"
-                   onclick="return confirm('Deseja excluir este ministro?')">
-                   Excluir
-                </a>
+                 <a href="{{ url_for('excluir_ministro', id=ministro.id) }}"
+                    class="btn btn-sm btn-danger"
+                    onclick="return confirm('Deseja excluir este ministro?')">
+                    Excluir
+                 </a>
+                {% endif %}  
 
             </td>
         </tr>

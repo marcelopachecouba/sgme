@@ -11,27 +11,50 @@ class Paroquia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     
-class Ministro(db.Model):
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+
+class Ministro(UserMixin, db.Model):
+
     id = db.Column(db.Integer, primary_key=True)
+
     nome = db.Column(db.String(120))
     telefone = db.Column(db.String(20))
-    email = db.Column(db.String(120))
+    email = db.Column(db.String(120), unique=True)
+
     data_nascimento = db.Column(db.Date)
     tempo_ministerio = db.Column(db.Integer)
     data_cadastro = db.Column(db.Date, default=date.today)
+
     id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))
-    token_publico = db.Column(db.String(120), unique=True,default=lambda: str(uuid.uuid4()))
+
+    token_publico = db.Column(
+        db.String(120),
+        unique=True,
+        default=lambda: str(uuid.uuid4())
+    )
+
     cpf = db.Column(db.String(14))
     comunidade = db.Column(db.String(30))
+
+    # 🔐 CAMPOS DE LOGIN
+    senha_hash = db.Column(db.String(200), nullable=True)
+    pode_logar = db.Column(db.Boolean, default=False)
+    tipo = db.Column(db.String(20), default="ministro")  # admin / coordenador / ministro
+    primeiro_acesso = db.Column(db.Boolean, default=True)
+
+    def set_senha(self, senha):
+        self.senha_hash = generate_password_hash(senha)
+
+    def check_senha(self, senha):
+        return check_password_hash(self.senha_hash, senha)
 
     def gerar_token(self):
         self.token_publico = str(uuid.uuid4())
 
     __table_args__ = (
         db.UniqueConstraint('nome', 'id_paroquia', name='unique_ministro_paroquia'),
-    )
-    
-    
+    )    
 
 class Missa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -56,21 +79,6 @@ class EscalaFixa(db.Model):
     id_paroquia = db.Column(db.Integer)
 
     ministro = db.relationship("Ministro", passive_deletes=True)
-
-class Usuario(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    senha_hash = db.Column(db.String(200), nullable=False)
-    tipo = db.Column(db.String(20))
-    id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))
-    
-    def set_senha(self, senha):
-        self.senha_hash = generate_password_hash(senha)
-
-    def check_senha(self, senha):
-        return check_password_hash(self.senha_hash, senha)
-    
 
 class Escala(db.Model):
     id = db.Column(db.Integer, primary_key=True)
