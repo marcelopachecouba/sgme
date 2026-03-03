@@ -60,7 +60,7 @@
                 {% else %}
                     Pendente
                     {% if current_user.tipo == "admin" %}
-                        <a href="{{ url_for('ativar_usuario', id=ministro.id) }}" class="btn btn-sm btn-success">
+                        <a href="{{ url_for('ativar-usuario', id=ministro.id) }}" class="btn btn-sm btn-success">
                             Liberar
                         </a>
                     {% endif %}
