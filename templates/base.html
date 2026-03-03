@@ -43,13 +43,6 @@
     </style>
 </head>
 
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/sw.js');
-}
-</script>
-
-
 <body>
 
 {% if current_user.is_authenticated %}
@@ -57,7 +50,9 @@ if ('serviceWorker' in navigator) {
 <!-- NAVBAR MOBILE -->
 <nav class="navbar navbar-dark bg-dark d-md-none">
     <div class="container-fluid">
-        <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+        <button class="btn btn-outline-light" type="button"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#sidebarMenu">
             ☰ Menu
         </button>
         <span class="navbar-brand mb-0 h1">SGME</span>
@@ -65,10 +60,15 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <!-- SIDEBAR OFFCANVAS MOBILE -->
-<div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="sidebarMenu">
+<div class="offcanvas offcanvas-start bg-dark text-white"
+     tabindex="-1"
+     id="sidebarMenu">
     <div class="offcanvas-header">
         <h5 class="offcanvas-title">SGME</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        <button type="button"
+                class="btn-close btn-close-white"
+                data-bs-dismiss="offcanvas">
+        </button>
     </div>
     <div class="offcanvas-body sidebar">
         {% include "menu.html" %}
@@ -96,6 +96,56 @@ if ('serviceWorker' in navigator) {
     </div>
 </div>
 
+<!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js');
+}
+</script>
+
+<!-- Firebase Push Notifications -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAdzJ3cJ7riBLGw9X89tPntQ6Q4MPbUewY",
+  authDomain: "sgme-a4d52.firebaseapp.com",
+  projectId: "sgme-a4d52D",
+  messagingSenderId: "929642581311",
+  appId: "1:929642581311:web:d93240da819f2cef58d78a"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+Notification.requestPermission().then((permission) => {
+  if (permission === "granted") {
+    getToken(messaging, {
+      vapidKey: "SUA_VAPID_PUBLIC_KEY"
+    }).then((currentToken) => {
+      if (currentToken) {
+
+        fetch("/salvar-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: currentToken })
+        });
+
+      }
+    });
+  }
+});
+
+onMessage(messaging, (payload) => {
+  alert(payload.notification.title + "\n" + payload.notification.body);
+});
+
+</script>
+
 </body>
 </html>
