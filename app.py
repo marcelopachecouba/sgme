@@ -1521,7 +1521,7 @@ def cadastro():
 
     return render_template("cadastro.html")    
 
-@app.route("/ativar-usuario/<int:id>")
+@app.route("/ativar_usuario/<int:id>")
 @login_required
 @admin_required
 def ativar_usuario(id):
