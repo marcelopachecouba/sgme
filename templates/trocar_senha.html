@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Primeiro acesso - Definir senha</h3>
+
+<form method="POST">
+    <div class="mb-3">
+        <label>Nova senha</label>
+        <input type="password" name="nova_senha" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Confirmar senha</label>
+        <input type="password" name="confirmar_senha" class="form-control" required>
+    </div>
+
+    <button class="btn btn-primary">Salvar senha</button>
+</form>
+
+{% endblock %}

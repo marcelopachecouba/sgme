@@ -1,3 +1,4 @@
+from itsdangerous import URLSafeTimedSerializer
 from flask import Flask, render_template, redirect, request, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from config import Config
@@ -71,6 +72,18 @@ def admin_required(f):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
+
+def gerar_token(email):
+    s = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    return s.dumps(email, salt="reset-senha")
+
+def validar_token(token, expiracao=3600):
+    s = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    try:
+        email = s.loads(token, salt="reset-senha", max_age=expiracao)
+        return email
+    except:
+        return None
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -1395,6 +1408,83 @@ def criar_admin():
 @app.errorhandler(403)
 def acesso_negado(e):
     return render_template("403.html"), 403
+
+@app.route("/trocar-senha", methods=["GET", "POST"])
+@login_required
+def trocar_senha():
+
+    if request.method == "POST":
+        nova = request.form["nova_senha"]
+        confirmar = request.form["confirmar_senha"]
+
+        if nova != confirmar:
+            flash("As senhas não coincidem.")
+            return redirect(url_for("trocar_senha"))
+
+        current_user.set_senha(nova)
+        current_user.primeiro_acesso = False
+        db.session.commit()
+
+        flash("Senha alterada com sucesso.")
+        return redirect(url_for("home"))
+
+    return render_template("trocar_senha.html")
+
+@app.route("/reset-senha", methods=["GET", "POST"])
+def reset_senha():
+
+    if request.method == "POST":
+        email = request.form["email"]
+        user = Ministro.query.filter_by(email=email).first()
+
+        if user:
+            token = gerar_token(email)
+            link = url_for("nova_senha", token=token, _external=True)
+
+            print("LINK RESET:", link)  # depois você envia por email
+
+            flash("Link de redefinição gerado. Verifique o console.")
+
+        return redirect(url_for("login"))
+
+    return render_template("reset_senha.html")
+
+@app.route("/nova-senha/<token>", methods=["GET", "POST"])
+def nova_senha(token):
+
+    email = validar_token(token)
+
+    if not email:
+        flash("Token inválido ou expirado.")
+        return redirect(url_for("login"))
+
+    user = Ministro.query.filter_by(email=email).first()
+
+    if request.method == "POST":
+        nova = request.form["nova_senha"]
+        user.set_senha(nova)
+        db.session.commit()
+
+        flash("Senha redefinida com sucesso.")
+        return redirect(url_for("login"))
+
+    return render_template("nova_senha.html")
+
+@app.route("/admin/resetar-senha/<int:id>")
+@login_required
+def admin_resetar_senha(id):
+
+    if current_user.tipo != "admin":
+        return "Acesso negado"
+
+    user = Ministro.query.get_or_404(id)
+    user.set_senha("123456")
+    user.primeiro_acesso = True
+
+    db.session.commit()
+
+    flash("Senha redefinida para 123456")
+    return redirect(url_for("ministros"))
 
 # ======================
 # EXECUÇÃO
