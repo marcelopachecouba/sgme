@@ -42,6 +42,20 @@ value="{{ ministro.data_cadastro.strftime('%d/%m/%Y') if ministro.data_cadastro 
 disabled>
 </div>
 
+<div class="mb-3">
+<label>Cpf</label>
+<input type="cpf" name="cpf" class="form-control"
+value="{{ ministro.cpf or '' }}">
+</div>
+
+<div class="mb-3">
+<label>Comunidade</label>
+<input type="comunidade" name="comunidade" class="form-control"
+value="{{ ministro.comunidade or '' }}">
+</div>
+
+
+
 <button class="btn btn-primary">Atualizar</button>
 
 </form>

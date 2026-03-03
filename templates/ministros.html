@@ -16,6 +16,8 @@
             <th>Nascimento</th>
             <th>Tempo Ministério</th>
             <th>Cadastro</th>
+            <th>Cpf</th>
+            <th>Comunidade</th>
             <th style="width: 200px;">Ações</th>
         </tr>
     </thead>
@@ -29,6 +31,8 @@
             <td>{{ ministro.data_nascimento }}</td>
             <td>{{ ministro.tempo_ministerio }} anos</td>
             <td>{{ ministro.data_cadastro }}</td>
+            <td>{{ ministro.cpf }}</td>
+            <td>{{ ministro.comunidade }}</td>
             <td>
 
                 <a href="{{ url_for('editar_ministro', id=ministro.id) }}"
