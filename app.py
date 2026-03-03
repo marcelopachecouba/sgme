@@ -1486,6 +1486,53 @@ def admin_resetar_senha(id):
     flash("Senha redefinida para 123456")
     return redirect(url_for("ministros"))
 
+@app.route("/cadastro", methods=["GET", "POST"])
+def cadastro():
+
+    if request.method == "POST":
+
+        nome = request.form["nome"]
+        email = request.form["email"]
+        senha = request.form["senha"]
+
+        existente = Ministro.query.filter_by(email=email).first()
+
+        if existente:
+            flash("Email já cadastrado.")
+            return redirect(url_for("cadastro"))
+
+        paroquia = Paroquia.query.first()
+
+        novo = Ministro(
+            nome=nome,
+            email=email,
+            tipo="ministro",
+            pode_logar=False,
+            id_paroquia=paroquia.id
+        )
+
+        novo.set_senha(senha)
+
+        db.session.add(novo)
+        db.session.commit()
+
+        flash("Cadastro realizado. Aguarde aprovação do administrador.")
+        return redirect(url_for("login"))
+
+    return render_template("cadastro.html")    
+
+@app.route("/ativar-usuario/<int:id>")
+@login_required
+@admin_required
+def ativar_usuario(id):
+
+    user = Ministro.query.get_or_404(id)
+    user.pode_logar = True
+    db.session.commit()
+
+    flash("Usuário liberado com sucesso!")
+    return redirect(url_for("ministros"))
+
 # ======================
 # EXECUÇÃO
 # ======================
