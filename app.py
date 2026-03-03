@@ -89,11 +89,25 @@ def validar_token(token, expiracao=3600):
 def login():
 
     if request.method == "POST":
-        email = request.form["email"]
+        login_input = request.form["login"].strip()
         senha = request.form["senha"]
 
-        user = Ministro.query.filter_by(email=email).first()
+        # Remove pontuação do CPF e telefone
+        login_limpo = (
+            login_input
+            .replace(".", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace(" ", "")
+        )
 
+        user = Ministro.query.filter(
+            (Ministro.email == login_input) |
+            (Ministro.cpf == login_limpo) |
+            (Ministro.telefone == login_limpo)
+        ).first()
+        
         # 🔐 Verifica se pode logar
         if user and user.pode_logar and user.check_senha(senha):
 
@@ -210,6 +224,12 @@ def novo_ministro():
             comunidade=comunidade,
             id_paroquia=current_user.id_paroquia
         )
+
+        # 🔐 SENHA PADRÃO
+        novo.set_senha("123456")
+        novo.primeiro_acesso = True
+        novo.pode_logar = False   # continua aguardando liberação do admin
+
         novo.gerar_token()
 
         db.session.add(novo)
