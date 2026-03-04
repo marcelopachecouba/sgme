@@ -1,5 +1,5 @@
 from app import app
-from models import db, ministro, Paroquia
+from models import db, Ministro, Paroquia
 
 with app.app_context():
 
@@ -13,12 +13,12 @@ with app.app_context():
         print("Paróquia criada!")
 
     # Verifica se usuário já existe
-    user_existente = Usuario.query.filter_by(
+    user_existente = Ministro.query.filter_by(
         email="marcelosouzapacheco@gmail.com"
     ).first()
 
     if not user_existente:
-        user = Usuario(
+        user = Ministro(
             nome="Marcelo",
             email="marcelosouzapacheco@gmail.com",
             tipo="admin",
