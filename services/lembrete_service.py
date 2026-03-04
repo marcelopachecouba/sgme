@@ -1,41 +1,46 @@
-from datetime import datetime, timedelta
-from models import Missa, Escala, Ministro
-from services.firebase_service import enviar_push
+ffrom datetime import datetime, timedelta
 from flask import current_app
+
+from models import Missa, Escala
+from services.firebase_service import enviar_push
+
 
 def enviar_lembretes():
 
-    agora = datetime.now()
+    # abre contexto do Flask (necessário para SQLAlchemy)
+    with current_app.app_context():
 
-    # verifica missas nas próximas 2 horas
-    limite = agora + timedelta(hours=2)
+        agora = datetime.now()
 
-    missas = Missa.query.filter(
-        Missa.data >= agora.date(),
-        Missa.data <= limite.date()
-    ).all()
+        # verifica missas nas próximas 2 horas
+        limite = agora + timedelta(hours=2)
 
-    for missa in missas:
+        missas = Missa.query.filter(
+            Missa.data >= agora.date(),
+            Missa.data <= limite.date()
+        ).all()
 
-        horario_missa = datetime.combine(
-            missa.data,
-            datetime.strptime(missa.horario, "%H:%M").time()
-        )
+        for missa in missas:
 
-        if agora <= horario_missa <= limite:
+            horario_missa = datetime.combine(
+                missa.data,
+                datetime.strptime(missa.horario, "%H:%M").time()
+            )
 
-            escalas = Escala.query.filter_by(
-                id_missa=missa.id
-            ).all()
+            if agora <= horario_missa <= limite:
 
-            for escala in escalas:
+                escalas = Escala.query.filter_by(
+                    id_missa=missa.id
+                ).all()
 
-                ministro = escala.ministro
+                for escala in escalas:
 
-                if ministro and ministro.firebase_token:
+                    ministro = escala.ministro
 
-                    enviar_push(
-                        ministro.firebase_token,
-                        "Lembrete de Escala",
-                        f"Você tem escala hoje às {missa.horario} - {missa.comunidade}"
-                    )
+                    if ministro and ministro.firebase_token:
+
+                        enviar_push(
+                            ministro.firebase_token,
+                            "Lembrete de Escala",
+                            f"Você tem escala hoje às {missa.horario} - {missa.comunidade}"
+                        )

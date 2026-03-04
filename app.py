@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from services.firebase_service import iniciar_firebase
-from services.lembrete_service import enviar_lembretes
+scheduler.add_job(lambda: enviar_lembretes(app), "interval", minutes=10)
 import os
 
 app = Flask(__name__)
