@@ -91,7 +91,7 @@ def reset_senha():
 
         if user:
             token = gerar_token(email)
-            link = url_for("nova_senha", token=token, _external=True)
+            link = url_for("auth.nova_senha", token=token, _external=True)
 
             print("LINK RESET:", link)  # depois você envia por email
 
@@ -147,7 +147,7 @@ def cadastro():
 
         if existente:
             flash("Email ou CPF já cadastrado.")
-            return redirect(url_for("cadastro"))
+            return redirect(url_for("auth.cadastro"))
 
         paroquia = Paroquia.query.first()
 
