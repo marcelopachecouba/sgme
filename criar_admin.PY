@@ -1,5 +1,5 @@
 from app import app
-from models import db, Usuario, Paroquia
+from models import db, ministro, Paroquia
 
 with app.app_context():
 
