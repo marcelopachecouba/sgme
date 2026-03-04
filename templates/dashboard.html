@@ -71,6 +71,51 @@
 
     </div>
 
+    <h3 class="mt-4">🔔 Próximas Missas da Semana</h3>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Data</th>
+<th>Horário</th>
+<th>Comunidade</th>
+<th>Ministros</th>
+<th>WhatsApp</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for item in proximas_missas %}
+
+<tr>
+<td>{{ item.missa.data.strftime("%d/%m/%Y") }}</td>
+<td>{{ item.missa.horario }}</td>
+<td>{{ item.missa.comunidade }}</td>
+
+<td>
+{% for m in item.ministros %}
+{{ m }}<br>
+{% endfor %}
+</td>
+
+<td>
+{% if item.whatsapp %}
+<a href="{{ item.whatsapp }}" target="_blank" class="btn btn-success btn-sm">
+📲 Avisar ministros
+</a>
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
 </div>
 
 {% endblock %}

@@ -30,63 +30,31 @@ import os
 from models import db
 import uuid
 from flask_migrate import Migrate
-
-
-# ======================
-# FIREBASE CONFIGURAÇÃO SEGURA
-# ======================
-
-import firebase_admin
-from firebase_admin import credentials, messaging
-import json
-import os
-
-firebase_ativo = False
-
-if os.environ.get("FIREBASE_CREDENTIALS"):
-
-    try:
-        firebase_dict = json.loads(os.environ["FIREBASE_CREDENTIALS"])
-        cred = credentials.Certificate(firebase_dict)
-
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-
-        firebase_ativo = True
-        print("🔥 Firebase iniciado com sucesso")
-
-    except Exception as e:
-        print("❌ Erro ao iniciar Firebase:", e)
-
-else:
-    print("⚠️ FIREBASE_CREDENTIALS não encontrada")
-
-def enviar_push(token, titulo, mensagem):
-
-    if not firebase_ativo:
-        print("⚠️ Firebase não está ativo")
-        return
-
-    try:
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=titulo,
-                body=mensagem
-            ),
-            token=token
-        )
-
-        messaging.send(message)
-        print("✅ Push enviado com sucesso")
-
-    except Exception as e:
-        print("❌ Erro ao enviar push:", e)
+from services.firebase_service import iniciar_firebase, enviar_push
+from apscheduler.schedulers.background import BackgroundScheduler
+from services.lembrete_service import enviar_lembretes
+from services.substituicao_service import substituir_ministro
         
+from services.notificacao_service import (
+    notificar_escala_criada,
+    notificar_escala_removida,
+    notificar_confirmacao
+)
+
+
 # ======================
 # CRIA APP
 # ======================
+
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# inicia firebase
+iniciar_firebase()
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(enviar_lembretes, "interval", minutes=10)
+scheduler.start()
 
 # ======================
 # INICIALIZA BANCO
@@ -183,57 +151,69 @@ def logout():
 # DASHBOARD
 # ======================
 
+from datetime import date, timedelta
+import urllib.parse
+
 @app.route("/")
 @login_required
 def home():
 
     hoje = date.today()
-    inicio_mes = hoje.replace(day=1)
+    inicio_semana = hoje
+    fim_semana = hoje + timedelta(days=7)
 
-    if hoje.month == 12:
-        proximo_mes = hoje.replace(year=hoje.year + 1, month=1, day=1)
-    else:
-        proximo_mes = hoje.replace(month=hoje.month + 1, day=1)
+    # Missas dos próximos 7 dias
+    proximas_missas = Missa.query.filter(
+        Missa.id_paroquia == current_user.id_paroquia,
+        Missa.data >= inicio_semana,
+        Missa.data <= fim_semana
+    ).order_by(Missa.data, Missa.horario).all()
 
-    dados = db.session.query(
-        Ministro.nome,
-        db.func.count(Escala.id)
-    ).join(Escala, Escala.id_ministro == Ministro.id)\
-     .join(Missa, Missa.id == Escala.id_missa)\
-     .filter(
-        Escala.id_paroquia == current_user.id_paroquia,
-        Missa.data >= inicio_mes,
-        Missa.data < proximo_mes
-     )\
-     .group_by(Ministro.nome)\
-     .all()
+    estrutura_missas = []
 
-    nomes = [d[0] for d in dados]
-    valores = [d[1] for d in dados]
+    for missa in proximas_missas:
 
-    fig, ax = plt.subplots()
-    ax.bar(nomes, valores)
-    plt.xticks(rotation=45)
-    img = io.BytesIO()
-    plt.tight_layout()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    grafico_barra = base64.b64encode(img.getvalue()).decode()
-    plt.close()
+        escalas = Escala.query.filter_by(id_missa=missa.id).all()
 
-    total_escalas = sum(valores) if valores else 0
-    confirmadas = Escala.query.filter_by(
-        id_paroquia=current_user.id_paroquia,
-        confirmado=True
-    ).count()
+        ministros = []
+        telefones = []
+
+        for e in escalas:
+            if e.ministro:
+                ministros.append(e.ministro.nome)
+
+                if e.ministro.telefone:
+                    telefones.append(f"55{e.ministro.telefone}")
+
+        mensagem = f"""
+Lembrete de Escala - Ministério da Eucaristia
+
+Data: {missa.data.strftime('%d/%m/%Y')}
+Horário: {missa.horario}
+Comunidade: {missa.comunidade}
+
+Deus abençoe seu ministério.
+"""
+
+        mensagem = urllib.parse.quote(mensagem)
+
+        # link whatsapp grupo
+        link_whatsapp = None
+
+        if telefones:
+            numeros = ",".join(telefones)
+            link_whatsapp = f"https://wa.me/{telefones[0]}?text={mensagem}"
+
+        estrutura_missas.append({
+            "missa": missa,
+            "ministros": ministros,
+            "whatsapp": link_whatsapp
+        })
 
     return render_template(
         "dashboard.html",
-        grafico_barra=grafico_barra,
-        total_escalas=total_escalas,
-        confirmadas=confirmadas
+        proximas_missas=estrutura_missas
     )
-
 # ======================
 # MINISTROS
 # ======================
@@ -398,6 +378,8 @@ def nova_missa():
 
 @app.route("/missas/editar/<int:id>", methods=["GET", "POST"])
 @login_required
+@admin_required
+
 def editar_missa(id):
 
     missa = Missa.query.get_or_404(id)
@@ -484,6 +466,7 @@ def gerar_escala(missa_id):
         Escala.query.filter_by(id_missa=missa.id).delete()
 
         for ministro_id in selecionados:
+            ministro = Ministro.query.get(ministro_id)
             nova = Escala(
                 id_missa=missa.id,
                 id_ministro=int(ministro_id),
@@ -491,6 +474,8 @@ def gerar_escala(missa_id):
                 token=str(uuid.uuid4())
             )
             db.session.add(nova)
+            # 🔔 envia notificação
+            notificar_escala(ministro, missa)
 
         db.session.commit()
 
@@ -608,7 +593,7 @@ def gerar_escala_auto(missa_id):
             token=str(uuid.uuid4())
         )
         db.session.add(nova)
-
+        notificar_escala_criada(ministro, missa)    
     db.session.commit()
 
     flash("Escala automática gerada com sucesso!")
@@ -766,6 +751,7 @@ def editar_escala_fixa(id):
 
 @app.route("/escala_fixa/excluir/<int:id>")
 @login_required
+@admin_required
 def excluir_escala_fixa(id):
 
     fixa = EscalaFixa.query.get_or_404(id)
@@ -777,6 +763,7 @@ def excluir_escala_fixa(id):
 
 @app.route("/ministros/editar/<int:id>", methods=["GET", "POST"])
 @login_required
+@admin_required
 def editar_ministro(id):
 
     ministro = Ministro.query.get_or_404(id)
@@ -1019,7 +1006,8 @@ def gerar_mensal():
                                 token=str(uuid.uuid4())
                             )
                             db.session.add(nova)
-
+                            ministro = Ministro.query.get(regra.id_ministro)
+                            notificar_escala_criada(ministro, missa) 
         db.session.commit()
 
         flash("Escala mensal gerada automaticamente com base na escala fixa!")
@@ -1029,22 +1017,32 @@ def gerar_mensal():
 
 @app.route("/escala/remover/<int:escala_id>")
 @login_required
+@admin_required
 def remover_ministro_escala(escala_id):
 
     escala = Escala.query.get_or_404(escala_id)
+
+    ministro = escala.ministro
+    missa = escala.missa
     missa_id = escala.id_missa
 
     db.session.delete(escala)
     db.session.commit()
 
+    # 🔔 envia notificação
+    notificar_escala_removida(ministro, missa)
+
     flash("Ministro removido da escala!")
     return redirect(url_for("visualizar_escala", missa_id=missa_id))
+
 
 @app.route("/escala/adicionar/<int:missa_id>", methods=["POST"])
 @login_required
 def adicionar_ministro_escala(missa_id):
 
     ministro_id = request.form.get("ministro_id")
+    missa = Missa.query.get(missa_id)
+    ministro = Ministro.query.get(ministro_id)  
 
     existe = Escala.query.filter_by(
         id_missa=missa_id,
@@ -1059,6 +1057,9 @@ def adicionar_ministro_escala(missa_id):
             token=str(uuid.uuid4())
         )
         db.session.add(nova)
+        
+        notificar_escala_criada(ministro, missa)
+
         db.session.commit()
 
     return redirect(url_for("visualizar_escala", missa_id=missa_id))
@@ -1424,13 +1425,24 @@ def escala_publica(token):
 
         if acao == "confirmar":
             escala.confirmado = True
+            db.session.commit()
+
+            flash("Presença confirmada. Obrigado!")
 
         elif acao == "recusar":
-            escala.confirmado = False
 
-        db.session.commit()
+            missa = escala.missa
 
-        flash("Resposta registrada com sucesso!")
+            # remove da escala
+            db.session.delete(escala)
+            db.session.commit()
+
+            # chama substituto automático
+            substituir_ministro(escala)
+
+            flash("Você foi removido da escala. Um substituto será chamado.")
+
+            return redirect(url_for("escala_publica", token=token))
 
     return render_template(
         "escala_publica.html",
@@ -1635,6 +1647,49 @@ def salvar_token():
     current_user.firebase_token = data["token"]
     db.session.commit()
     return {"status": "ok"}
+
+
+@app.route("/confiabilidade")
+@login_required
+@admin_required
+def confiabilidade():
+
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    dados = []
+
+    for ministro in ministros:
+
+        total = Escala.query.filter_by(
+            id_ministro=ministro.id
+        ).count()
+
+        confirmadas = Escala.query.filter_by(
+            id_ministro=ministro.id,
+            confirmado=True
+        ).count()
+
+        recusadas = Escala.query.filter_by(
+            id_ministro=ministro.id,
+            confirmado=False
+        ).count()
+
+        percentual = 0
+
+        if total > 0:
+            percentual = round((confirmadas / total) * 100)
+
+        dados.append({
+            "ministro": ministro.nome,
+            "total": total,
+            "confirmadas": confirmadas,
+            "recusadas": recusadas,
+            "percentual": percentual
+        })
+
+    return render_template("confiabilidade.html", dados=dados)
 
 # ======================
 # EXECUÇÃO
