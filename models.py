@@ -36,6 +36,8 @@ class Ministro(UserMixin, db.Model):
 
     cpf = db.Column(db.String(14))
     comunidade = db.Column(db.String(30))
+    firebase_token = db.Column(db.String(255))
+    notificacoes_ativas = db.Column(db.Boolean, default=True)
 
     # 🔐 CAMPOS DE LOGIN
     senha_hash = db.Column(db.String(200), nullable=True)

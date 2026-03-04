@@ -33,6 +33,56 @@ from flask_migrate import Migrate
 
 
 # ======================
+# FIREBASE CONFIGURAÇÃO SEGURA
+# ======================
+
+import firebase_admin
+from firebase_admin import credentials, messaging
+import json
+import os
+
+firebase_ativo = False
+
+if os.environ.get("FIREBASE_CREDENTIALS"):
+
+    try:
+        firebase_dict = json.loads(os.environ["FIREBASE_CREDENTIALS"])
+        cred = credentials.Certificate(firebase_dict)
+
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app(cred)
+
+        firebase_ativo = True
+        print("🔥 Firebase iniciado com sucesso")
+
+    except Exception as e:
+        print("❌ Erro ao iniciar Firebase:", e)
+
+else:
+    print("⚠️ FIREBASE_CREDENTIALS não encontrada")
+
+def enviar_push(token, titulo, mensagem):
+
+    if not firebase_ativo:
+        print("⚠️ Firebase não está ativo")
+        return
+
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=titulo,
+                body=mensagem
+            ),
+            token=token
+        )
+
+        messaging.send(message)
+        print("✅ Push enviado com sucesso")
+
+    except Exception as e:
+        print("❌ Erro ao enviar push:", e)
+        
+# ======================
 # CRIA APP
 # ======================
 app = Flask(__name__)
@@ -443,6 +493,7 @@ def gerar_escala(missa_id):
             db.session.add(nova)
 
         db.session.commit()
+
         return redirect(url_for("visualizar_escala", missa_id=missa.id))
 
     return render_template("gerar_escala.html", missa=missa, ministros=ministros)
@@ -1514,11 +1565,21 @@ def cadastro():
         nome = request.form["nome"]
         email = request.form["email"]
         senha = request.form["senha"]
+        cpf = request.form["cpf"]
+        telefone = request.form["telefone"]
+        comunidade = request.form["comunidade"]
 
-        existente = Ministro.query.filter_by(email=email).first()
+        # Remove máscara
+        cpf = cpf.replace(".", "").replace("-", "")
+        telefone = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+
+        existente = Ministro.query.filter(
+            (Ministro.email == email) |
+            (Ministro.cpf == cpf)
+        ).first()
 
         if existente:
-            flash("Email já cadastrado.")
+            flash("Email ou CPF já cadastrado.")
             return redirect(url_for("cadastro"))
 
         paroquia = Paroquia.query.first()
@@ -1526,8 +1587,12 @@ def cadastro():
         novo = Ministro(
             nome=nome,
             email=email,
+            cpf=cpf,
+            telefone=telefone,
+            comunidade=comunidade,
             tipo="ministro",
             pode_logar=False,
+            primeiro_acesso=False,
             id_paroquia=paroquia.id
         )
 
@@ -1536,10 +1601,20 @@ def cadastro():
         db.session.add(novo)
         db.session.commit()
 
-        flash("Cadastro realizado. Aguarde aprovação do administrador.")
+        # 🔔 Notifica admin via Firebase (se tiver token)
+        admin = Ministro.query.filter_by(tipo="admin").first()
+
+        if admin and admin.firebase_token:
+            enviar_push(
+                admin.firebase_token,
+                "Novo Cadastro",
+                f"{nome} solicitou cadastro no SGME."
+            )
+
+        flash("Cadastro realizado com sucesso! Aguarde aprovação do administrador.")
         return redirect(url_for("login"))
 
-    return render_template("cadastro.html")    
+    return render_template("cadastro.html")
 
 @app.route("/ativar_usuario/<int:id>")
 @login_required
@@ -1552,6 +1627,14 @@ def ativar_usuario(id):
 
     flash("Usuário liberado com sucesso!")
     return redirect(url_for("ministros"))
+
+@app.route("/salvar-token", methods=["POST"])
+@login_required
+def salvar_token():
+    data = request.get_json()
+    current_user.firebase_token = data["token"]
+    db.session.commit()
+    return {"status": "ok"}
 
 # ======================
 # EXECUÇÃO
