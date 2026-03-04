@@ -5,8 +5,12 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from flask import Flask
+from apscheduler.schedulers.background import BackgroundScheduler
+from services.lembrete_service import enviar_lembretes
+
 from services.firebase_service import iniciar_firebase
-scheduler.add_job(lambda: enviar_lembretes(app), "interval", minutes=10)
+#scheduler.add_job(lambda: enviar_lembretes(app), "interval", minutes=10)
 import os
 
 app = Flask(__name__)
@@ -15,11 +19,19 @@ app.config.from_object(Config)
 # Firebase
 iniciar_firebase()
 
-# Scheduler
-if os.environ.get("RENDER"):
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(enviar_lembretes, "interval", minutes=10)
+def iniciar_scheduler():
+
+    scheduler = BackgroundScheduler(daemon=True)
+
+    scheduler.add_job(
+        lambda: enviar_lembretes(app),
+        "interval",
+        minutes=10
+    )
+
     scheduler.start()
+
+iniciar_scheduler()
 
 # Banco
 db.init_app(app)
