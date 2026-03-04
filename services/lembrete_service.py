@@ -1,4 +1,4 @@
-ffrom datetime import datetime, timedelta
+from datetime import datetime, timedelta
 from flask import current_app
 
 from models import Missa, Escala
