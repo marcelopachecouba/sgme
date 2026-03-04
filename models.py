@@ -11,7 +11,10 @@ class Paroquia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     
-from flask_login import UserMixin
+    ministros = db.relationship("Ministro", backref="paroquia")
+    missas = db.relationship("Missa", backref="paroquia")
+    
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class Ministro(UserMixin, db.Model):
@@ -59,8 +62,9 @@ class Ministro(UserMixin, db.Model):
     )    
 
 class Missa(db.Model):
+    
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.Date, nullable=False)
+    data = db.Column(db.Date, nullable=False, index=True)
     horario = db.Column(db.String(10))
     comunidade = db.Column(db.String(100))
     qtd_ministros = db.Column(db.Integer)
@@ -80,21 +84,21 @@ class EscalaFixa(db.Model):
     
     id_paroquia = db.Column(db.Integer)
 
-    ministro = db.relationship("Ministro", passive_deletes=True)
+    ministro = db.relationship("Ministro", passive_deletes=True, lazy="joined")
 
 class Escala(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    id_missa = db.Column(db.Integer, db.ForeignKey('missa.id'))
-    id_ministro = db.Column(db.Integer, db.ForeignKey('ministro.id'))
+    id_missa = db.Column(db.Integer, db.ForeignKey('missa.id'), index=True)
+    id_ministro = db.Column(db.Integer, db.ForeignKey('ministro.id'), index=True)
 
     confirmado = db.Column(db.Boolean, default=False)
     presente = db.Column(db.Boolean, default=False)
 
     id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))
 
-    missa = db.relationship("Missa")
-    ministro = db.relationship("Ministro")
+    missa = db.relationship("Missa", lazy="joined")
+    ministro = db.relationship("Ministro", lazy="joined")
     token = db.Column(db.String(100), unique=True, nullable=True)
 
 class Indisponibilidade(db.Model):
@@ -106,5 +110,5 @@ class Indisponibilidade(db.Model):
 
     id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))
 
-    ministro = db.relationship("Ministro")
+    ministro = db.relationship("Ministro", lazy="joined")
 

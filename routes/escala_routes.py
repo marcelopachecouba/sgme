@@ -1,0 +1,666 @@
+from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
+from flask_login import login_required, current_user, login_user, logout_user
+from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
+from datetime import datetime, date, timedelta
+import calendar, uuid, urllib.parse, base64, io
+from utils.auth import admin_required
+from services.notificacao_service import (
+    notificar_escala_criada,
+    notificar_escala_removida
+)
+
+from services.substituicao_service import substituir_ministro
+
+escala_bp = Blueprint("escala", __name__)
+
+@escala_bp.route("/escala/<int:missa_id>", methods=["GET", "POST"])
+@login_required
+def gerar_escala(missa_id):
+
+    missa = Missa.query.get_or_404(missa_id)
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    if request.method == "POST":
+        selecionados = request.form.getlist("ministros")
+        Escala.query.filter_by(id_missa=missa.id).delete()
+
+        for ministro_id in selecionados:
+            ministro = Ministro.query.get(ministro_id)
+            nova = Escala(
+                id_missa=missa.id,
+                id_ministro=int(ministro_id),
+                id_paroquia=current_user.id_paroquia,
+                token=str(uuid.uuid4())
+            )
+            db.session.add(nova)
+            # 🔔 envia notificação
+            notificar_escala_criada(ministro, missa)
+
+        db.session.commit()
+
+        return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
+
+    return render_template("gerar_escala.html", missa=missa, ministros=ministros)
+
+# ======================
+# ESCALA AUTOMÁTICA
+# ======================
+
+from utils.auth import admin_required
+@escala_bp.route("/escala/auto/<int:missa_id>")
+@login_required
+@admin_required
+def gerar_escala_auto(missa_id):
+
+    missa = Missa.query.get_or_404(missa_id)
+
+    # Limpa escala anterior da missa
+    Escala.query.filter_by(id_missa=missa.id).delete()
+
+    selecionados = []
+
+    # ===============================
+    # 1️⃣ BUSCA PRIMEIRO ESCALA FIXA
+    # ===============================
+
+    semana = (missa.data.day - 1) // 7 + 1
+    dia_semana = missa.data.weekday()  # 0=segunda
+
+    fixos = EscalaFixa.query.filter(
+        EscalaFixa.id_paroquia == current_user.id_paroquia,
+        (EscalaFixa.semana == semana) | (EscalaFixa.semana == None),
+        (EscalaFixa.dia_semana == dia_semana) | (EscalaFixa.dia_semana == None),
+        (EscalaFixa.horario == missa.horario) | (EscalaFixa.horario == None),
+        (EscalaFixa.comunidade == missa.comunidade) | (EscalaFixa.comunidade == None)
+    ).all()
+
+    for fixa in fixos:
+
+        ministro = Ministro.query.get(fixa.id_ministro)
+
+        if not ministro:
+            continue
+
+        # verifica indisponibilidade
+        indisponivel = Indisponibilidade.query.filter_by(
+            id_ministro=ministro.id,
+            data=missa.data,
+            id_paroquia=current_user.id_paroquia
+        ).first()
+
+        if indisponivel:
+            continue
+
+        # evita duplicado
+        if ministro not in selecionados:
+            selecionados.append(ministro)
+
+        if len(selecionados) >= missa.qtd_ministros:
+            break
+
+    # ===================================
+    # 2️⃣ COMPLETA COM OUTROS SE PRECISAR
+    # ===================================
+
+    if len(selecionados) < missa.qtd_ministros:
+
+        ministros = Ministro.query.filter_by(
+            id_paroquia=current_user.id_paroquia
+        ).all()
+
+        for ministro in ministros:
+
+            if ministro in selecionados:
+                continue
+
+            # verifica conflito de horário
+            conflito = db.session.query(Escala)\
+                .join(Missa)\
+                .filter(
+                    Escala.id_ministro == ministro.id,
+                    Missa.data == missa.data,
+                    Missa.horario == missa.horario,
+                    Escala.id_paroquia == current_user.id_paroquia
+                ).first()
+
+            if conflito:
+                continue
+
+            # verifica indisponibilidade
+            indisponivel = Indisponibilidade.query.filter_by(
+                id_ministro=ministro.id,
+                data=missa.data,
+                id_paroquia=current_user.id_paroquia
+            ).first()
+
+            if indisponivel:
+                continue
+
+            selecionados.append(ministro)
+
+            if len(selecionados) >= missa.qtd_ministros:
+                break
+
+    # ===============================
+    # 3️⃣ SALVA NO BANCO
+    # ===============================
+
+    for ministro in selecionados:
+        nova = Escala(
+            id_missa=missa.id,
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia,
+            token=str(uuid.uuid4())
+        )
+        db.session.add(nova)
+        notificar_escala_criada(ministro, missa)    
+    db.session.commit()
+
+    flash("Escala automática gerada com sucesso!")
+    return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
+# ======================
+# VISUALIZAR ESCALA
+# ======================
+
+
+@escala_bp.route("/escala/visualizar/<int:missa_id>")
+@login_required
+def visualizar_escala(missa_id):
+
+    missa = Missa.query.get_or_404(missa_id)
+
+    escalas = Escala.query.filter_by(
+        id_missa=missa.id,
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).order_by(Ministro.nome).all()
+
+    return render_template(
+        "visualizar_escala.html",
+        missa=missa,
+        escalas=escalas,
+        ministros=ministros
+    )
+from utils.auth import admin_required
+@escala_bp.route("/escala_fixa", methods=["GET", "POST"])
+@login_required
+@admin_required
+def escala_fixa():
+
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).order_by(Ministro.nome).all()
+
+    if request.method == "POST":
+
+        semana = request.form.get("semana")
+        dia_semana = request.form.get("dia_semana")
+        horario = request.form.get("horario")
+        comunidade = request.form.get("comunidade")
+
+        ministros_ids = request.form.getlist("ministros")
+
+        if not ministros_ids:
+            flash("Selecione pelo menos um ministro.")
+            return redirect(url_for("escala_fixa"))
+
+        for ministro_id in ministros_ids:
+
+            nova = EscalaFixa(
+                semana=int(semana) if semana else None,
+                dia_semana=int(dia_semana) if dia_semana else None,
+                horario=horario if horario else None,
+                comunidade=comunidade if comunidade else None,
+                id_ministro=int(ministro_id),
+                id_paroquia=current_user.id_paroquia
+            )
+
+            db.session.add(nova)
+
+        db.session.commit()
+
+        flash("Escala fixa cadastrada com sucesso!")
+        return redirect(url_for("escala_fixa"))
+
+    fixos = EscalaFixa.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    return render_template(
+        "escala_fixa.html",
+        ministros=ministros,
+        fixos=fixos
+    )
+
+
+@escala_bp.route("/escala_fixa/editar/<int:id>", methods=["GET", "POST"])
+@login_required
+def editar_escala_fixa(id):
+
+    fixa = EscalaFixa.query.get_or_404(id)
+
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).order_by(Ministro.nome).all()
+
+    if request.method == "POST":
+
+        fixa.semana = int(request.form["semana"]) if request.form.get("semana") else None
+        fixa.dia_semana = int(request.form["dia_semana"]) if request.form.get("dia_semana") else None
+        fixa.horario = request.form.get("horario") or None
+        fixa.comunidade = request.form.get("comunidade") or None
+
+        db.session.commit()
+
+        flash("Escala fixa atualizada com sucesso!")
+        return redirect(url_for("escala_fixa"))
+
+    return render_template(
+        "editar_escala_fixa.html",
+        fixa=fixa,
+        ministros=ministros
+    )
+
+from utils.auth import admin_required
+@escala_bp.route("/escala_fixa/excluir/<int:id>")
+@login_required
+@admin_required
+def excluir_escala_fixa(id):
+
+    fixa = EscalaFixa.query.get_or_404(id)
+    db.session.delete(fixa)
+    db.session.commit()
+
+    flash("Escala fixa removida.")
+    return redirect(url_for("escala_fixa"))
+
+
+@escala_bp.route("/escala_mensal", methods=["GET", "POST"])
+@login_required
+def escala_mensal():
+
+    if request.method == "POST":
+
+        mes = int(request.form["mes"])
+        ano = int(request.form["ano"])
+
+        inicio_mes = date(ano, mes, 1)
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
+        fim_mes = date(ano, mes, ultimo_dia)
+
+        domingos = []
+        dia = inicio_mes
+
+        # =============================
+        # BUSCA TODOS OS DOMINGOS
+        # =============================
+        while dia <= fim_mes:
+            if dia.weekday() == 6:  # 6 = Domingo
+                domingos.append(dia)
+            dia += timedelta(days=1)
+
+        estrutura = {}
+
+        # =============================
+        # MONTA ESTRUTURA
+        # =============================
+        for domingo in domingos:
+
+            semana = (domingo.day - 1) // 7 + 1
+
+            estrutura[semana] = {
+                "data": domingo,
+                "manha": [],
+                "noite": []
+            }
+
+            missas = Missa.query.filter_by(
+                data=domingo,
+                id_paroquia=current_user.id_paroquia
+            ).all()
+
+            for missa in missas:
+
+                escalas = Escala.query.filter_by(
+                    id_missa=missa.id
+                ).all()
+
+                nomes = [e.ministro.nome for e in escalas]
+
+                # Se horário começa com 08 ou contém 8 → manhã
+                if "8" in missa.horario or "07" in missa.horario:
+                    estrutura[semana]["manha"] = nomes
+                else:
+                    estrutura[semana]["noite"] = nomes
+
+        return render_template(
+            "escala_mensal_editavel.html",
+            estrutura=estrutura,
+            mes=mes,
+            ano=ano
+        )
+
+    return render_template("form_escala_mensal.html")
+
+
+
+@escala_bp.route("/escala_fixa/visao")
+@login_required
+def visao_escala_fixa():
+
+    fixos = EscalaFixa.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    estrutura = {}
+
+    for f in fixos:
+
+        if not f.ministro:
+            continue
+
+        semana = f.semana if f.semana else 0
+        dia = f.dia_semana if f.dia_semana is not None else -1
+        horario = f.horario if f.horario else "99:99"
+
+        if semana not in estrutura:
+            estrutura[semana] = {}
+
+        if dia not in estrutura[semana]:
+            estrutura[semana][dia] = {}
+
+        if horario not in estrutura[semana][dia]:
+            estrutura[semana][dia][horario] = set()  # 🔥 AQUI MUDOU
+
+        estrutura[semana][dia][horario].add(f.ministro.nome)  # 🔥 AQUI MUDOU
+
+    # Converter set para lista ordenada
+    for semana in estrutura:
+        for dia in estrutura[semana]:
+            for horario in estrutura[semana][dia]:
+                estrutura[semana][dia][horario] = sorted(
+                    list(estrutura[semana][dia][horario])
+                )
+
+    return render_template(
+        "visao_escala_fixa.html",
+        estrutura=estrutura
+    )
+
+from utils.auth import admin_required
+@escala_bp.route("/gerar_mensal", methods=["GET", "POST"])
+@login_required
+@admin_required
+def gerar_mensal():
+
+    if request.method == "POST":
+
+        mes = int(request.form["mes"])
+        ano = int(request.form["ano"])
+
+        cal = calendar.monthcalendar(ano, mes)
+
+        for semana in cal:
+            for dia_semana, dia in enumerate(semana):
+
+                if dia == 0:
+                    continue
+
+                data_missa = date(ano, mes, dia)
+                semana_mes = (dia - 1) // 7 + 1
+
+                # Buscar regras que se aplicam a esse dia
+                regras = EscalaFixa.query.filter_by(
+                    id_paroquia=current_user.id_paroquia
+                ).all()
+
+                # Filtrar regras válidas para esse dia específico
+                regras_validas = []
+
+                for regra in regras:
+
+                    if regra.semana and regra.semana != semana_mes:
+                        continue
+
+                    if regra.dia_semana is not None and regra.dia_semana != dia_semana:
+                        continue
+
+                    regras_validas.append(regra)
+
+                # Agrupar por horário + comunidade
+                agrupado = {}
+
+                for regra in regras_validas:
+                    chave = (regra.horario, regra.comunidade)
+
+                    if chave not in agrupado:
+                        agrupado[chave] = []
+
+                    agrupado[chave].append(regra)
+
+                # Criar Missa e Escalas
+                for (horario, comunidade), lista_regras in agrupado.items():
+
+                    qtd_ministros = len(lista_regras)
+
+                    missa = Missa.query.filter_by(
+                        data=data_missa,
+                        horario=horario,
+                        id_paroquia=current_user.id_paroquia
+                    ).first()
+
+                    if not missa:
+                        missa = Missa(
+                            data=data_missa,
+                            horario=horario,
+                            comunidade=comunidade or "Matriz",
+                            qtd_ministros=qtd_ministros,
+                            id_paroquia=current_user.id_paroquia
+                        )
+                        db.session.add(missa)
+                        db.session.commit()
+                    else:
+                        # Atualiza quantidade se já existir
+                        missa.qtd_ministros = qtd_ministros
+                        db.session.commit()
+
+                    # Criar escalas
+                    for regra in lista_regras:
+
+                        escala_existente = Escala.query.filter_by(
+                            id_missa=missa.id,
+                            id_ministro=regra.id_ministro
+                        ).first()
+
+                        if not escala_existente:
+                            nova = Escala(
+                                id_missa=missa.id,
+                                id_ministro=regra.id_ministro,
+                                id_paroquia=current_user.id_paroquia,
+                                token=str(uuid.uuid4())
+                            )
+                            db.session.add(nova)
+                            ministro = Ministro.query.get(regra.id_ministro)
+                            notificar_escala_criada(ministro, missa) 
+        db.session.commit()
+
+        flash("Escala mensal gerada automaticamente com base na escala fixa!")
+        return redirect(url_for("missas"))
+
+    return render_template("form_gerar_mensal.html")
+
+from utils.auth import admin_required
+@escala_bp.route("/escala/remover/<int:escala_id>")
+@login_required
+@admin_required
+def remover_ministro_escala(escala_id):
+
+    escala = Escala.query.get_or_404(escala_id)
+
+    ministro = escala.ministro
+    missa = escala.missa
+    missa_id = escala.id_missa
+
+    db.session.delete(escala)
+    db.session.commit()
+
+    # 🔔 envia notificação
+    notificar_escala_removida(ministro, missa)
+
+    flash("Ministro removido da escala!")
+    return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
+
+
+
+@escala_bp.route("/escala/adicionar/<int:missa_id>", methods=["POST"])
+@login_required
+def adicionar_ministro_escala(missa_id):
+
+    ministro_id = request.form.get("ministro_id")
+    missa = Missa.query.get(missa_id)
+    ministro = Ministro.query.get(ministro_id)  
+
+    existe = Escala.query.filter_by(
+        id_missa=missa_id,
+        id_ministro=ministro_id
+    ).first()
+
+    if not existe:
+        nova = Escala(
+            id_missa=missa_id,
+            id_ministro=ministro_id,
+            id_paroquia=current_user.id_paroquia,
+            token=str(uuid.uuid4())
+        )
+        db.session.add(nova)
+        
+        notificar_escala_criada(ministro, missa)
+
+        db.session.commit()
+
+    return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
+
+
+@escala_bp.route("/salvar_mensal", methods=["POST"])
+@login_required
+def salvar_mensal():
+
+    mes = int(request.form["mes"])
+    ano = int(request.form["ano"])
+
+    cal = calendar.monthcalendar(ano, mes)
+
+    for semana in cal:
+        for dia_semana, dia in enumerate(semana):
+
+            if dia == 0:
+                continue
+
+            data_missa = date(ano, mes, dia)
+            semana_mes = (dia - 1) // 7 + 1
+
+            regras = EscalaFixa.query.filter_by(
+                id_paroquia=current_user.id_paroquia
+            ).all()
+
+            for regra in regras:
+
+                if regra.semana and regra.semana != semana_mes:
+                    continue
+
+                if regra.dia_semana is not None and regra.dia_semana != dia_semana:
+                    continue
+
+                missa = Missa.query.filter_by(
+                    data=data_missa,
+                    horario=regra.horario,
+                    id_paroquia=current_user.id_paroquia
+                ).first()
+
+                if not missa:
+                    missa = Missa(
+                        data=data_missa,
+                        horario=regra.horario,
+                        comunidade=regra.comunidade or "Matriz",
+                        qtd_ministros=1,
+                        id_paroquia=current_user.id_paroquia
+                    )
+                    db.session.add(missa)
+                    db.session.commit()
+
+                escala_existente = Escala.query.filter_by(
+                    id_missa=missa.id,
+                    id_ministro=regra.id_ministro
+                ).first()
+
+                if not escala_existente:
+                    nova = Escala(
+                        id_missa=missa.id,
+                        id_ministro=regra.id_ministro,
+                        id_paroquia=current_user.id_paroquia
+                    )
+                    db.session.add(nova)
+
+    db.session.commit()
+
+    flash("Escala mensal criada com sucesso!")
+    return redirect(url_for("missas"))
+
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.platypus import Table
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import TableStyle
+import io
+from flask import send_file
+
+
+@escala_bp.route("/escala/publica/<token>", methods=["GET", "POST"])
+def escala_publica(token):
+
+    escala = Escala.query.filter_by(token=token).first_or_404()
+
+    if request.method == "POST":
+
+        acao = request.form.get("acao")
+
+        if acao == "confirmar":
+            escala.confirmado = True
+            db.session.commit()
+
+            flash("Presença confirmada. Obrigado!")
+
+        elif acao == "recusar":
+
+            missa = escala.missa
+
+            # remove da escala
+            db.session.delete(escala)
+            db.session.commit()
+
+            # chama substituto automático
+            substituir_ministro(escala)
+
+            flash("Você foi removido da escala. Um substituto será chamado.")
+
+            return redirect(url_for("escala_publica", token=token))
+
+    return render_template(
+        "escala_publica.html",
+        escala=escala,
+        missa=escala.missa,
+        ministro=escala.ministro
+    )
+
+#@escala_bp.route("/init-db")
+#def init_db():
+#    db.create_all()
+#    return "Banco criado com sucesso"
+
+
