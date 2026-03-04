@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Painel de Confiabilidade dos Ministros</h2>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Ministro</th>
+<th>Escalas</th>
+<th>Confirmadas</th>
+<th>Recusadas</th>
+<th>Presença %</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for d in dados %}
+
+<tr>
+<td>{{ d.ministro }}</td>
+<td>{{ d.total }}</td>
+<td>{{ d.confirmadas }}</td>
+<td>{{ d.recusadas }}</td>
+<td>{{ d.percentual }}%</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}
