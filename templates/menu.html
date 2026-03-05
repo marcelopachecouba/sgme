@@ -1,4 +1,5 @@
 <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
+<a href="{{ url_for('escala.dashboard_ministros') }}" class="btn btn-info">📊 Dashboard de Ministros</a>
 <a href="{{ url_for('ministros.ministros') }}">Ministros</a>
 <a href="{{ url_for('missas.missas') }}">Missas</a>
 <a href="{{ url_for('estatisticas.estatisticas') }}">Estatísticas</a>
@@ -12,5 +13,4 @@
 <a href="/gerar_mensal_inteligente" class="btn btn-primary">⚡ Gerar Escala Inteligente</a>
 <a href="/gerar_mensal_super_inteligente" class="btn btn-warning">⚡ Gerar Escala Inteligente do Mês</a>
 
-<hr class="text-white">
-<a href="{{ url_for('auth.logout') }}">Sair</a>
+<hr class="text-white"><a href="{{ url_for('auth.logout') }}">Sair</a>
