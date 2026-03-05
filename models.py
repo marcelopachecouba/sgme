@@ -23,7 +23,7 @@ class Ministro(UserMixin, db.Model):
 
     nome = db.Column(db.String(120))
     telefone = db.Column(db.String(20))
-    email = db.Column(db.String(120), unique=True)
+    email = db.Column(db.String(120), nullable=True)
 
     data_nascimento = db.Column(db.Date)
     tempo_ministerio = db.Column(db.Integer)

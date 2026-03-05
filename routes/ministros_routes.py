@@ -26,6 +26,10 @@ def novo_ministro():
         nome = request.form.get("nome")
         telefone = request.form.get("telefone")
         email = request.form.get("email")
+        
+        if email == "":
+           email = None
+
         data_nascimento = request.form.get("data_nascimento")
         tempo_ministerio = request.form.get("tempo_ministerio")
         cpf = request.form.get("cpf")
