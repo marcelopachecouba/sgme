@@ -4,9 +4,10 @@
 <h2 class="mb-4">Ministros</h2>
 
 {% if current_user.tipo == "admin" %}
-<a href="{{ url_for('ministross.novo_ministro') }}" class="btn btn-success mb-3">
+<a href="{{ url_for('ministros.novo_ministro') }}" class="btn btn-success mb-3">
     Novo Ministro
 </a>
+
 {% endif %}
 
 
