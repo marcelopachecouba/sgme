@@ -133,3 +133,56 @@ class Aviso(db.Model):
     fixado = db.Column(db.Boolean, default=False)
 
     data = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Mural(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    texto = db.Column(db.Text)
+
+    imagem = db.Column(db.String(300))
+    video = db.Column(db.String(300))
+
+    data = db.Column(db.DateTime, default=datetime.utcnow)
+
+    id_ministro = db.Column(db.Integer, db.ForeignKey("ministro.id"))
+    id_paroquia = db.Column(db.Integer)
+
+    ministro = db.relationship("Ministro")
+
+from datetime import datetime
+
+class MuralPost(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    texto = db.Column(db.Text)
+
+    imagem = db.Column(db.String(300))
+    video = db.Column(db.String(300))
+
+    data = db.Column(db.DateTime, default=datetime.utcnow)
+
+    id_ministro = db.Column(db.Integer, db.ForeignKey("ministro.id"))
+    id_paroquia = db.Column(db.Integer)
+
+    ministro = db.relationship("Ministro")
+
+
+class MuralCurtida(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    id_post = db.Column(db.Integer, db.ForeignKey("mural_post.id"))
+    id_ministro = db.Column(db.Integer)
+
+    data = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class MuralComentario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    comentario = db.Column(db.Text)
+
+    id_post = db.Column(db.Integer, db.ForeignKey("mural_post.id"))
+    id_ministro = db.Column(db.Integer)
+
+    data = db.Column(db.DateTime, default=datetime.utcnow)

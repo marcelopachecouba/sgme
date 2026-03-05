@@ -25,7 +25,7 @@ def iniciar_scheduler():
     scheduler = BackgroundScheduler(daemon=True)
 
     scheduler.add_job(
-        lambda: enviar_lembretes(app),
+        lambda: enviar_lembretes(),
         "interval",
         minutes=10
     )
