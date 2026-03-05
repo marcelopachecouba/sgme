@@ -61,7 +61,7 @@ def novo_ministro():
             print("ERRO AO SALVAR:", e)
             db.session.rollback()
 
-        return redirect(url_for("ministros"))
+        return redirect(url_for("ministros.ministros"))
 
     return render_template("novo_ministro.html")
 
@@ -80,7 +80,7 @@ def excluir_ministro(id):
     db.session.delete(ministro)
     db.session.commit()
 
-    return redirect(url_for("ministros"))
+    return redirect(url_for("ministros.ministros"))
 
 # ======================
 # MISSAS
@@ -112,7 +112,7 @@ def editar_ministro(id):
 
         if existe:
             flash("Já existe outro ministro com esse nome.")
-            return redirect(url_for("editar_ministro", id=id))
+            return redirect(url_for("ministros.editar_ministro", id=id))
 
         ministro.nome = novo_nome
         ministro.telefone = telefone
@@ -123,7 +123,7 @@ def editar_ministro(id):
         ministro.comunidade = comunidade
 
         db.session.commit()
-        return redirect(url_for("ministros"))
+        return redirect(url_for("ministros.ministros"))
 
     return render_template("editar_ministro.html", ministro=ministro)
 
@@ -145,7 +145,7 @@ def admin_resetar_senha(id):
     db.session.commit()
 
     flash("Senha redefinida para 123456")
-    return redirect(url_for("ministros"))
+    return redirect(url_for("ministros.ministros"))
 
 
 @ministros_bp.route("/ativar_usuario/<int:id>")
@@ -158,6 +158,6 @@ def ativar_usuario(id):
     db.session.commit()
 
     flash("Usuário liberado com sucesso!")
-    return redirect(url_for("ministros"))
+    return redirect(url_for("ministros.ministros"))
 
 
