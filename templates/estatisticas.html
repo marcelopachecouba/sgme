@@ -20,27 +20,22 @@
                    class="form-control">
         </div>
 
-        <div class="col-md-4 align-self-end">
+        <div class="col-md-6 align-self-end d-flex gap-2 flex-wrap">
             <button class="btn btn-primary">
                 Filtrar
             </button>
 
-            <button formaction="{{ url_for('estatisticas_pdf') }}"
-               class="btn btn-danger">
-               Gerar PDF
-             </button>
-
-             <button formaction="{{ url_for('whatsapp_periodo') }}"
-               class="btn btn-success">
-               Enviar WhatsApp para Todos
-             </button>
+             #<button formaction="{{ url_for('estatisticas.whatsapp_periodo') }}"
+             #  class="btn btn-success">
+             #  Enviar WhatsApp para Todos
+             #</button>
              
-             <button formaction="{{ url_for('whatsapp_periodo') }}"
+             <button formaction="{{ url_for('estatisticas.whatsapp_pendentes') }}"
                class="btn btn-success">
                WhatsApp Pendentes
              </button>
 
-             <button formaction="{{ url_for('estatisticas_pdf') }}"
+             <button formaction="{{ url_for('estatisticas.estatisticas_pdf') }}"
                class="btn btn-danger">
                Gerar PDF
              </button>
@@ -104,9 +99,6 @@
                             WhatsApp
                         </a> 
                     </td>
-
-                    <td>
-  
 
                </tr>
             {% endfor %}
