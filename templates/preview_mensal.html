@@ -3,7 +3,7 @@
 
 <h3>Pré-visualização Escala {{ mes }}/{{ ano }}</h3>
 
-<form method="POST" action="{{ url_for('salvar_mensal') }}">
+<form method="POST" action="{{ url_for('escala.salvar_mensal') }}">
 
 <input type="hidden" name="mes" value="{{ mes }}">
 <input type="hidden" name="ano" value="{{ ano }}">

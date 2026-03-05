@@ -105,12 +105,12 @@
         <td>{{ f.comunidade if f.comunidade else "Todas" }}</td>
         <td>{{ f.ministro.nome }}</td>
         <td>
-            <a href="{{ url_for('excluir_escala_fixa', id=f.id) }}"
+            <a href="{{ url_for('escala.excluir_escala_fixa', id=f.id) }}"
                class="btn btn-sm btn-danger">
                Excluir
             </a>
 
-            <a href="{{ url_for('editar_escala_fixa', id=f.id) }}"
+            <a href="{{ url_for('escala.editar_escala_fixa', id=f.id) }}"
                class="btn btn-warning btn-sm">
                Editar
             </a>
