@@ -1,14 +1,14 @@
-<a href="{{ url_for('home') }}">Dashboard</a>
-<a href="{{ url_for('ministros') }}">Ministros</a>
-<a href="{{ url_for('missas') }}">Missas</a>
-<a href="{{ url_for('estatisticas') }}">Estatísticas</a>
-<a href="{{ url_for('confiabilidade') }}">📊 Confiabilidade</a>
+<a href="{{ url_for('dashboard.home') }}">Dashboard</a>
+<a href="{{ url_for('ministros.ministros') }}">Ministros</a>
+<a href="{{ url_for('missas.missas') }}">Missas</a>
+<a href="{{ url_for('estatisticas.estatisticas') }}">Estatísticas</a>
+<a href="{{ url_for('estatisticas.confiabilidade') }}">📊 Confiabilidade</a>
 
 <hr class="text-white">
 
-<a href="{{ url_for('escala_fixa') }}">Escala Fixa</a>
-<a href="{{ url_for('visao_escala_fixa') }}">Visão Organizada</a>
-<a href="{{ url_for('gerar_mensal') }}">📅 Gerar Escala Mensal</a>
+<a href="{{ url_for('escala.escala_fixa') }}">Escala Fixa</a>
+<a href="{{ url_for('escala.visao_escala_fixa') }}">Visão Organizada</a>
+<a href="{{ url_for('escala.gerar_mensal') }}">📅 Gerar Escala Mensal</a>
 
 <hr class="text-white">
-<a href="{{ url_for('logout') }}">Sair</a>
+<a href="{{ url_for('auth.logout') }}">Sair</a>
