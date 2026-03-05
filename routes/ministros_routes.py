@@ -69,13 +69,9 @@ def novo_ministro():
 
 @ministros_bp.route("/ministros/excluir/<int:id>")
 @login_required
-@admin_required
 def excluir_ministro(id):
 
     ministro = Ministro.query.get_or_404(id)
-
-    # Remove escalas vinculadas primeiro
-    Escala.query.filter_by(id_ministro=ministro.id).delete()
 
     db.session.delete(ministro)
     db.session.commit()

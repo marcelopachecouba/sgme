@@ -46,11 +46,13 @@
                     Editar
                  </a>
 
-                 <a href="{{ url_for('ministros.excluir_ministro', id=ministro.id) }}"
+                 <a href="{{ url_for('ministros.excluir_ministro', id=m.id) }}"
                     class="btn btn-sm btn-danger"
                     onclick="return confirm('Deseja excluir este ministro?')">
                     Excluir
                  </a>
+
+
                 {% endif %}  
 
             </td>
