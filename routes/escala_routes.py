@@ -504,6 +504,123 @@ def gerar_mensal():
 
     return render_template("form_gerar_mensal.html")
 
+
+@escala_bp.route("/gerar_mensal_inteligente", methods=["GET", "POST"])
+@login_required
+@admin_required
+def gerar_mensal_inteligente():
+
+    from services.escala_inteligente_service import selecionar_ministros
+
+    if request.method == "POST":
+
+        mes = int(request.form["mes"])
+        ano = int(request.form["ano"])
+
+        cal = calendar.monthcalendar(ano, mes)
+
+        for semana in cal:
+            for dia_semana, dia in enumerate(semana):
+
+                if dia == 0:
+                    continue
+
+                data_missa = date(ano, mes, dia)
+
+                missas = Missa.query.filter_by(
+                    data=data_missa,
+                    id_paroquia=current_user.id_paroquia
+                ).all()
+
+                for missa in missas:
+
+                    # limpa escala antiga
+                    Escala.query.filter_by(id_missa=missa.id).delete()
+
+                    ministros = selecionar_ministros(
+                        missa.qtd_ministros,
+                        current_user.id_paroquia
+                    )
+
+                    for ministro in ministros:
+
+                        nova = Escala(
+                            id_missa=missa.id,
+                            id_ministro=ministro.id,
+                            id_paroquia=current_user.id_paroquia,
+                            token=str(uuid.uuid4())
+                        )
+
+                        db.session.add(nova)
+
+                        notificar_escala_criada(ministro, missa)
+
+        db.session.commit()
+
+        flash("Escala mensal inteligente gerada com sucesso!")
+
+        return redirect(url_for("missas.missas"))
+
+    return render_template("form_gerar_mensal_inteligente.html")
+
+@escala_bp.route("/gerar_mensal_super_inteligente", methods=["GET","POST"])
+@login_required
+@admin_required
+def gerar_mensal_super_inteligente():
+
+    from services.escala_inteligente_service import selecionar_ministros
+
+    if request.method == "POST":
+
+        mes = int(request.form["mes"])
+        ano = int(request.form["ano"])
+
+        inicio = date(ano, mes, 1)
+        ultimo = calendar.monthrange(ano, mes)[1]
+        fim = date(ano, mes, ultimo)
+
+        dia = inicio
+
+        while dia <= fim:
+
+            missas = Missa.query.filter_by(
+                data=dia,
+                id_paroquia=current_user.id_paroquia
+            ).all()
+
+            for missa in missas:
+
+                # remove escala existente
+                Escala.query.filter_by(id_missa=missa.id).delete()
+
+                ministros = selecionar_ministros(
+                    missa.qtd_ministros,
+                    current_user.id_paroquia
+                )
+
+                for ministro in ministros:
+
+                    nova = Escala(
+                        id_missa=missa.id,
+                        id_ministro=ministro.id,
+                        id_paroquia=current_user.id_paroquia,
+                        token=str(uuid.uuid4())
+                    )
+
+                    db.session.add(nova)
+
+                    notificar_escala_criada(ministro, missa)
+
+            dia += timedelta(days=1)
+
+        db.session.commit()
+
+        flash("⚡ Escala inteligente do mês gerada com sucesso!")
+
+        return redirect(url_for("missas.missas"))
+
+    return render_template("form_gerar_mensal_super.html")
+
 from utils.auth import admin_required
 @escala_bp.route("/escala/remover/<int:escala_id>")
 @login_required
