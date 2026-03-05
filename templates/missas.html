@@ -48,9 +48,9 @@
             <td>{{ m.comunidade }}</td>
             <td>{{ m.qtd_ministros }}</td>
 
-            <td>
+            <td class="d-flex gap-1 flex-wrap">
 
-                <a href="{{ url_for('missas.gerar_escala', missa_id=m.id) }}"
+                <a href="{{ url_for('escala.gerar_escala', missa_id=m.id) }}"
                    class="btn btn-sm btn-warning">
                    Selecionar
                 </a>
@@ -75,7 +75,7 @@
                    onclick="return confirm('Tem certeza que deseja excluir esta missa?')">
                    Excluir
                 </a>
-
+            </td>
 
         </tr>
         {% endfor %}
