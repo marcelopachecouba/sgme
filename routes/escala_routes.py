@@ -217,7 +217,7 @@ def escala_fixa():
 
         if not ministros_ids:
             flash("Selecione pelo menos um ministro.")
-            return redirect(url_for("escala_fixa"))
+            return redirect(url_for("escala.escala_fixa"))
 
         for ministro_id in ministros_ids:
 
@@ -235,7 +235,7 @@ def escala_fixa():
         db.session.commit()
 
         flash("Escala fixa cadastrada com sucesso!")
-        return redirect(url_for("escala_fixa"))
+        return redirect(url_for("escala.escala_fixa"))
 
     fixos = EscalaFixa.query.filter_by(
         id_paroquia=current_user.id_paroquia
@@ -268,7 +268,7 @@ def editar_escala_fixa(id):
         db.session.commit()
 
         flash("Escala fixa atualizada com sucesso!")
-        return redirect(url_for("escala_fixa"))
+        return redirect(url_for("escala.escala_fixa"))
 
     return render_template(
         "editar_escala_fixa.html",
@@ -287,7 +287,7 @@ def excluir_escala_fixa(id):
     db.session.commit()
 
     flash("Escala fixa removida.")
-    return redirect(url_for("escala_fixa"))
+    return redirect(url_for("escala.escala_fixa"))
 
 
 @escala_bp.route("/escala_mensal", methods=["GET", "POST"])
@@ -500,7 +500,7 @@ def gerar_mensal():
         db.session.commit()
 
         flash("Escala mensal gerada automaticamente com base na escala fixa!")
-        return redirect(url_for("missas"))
+        return redirect(url_for("missas.missas"))
 
     return render_template("form_gerar_mensal.html")
 
@@ -619,7 +619,7 @@ def salvar_mensal():
     db.session.commit()
 
     flash("Escala mensal criada com sucesso!")
-    return redirect(url_for("missas"))
+    return redirect(url_for("missas.missas"))
 
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
@@ -659,7 +659,7 @@ def escala_publica(token):
 
             flash("Você foi removido da escala. Um substituto será chamado.")
 
-            return redirect(url_for("escala_publica", token=token))
+            return redirect(url_for("escala.escala_publica", token=token))
 
     return render_template(
         "escala_publica.html",
