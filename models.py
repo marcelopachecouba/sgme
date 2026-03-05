@@ -112,3 +112,24 @@ class Indisponibilidade(db.Model):
 
     ministro = db.relationship("Ministro", lazy="joined")
 
+from datetime import datetime
+
+class Aviso(db.Model):
+
+    __tablename__ = "avisos"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    titulo = db.Column(db.String(200))
+    mensagem = db.Column(db.Text)
+
+    tipo = db.Column(db.String(50)) 
+    # aviso | formacao | foto | video | pdf
+
+    arquivo = db.Column(db.String(300))
+
+    video_url = db.Column(db.String(300))
+
+    fixado = db.Column(db.Boolean, default=False)
+
+    data = db.Column(db.DateTime, default=datetime.utcnow)

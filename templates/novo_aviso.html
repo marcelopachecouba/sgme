@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3>Novo Aviso / Formação</h3>
+
+<form method="POST" enctype="multipart/form-data">
+
+<div class="mb-3">
+<label>Título</label>
+<input type="text" name="titulo" class="form-control">
+</div>
+
+<div class="mb-3">
+<label>Mensagem</label>
+<textarea name="mensagem" class="form-control"></textarea>
+</div>
+
+<div class="mb-3">
+<label>Tipo</label>
+
+<select name="tipo" class="form-control">
+
+<option value="aviso">Aviso</option>
+
+<option value="formacao">Formação</option>
+
+<option value="foto">Foto</option>
+
+<option value="video">Vídeo YouTube</option>
+
+<option value="pdf">Arquivo PDF</option>
+
+</select>
+
+</div>
+
+<div class="mb-3">
+<label>Link do vídeo YouTube</label>
+<input type="text" name="video_url" class="form-control">
+</div>
+
+<div class="mb-3">
+<label>Arquivo</label>
+<input type="file" name="arquivo" class="form-control">
+</div>
+
+<div class="form-check mb-3">
+
+<input type="checkbox" name="fixado" class="form-check-input">
+
+<label class="form-check-label">
+Fixar no topo
+</label>
+
+</div>
+
+<button class="btn btn-success">
+Salvar
+</button>
+
+</form>
+
+{% endblock %}

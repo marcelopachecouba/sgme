@@ -12,6 +12,7 @@ from services.lembrete_service import enviar_lembretes
 from services.firebase_service import iniciar_firebase
 #scheduler.add_job(lambda: enviar_lembretes(app), "interval", minutes=10)
 import os
+from routes.avisos_routes import avisos_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -65,6 +66,7 @@ app.register_blueprint(escala_bp)
 app.register_blueprint(estatisticas_bp)
 app.register_blueprint(publico_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(avisos_bp)
 
 if __name__ == "__main__":
     app.run(debug=True)
