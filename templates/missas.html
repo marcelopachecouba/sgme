@@ -4,16 +4,16 @@
 
 <h2 class="mb-4">Missas</h2>
 
-<a href="{{ url_for('nova_missa') }}" class="btn btn-success mb-3">
+<a href="{{ url_for('missas.nova_missa') }}" class="btn btn-success mb-3">
     Nova Missa
 </a>
 
 
 
 <div class="btn-group mb-3">
-    <a href="{{ url_for('missas') }}" class="btn btn-primary">Lista</a>
-    <a href="{{ url_for('visao_missas') }}" class="btn btn-secondary">Visão Organizada</a>
-    <a href="{{ url_for('calendario_missas') }}" class="btn btn-success">Calendário</a>
+    <a href="{{ url_for('missas.missas') }}" class="btn btn-primary">Lista</a>
+    <a href="{{ url_for('missas.visao_missas') }}" class="btn btn-secondary">Visão Organizada</a>
+    <a href="{{ url_for('missas.calendario_missas') }}" class="btn btn-success">Calendário</a>
 </div>
 
 <table class="table table-striped table-bordered align-middle">
@@ -50,27 +50,27 @@
 
             <td>
 
-                <a href="{{ url_for('gerar_escala', missa_id=m.id) }}"
+                <a href="{{ url_for('missas.gerar_escala', missa_id=m.id) }}"
                    class="btn btn-sm btn-warning">
                    Selecionar
                 </a>
 
-                <a href="{{ url_for('visualizar_escala', missa_id=m.id) }}"
+                <a href="{{ url_for('escala.visualizar_escala', missa_id=m.id) }}"
                    class="btn btn-sm btn-info">
                    Ver Escala
                 </a>
 
-                <a href="{{ url_for('gerar_escala_auto', missa_id=m.id) }}"
+                <a href="{{ url_for('escala.gerar_escala_auto', missa_id=m.id) }}"
                    class="btn btn-sm btn-danger">
                    Auto
                 </a>
 
-                <a href="{{ url_for('editar_missa', id=m.id) }}"
+                <a href="{{ url_for('missas.editar_missa', id=m.id) }}"
                    class="btn btn-sm btn-secondary">
                    Editar
                 </a>
 
-                <a href="{{ url_for('excluir_missa', id=m.id) }}"
+                <a href="{{ url_for('missas.excluir_missa', id=m.id) }}"
                    class="btn btn-sm btn-dark"
                    onclick="return confirm('Tem certeza que deseja excluir esta missa?')">
                    Excluir
