@@ -36,10 +36,14 @@ def novo_aviso():
 
             nome = secure_filename(arquivo.filename)
 
-            caminho = os.path.join("static/uploads", nome)
+            UPLOAD_FOLDER = "static/uploads"
+
+            # cria pasta se não existir
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+            caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
 
             arquivo.save(caminho)
-
             arquivo_nome = nome
 
         aviso = Aviso(

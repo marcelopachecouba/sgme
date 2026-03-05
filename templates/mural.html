@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📢 Mural dos Ministros</h2>
+
+<a href="/mural/novo" class="btn btn-success">
+➕ Novo Aviso
+</a>
+
+<hr>
+
+{% for post in posts %}
+
+<div class="card mb-4">
+
+<div class="card-body">
+
+<h5>{{ post.ministro.nome }}</h5>
+
+<p>{{ post.texto }}</p>
+
+{% if post.imagem %}
+<img src="{{ post.imagem }}" class="img-fluid">
+{% endif %}
+
+{% if post.video %}
+<video controls width="100%">
+<source src="{{ post.video }}">
+</video>
+{% endif %}
+
+<br><br>
+
+<a href="/mural/curtir/{{ post.id }}" class="btn btn-outline-primary">
+👍 Curtir
+</a>
+
+<form method="POST" action="/mural/comentar/{{ post.id }}">
+
+<input type="text" name="comentario" class="form-control"
+placeholder="Escreva um comentário">
+
+</form>
+
+</div>
+</div>
+
+{% endfor %}
+
+{% endblock %}

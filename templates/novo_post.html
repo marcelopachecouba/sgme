@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Novo Aviso</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+<textarea name="texto" class="form-control"
+placeholder="Digite o aviso"></textarea>
+
+<br>
+
+<label>Foto</label>
+<input type="file" name="imagem" class="form-control">
+
+<br>
+
+<label>Vídeo</label>
+<input type="file" name="video" class="form-control">
+
+<br>
+
+<button class="btn btn-primary">
+Publicar
+</button>
+
+</form>
+
+{% endblock %}
