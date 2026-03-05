@@ -785,9 +785,44 @@ def escala_publica(token):
         ministro=escala.ministro
     )
 
-#@escala_bp.route("/init-db")
-#def init_db():
-#    db.create_all()
-#    return "Banco criado com sucesso"
+@escala_bp.route("/dashboard_ministros")
+@login_required
+@admin_required
+def dashboard_ministros():
+
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    dados = []
+
+    for m in ministros:
+
+        total = Escala.query.filter_by(
+            id_ministro=m.id
+        ).count()
+
+        confirmadas = Escala.query.filter_by(
+            id_ministro=m.id,
+            confirmado=True
+        ).count()
+
+        recusas = Escala.query.filter(
+            Escala.id_ministro == m.id,
+            Escala.confirmado == False
+        ).count()
+
+        dados.append({
+            "nome": m.nome,
+            "total": total,
+            "confirmadas": confirmadas,
+            "recusas": recusas
+        })
+
+    return render_template(
+        "dashboard_ministros.html",
+        dados=dados
+    )
+
 
 

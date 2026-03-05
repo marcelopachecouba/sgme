@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📊 Dashboard de Ministros</h2>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Ministro</th>
+<th>Total Escalas</th>
+<th>Confirmadas</th>
+<th>Recusas</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for d in dados %}
+
+<tr>
+<td>{{ d.nome }}</td>
+<td>{{ d.total }}</td>
+<td>{{ d.confirmadas }}</td>
+<td>{{ d.recusas }}</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}
