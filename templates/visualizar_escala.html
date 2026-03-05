@@ -13,37 +13,39 @@
 
 <table class="table table-bordered table-striped">
 
-    <thead class="table-dark">
-        <tr>
-            <th>Ministro</th>
-            <th>Status</th>
-            <th>Ação</th>
-        </tr>
-    </thead>
+<thead class="table-dark">
+<tr>
+<th>Ministro</th>
+<th>Status</th>
+<th>Ação</th>
+</tr>
+</thead>
 
-    <tbody>
-    {% for e in escalas %}
-        <tr>
-            <td>{{ e.ministro.nome }}</td>
+<tbody>
+{% for e in escalas %}
+<tr>
 
-            <td>
-                {% if e.confirmado %}
-                    <span class="badge bg-success">Confirmado</span>
-                {% else %}
-                    <span class="badge bg-warning text-dark">Pendente</span>
-                {% endif %}
-            </td>
+<td>{{ e.ministro.nome }}</td>
 
-            <td>
-                <a href="{{ url_for('remover_ministro_escala', escala_id=e.id) }}"
-                   class="btn btn-danger btn-sm"
-                   onclick="return confirm('Remover ministro da escala?')">
-                   Remover
-                </a>
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
+<td>
+{% if e.confirmado %}
+<span class="badge bg-success">Confirmado</span>
+{% else %}
+<span class="badge bg-warning text-dark">Pendente</span>
+{% endif %}
+</td>
+
+<td>
+<a href="{{ url_for('escala.remover_ministro_escala', escala_id=e.id) }}"
+class="btn btn-danger btn-sm"
+onclick="return confirm('Remover ministro da escala?')">
+Remover
+</a>
+</td>
+
+</tr>
+{% endfor %}
+</tbody>
 
 </table>
 
@@ -52,32 +54,34 @@
 <h5>Adicionar Ministro</h5>
 
 <form method="POST"
-      action="{{ url_for('adicionar_ministro_escala', missa_id=missa.id) }}">
+action="{{ url_for('escala.adicionar_ministro_escala', missa_id=missa.id) }}">
 
-    <div class="row">
+<div class="row">
 
-        <div class="col-md-6">
-            <select name="ministro_id" class="form-control" required>
-                {% for ministro in ministros %}
-                    <option value="{{ ministro.id }}">
-                        {{ ministro.nome }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+<div class="col-md-6">
+<select name="ministro_id" class="form-control" required>
 
-        <div class="col-md-3">
-            <button class="btn btn-primary">
-                Adicionar
-            </button>
-        </div>
+{% for ministro in ministros %}
+<option value="{{ ministro.id }}">
+{{ ministro.nome }}
+</option>
+{% endfor %}
 
-    </div>
+</select>
+</div>
+
+<div class="col-md-3">
+<button class="btn btn-primary">
+Adicionar
+</button>
+</div>
+
+</div>
 
 </form>
 
-<a href="{{ url_for('missas') }}" class="btn btn-secondary mt-3">
-    Voltar
+<a href="{{ url_for('missas.missas') }}" class="btn btn-secondary mt-3">
+Voltar
 </a>
 
 {% endblock %}
