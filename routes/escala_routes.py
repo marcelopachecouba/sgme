@@ -1,3 +1,4 @@
+import random
 from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
 from flask_login import login_required, current_user, login_user, logout_user
 from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
@@ -54,19 +55,21 @@ from utils.auth import admin_required
 @admin_required
 def gerar_escala_auto(missa_id):
 
+    from services.escala_inteligente_service import selecionar_ministros
+
     missa = Missa.query.get_or_404(missa_id)
 
-    # Limpa escala anterior da missa
+    # Limpa escala anterior
     Escala.query.filter_by(id_missa=missa.id).delete()
 
     selecionados = []
 
     # ===============================
-    # 1️⃣ BUSCA PRIMEIRO ESCALA FIXA
+    # 1️⃣ ESCALA FIXA
     # ===============================
 
     semana = (missa.data.day - 1) // 7 + 1
-    dia_semana = missa.data.weekday()  # 0=segunda
+    dia_semana = missa.data.weekday()
 
     fixos = EscalaFixa.query.filter(
         EscalaFixa.id_paroquia == current_user.id_paroquia,
@@ -83,7 +86,7 @@ def gerar_escala_auto(missa_id):
         if not ministro:
             continue
 
-        # verifica indisponibilidade
+        # indisponibilidade
         indisponivel = Indisponibilidade.query.filter_by(
             id_ministro=ministro.id,
             data=missa.data,
@@ -93,29 +96,32 @@ def gerar_escala_auto(missa_id):
         if indisponivel:
             continue
 
-        # evita duplicado
         if ministro not in selecionados:
             selecionados.append(ministro)
 
         if len(selecionados) >= missa.qtd_ministros:
             break
 
-    # ===================================
-    # 2️⃣ COMPLETA COM OUTROS SE PRECISAR
-    # ===================================
+
+    # ===============================
+    # 2️⃣ ESCALA INTELIGENTE
+    # ===============================
 
     if len(selecionados) < missa.qtd_ministros:
 
-        ministros = Ministro.query.filter_by(
-            id_paroquia=current_user.id_paroquia
-        ).all()
+        restantes = missa.qtd_ministros - len(selecionados)
 
-        for ministro in ministros:
+        candidatos = selecionar_ministros(
+            restantes,
+            current_user.id_paroquia
+        )
+
+        for ministro in candidatos:
 
             if ministro in selecionados:
                 continue
 
-            # verifica conflito de horário
+            # conflito de horário
             conflito = db.session.query(Escala)\
                 .join(Missa)\
                 .filter(
@@ -128,7 +134,7 @@ def gerar_escala_auto(missa_id):
             if conflito:
                 continue
 
-            # verifica indisponibilidade
+            # indisponibilidade
             indisponivel = Indisponibilidade.query.filter_by(
                 id_ministro=ministro.id,
                 data=missa.data,
@@ -143,26 +149,30 @@ def gerar_escala_auto(missa_id):
             if len(selecionados) >= missa.qtd_ministros:
                 break
 
+
     # ===============================
-    # 3️⃣ SALVA NO BANCO
+    # 3️⃣ SALVAR ESCALA
     # ===============================
 
     for ministro in selecionados:
+
         nova = Escala(
             id_missa=missa.id,
             id_ministro=ministro.id,
             id_paroquia=current_user.id_paroquia,
             token=str(uuid.uuid4())
         )
+
         db.session.add(nova)
-        notificar_escala_criada(ministro, missa)    
+
+        # envia notificação
+        notificar_escala_criada(ministro, missa)
+
     db.session.commit()
 
     flash("Escala automática gerada com sucesso!")
+
     return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
-# ======================
-# VISUALIZAR ESCALA
-# ======================
 
 
 @escala_bp.route("/escala/visualizar/<int:missa_id>")
