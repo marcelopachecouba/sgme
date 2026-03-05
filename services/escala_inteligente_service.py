@@ -1,6 +1,6 @@
 from datetime import date
 from models import Ministro, Escala, Missa
-
+import random
 
 def calcular_score(ministro):
 
@@ -44,6 +44,9 @@ def selecionar_ministros(qtd, id_paroquia):
     ministros = Ministro.query.filter_by(
         id_paroquia=id_paroquia
     ).all()
+
+    
+    random.shuffle(ministros)
 
     ranking = []
 
