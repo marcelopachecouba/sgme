@@ -85,7 +85,7 @@ def nova_missa():
 
         db.session.add(missa)
         db.session.commit()
-        return redirect(url_for("missas"))
+        return redirect(url_for("missas.missas"))
 
     return render_template("nova_missa.html")
 
@@ -109,7 +109,7 @@ def editar_missa(id):
         db.session.commit()
 
         flash("Missa atualizada com sucesso!")
-        return redirect(url_for("missas"))
+        return redirect(url_for("missas.missas"))
 
     return render_template("editar_missa.html", missa=missa)
 
@@ -128,7 +128,7 @@ def excluir_missa(id):
     db.session.commit()
 
     flash("Missa excluída com sucesso!")
-    return redirect(url_for("missas"))
+    return redirect(url_for("missas.missas"))
 
 
 
