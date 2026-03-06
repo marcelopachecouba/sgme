@@ -186,3 +186,25 @@ class MuralComentario(db.Model):
     id_ministro = db.Column(db.Integer)
 
     data = db.Column(db.DateTime, default=datetime.utcnow)
+
+class IndisponibilidadeFixa(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    id_ministro = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False
+    )
+
+    semana = db.Column(db.Integer)      # 1,2,3,4 ou None
+    dia_semana = db.Column(db.Integer)  # 0=segunda ... 6=domingo
+    horario = db.Column(db.String(10))
+
+    ministro = db.relationship("Ministro")

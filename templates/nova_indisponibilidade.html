@@ -1,0 +1,45 @@
+<h2>Nova Indisponibilidade</h2>
+
+<form method="POST">
+
+<label>Ministro</label>
+<select name="ministro">
+{% for m in ministros %}
+<option value="{{m.id}}">{{m.nome}}</option>
+{% endfor %}
+</select>
+
+<br><br>
+
+<label>Semana</label>
+<select name="semana">
+<option value="">Todas</option>
+<option value="1">1ª semana</option>
+<option value="2">2ª semana</option>
+<option value="3">3ª semana</option>
+<option value="4">4ª semana</option>
+</select>
+
+<br><br>
+
+<label>Dia da semana</label>
+<select name="dia_semana">
+<option value="0">Segunda</option>
+<option value="1">Terça</option>
+<option value="2">Quarta</option>
+<option value="3">Quinta</option>
+<option value="4">Sexta</option>
+<option value="5">Sábado</option>
+<option value="6">Domingo</option>
+</select>
+
+<br><br>
+
+<label>Horário</label>
+<input type="text" name="horario" placeholder="19:30">
+
+<br><br>
+
+<button type="submit">Salvar</button>
+
+</form>
