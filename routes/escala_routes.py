@@ -481,6 +481,37 @@ def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriore
         Escala.id_missa.in_(missas_mes_subquery)
     ).delete(synchronize_session=False)
 
+    inicio = date(ano, mes, 1)
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    fim = date(ano, mes, ultimo_dia)
+    dia_atual = inicio
+
+    while dia_atual <= fim:
+        missas = Missa.query.filter_by(
+            data=dia_atual,
+            id_paroquia=current_user.id_paroquia
+        ).all()
+
+        for missa in missas:
+            ministros = selecionar_ministros(
+                missa.qtd_ministros,
+                current_user.id_paroquia,
+                missa,
+                considerar_periodos_anteriores=considerar_periodos_anteriores
+            )
+
+            for ministro in ministros:
+                nova = Escala(
+                    id_missa=missa.id,
+                    id_ministro=ministro.id,
+                    id_paroquia=current_user.id_paroquia,
+                    token=str(uuid.uuid4())
+                )
+                db.session.add(nova)
+                notificar_escala_criada(ministro, missa)
+
+        dia_atual += timedelta(days=1)
+
     db.session.commit()
 
 
@@ -535,39 +566,6 @@ def _enviar_escala_mes_ministros(id_paroquia, mes, ano):
         "sem_token": sem_token,
         "sem_link_publico": sem_link_publico,
     }
-
-    inicio = date(ano, mes, 1)
-    ultimo_dia = calendar.monthrange(ano, mes)[1]
-    fim = date(ano, mes, ultimo_dia)
-    dia_atual = inicio
-
-    while dia_atual <= fim:
-        missas = Missa.query.filter_by(
-            data=dia_atual,
-            id_paroquia=current_user.id_paroquia
-        ).all()
-
-        for missa in missas:
-            ministros = selecionar_ministros(
-                missa.qtd_ministros,
-                current_user.id_paroquia,
-                missa,
-                considerar_periodos_anteriores=considerar_periodos_anteriores
-            )
-
-            for ministro in ministros:
-                nova = Escala(
-                    id_missa=missa.id,
-                    id_ministro=ministro.id,
-                    id_paroquia=current_user.id_paroquia,
-                    token=str(uuid.uuid4())
-                )
-                db.session.add(nova)
-                notificar_escala_criada(ministro, missa)
-
-        dia_atual += timedelta(days=1)
-
-    db.session.commit()
 
 
 @escala_bp.route("/gerar_escala_inteligente", methods=["GET", "POST"])
