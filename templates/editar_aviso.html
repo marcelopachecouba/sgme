@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3>Editar Aviso / Formação</h3>
+
+<form method="POST" enctype="multipart/form-data">
+
+<div class="mb-3">
+<label>Título</label>
+<input type="text" name="titulo" class="form-control" value="{{ aviso.titulo }}" required>
+</div>
+
+<div class="mb-3">
+<label>Mensagem</label>
+<textarea name="mensagem" class="form-control" rows="4" required>{{ aviso.mensagem }}</textarea>
+</div>
+
+<div class="mb-3">
+<label>Tipo</label>
+<select name="tipo" class="form-control" required>
+<option value="aviso" {% if aviso.tipo == 'aviso' %}selected{% endif %}>Aviso</option>
+<option value="formacao" {% if aviso.tipo == 'formacao' %}selected{% endif %}>Formação</option>
+<option value="foto" {% if aviso.tipo == 'foto' %}selected{% endif %}>Foto</option>
+<option value="video" {% if aviso.tipo == 'video' %}selected{% endif %}>Vídeo YouTube</option>
+<option value="pdf" {% if aviso.tipo == 'pdf' %}selected{% endif %}>Arquivo PDF</option>
+</select>
+</div>
+
+<div class="mb-3">
+<label>Link do vídeo YouTube</label>
+<input type="text" name="video_url" class="form-control" value="{{ aviso.video_url or '' }}">
+<div class="form-check mt-2">
+<input type="checkbox" name="remover_video" class="form-check-input" id="remover_video">
+<label class="form-check-label" for="remover_video">Remover vídeo atual</label>
+</div>
+</div>
+
+<div class="mb-3">
+<label>Substituir arquivo</label>
+<input type="file" name="arquivo" class="form-control">
+<div class="form-check mt-2">
+<input type="checkbox" name="remover_arquivo" class="form-check-input" id="remover_arquivo">
+<label class="form-check-label" for="remover_arquivo">Remover arquivo atual</label>
+</div>
+</div>
+
+<div class="form-check mb-3">
+<input type="checkbox" name="fixado" class="form-check-input" id="fixado" {% if aviso.fixado %}checked{% endif %}>
+<label class="form-check-label" for="fixado">Fixar no topo</label>
+</div>
+
+<button class="btn btn-success">Salvar alterações</button>
+<a href="{{ url_for('avisos.avisos') }}" class="btn btn-secondary">Cancelar</a>
+
+</form>
+
+{% endblock %}
