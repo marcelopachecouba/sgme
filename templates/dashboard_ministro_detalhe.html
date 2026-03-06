@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-1">Missas de {{ ministro.nome }}</h2>
+        <small class="text-muted">
+            Periodo:
+            {% if inicio %}{{ inicio }}{% else %}inicio aberto{% endif %}
+            ate
+            {% if fim %}{{ fim }}{% else %}fim aberto{% endif %}
+        </small>
+    </div>
+    <a href="{{ url_for('escala.dashboard_ministros', inicio=inicio, fim=fim) }}" class="btn btn-outline-secondary">
+        Voltar ao dashboard
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Data</th>
+                        <th>Horario</th>
+                        <th>Comunidade</th>
+                        <th class="text-center">Confirmado</th>
+                        <th class="text-center">Presente</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in missas %}
+                    <tr>
+                        <td>{{ m.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ m.horario or '-' }}</td>
+                        <td>{{ m.comunidade or '-' }}</td>
+                        <td class="text-center">{{ "Sim" if m.confirmado else "Nao" }}</td>
+                        <td class="text-center">{{ "Sim" if m.presente else "Nao" }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            Nenhuma missa encontrada para este periodo.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

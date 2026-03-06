@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
 from flask_login import login_required, current_user
 from models import db, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
@@ -9,7 +10,10 @@ from services.notificacao_service import (
     notificar_escala_criada,
     notificar_escala_removida
 )
-from services.participacao_service import obter_estatisticas_participacao
+from services.participacao_service import (
+    obter_estatisticas_participacao,
+    obter_missas_ministro_periodo,
+)
 
 from services.substituicao_service import substituir_ministro
 from services.paroquia_scope_service import (
@@ -872,12 +876,51 @@ def escala_publica(token):
 @login_required
 @admin_required
 def dashboard_ministros():
-    resultado = obter_estatisticas_participacao(current_user.id_paroquia)
+    inicio_str = (request.args.get("inicio") or "").strip()
+    fim_str = (request.args.get("fim") or "").strip()
+
+    data_inicio = datetime.strptime(inicio_str, "%Y-%m-%d").date() if inicio_str else None
+    data_fim = datetime.strptime(fim_str, "%Y-%m-%d").date() if fim_str else None
+
+    resultado = obter_estatisticas_participacao(
+        current_user.id_paroquia,
+        data_inicio=data_inicio,
+        data_fim=data_fim
+    )
 
     return render_template(
         "dashboard_ministros.html",
         dados=resultado["dados"],
-        resumo=resultado["resumo"]
+        resumo=resultado["resumo"],
+        inicio=inicio_str,
+        fim=fim_str,
+    )
+
+
+@escala_bp.route("/dashboard_ministros/ministro/<int:ministro_id>")
+@login_required
+@admin_required
+def dashboard_ministro_detalhe(ministro_id):
+    inicio_str = (request.args.get("inicio") or "").strip()
+    fim_str = (request.args.get("fim") or "").strip()
+
+    data_inicio = datetime.strptime(inicio_str, "%Y-%m-%d").date() if inicio_str else None
+    data_fim = datetime.strptime(fim_str, "%Y-%m-%d").date() if fim_str else None
+
+    ministro = get_ministro_or_404(ministro_id, current_user.id_paroquia)
+    missas = obter_missas_ministro_periodo(
+        ministro_id=ministro.id,
+        id_paroquia=current_user.id_paroquia,
+        data_inicio=data_inicio,
+        data_fim=data_fim
+    )
+
+    return render_template(
+        "dashboard_ministro_detalhe.html",
+        ministro=ministro,
+        missas=missas,
+        inicio=inicio_str,
+        fim=fim_str,
     )
 
 
