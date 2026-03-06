@@ -1,6 +1,17 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Ministro
+from sqlalchemy.exc import SQLAlchemyError
+
+from models import (
+    db,
+    Escala,
+    EscalaFixa,
+    Indisponibilidade,
+    IndisponibilidadeFixa,
+    Ministro,
+    Mural,
+    MuralPost,
+)
 from datetime import datetime
 from utils.auth import admin_required
 from services.paroquia_scope_service import get_ministro_or_404
@@ -78,8 +89,47 @@ def excluir_ministro(id):
 
     ministro = get_ministro_or_404(id, current_user.id_paroquia)
 
-    db.session.delete(ministro)
-    db.session.commit()
+    if ministro.id == current_user.id:
+        flash("Nao e permitido excluir o proprio usuario logado.")
+        return redirect(url_for("ministros.ministros"))
+
+    try:
+        Escala.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        EscalaFixa.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        Indisponibilidade.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        IndisponibilidadeFixa.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        Mural.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        MuralPost.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        db.session.delete(ministro)
+        db.session.commit()
+        flash("Ministro excluido com sucesso.")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("Erro ao excluir ministro. Verifique se existem vinculos pendentes.")
 
     return redirect(url_for("ministros.ministros"))
 
