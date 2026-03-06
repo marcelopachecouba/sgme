@@ -1,6 +1,7 @@
 import os
+import uuid
 
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
@@ -25,11 +26,16 @@ def _salvar_arquivo_upload():
     if not arquivo or arquivo.filename == "":
         return None
 
-    nome = secure_filename(arquivo.filename)
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    caminho = os.path.join(UPLOAD_FOLDER, nome)
+    nome_original = secure_filename(arquivo.filename)
+    if not nome_original:
+        return None
+
+    nome_unico = f"{uuid.uuid4().hex}_{nome_original}"
+    pasta_upload = os.path.join(current_app.root_path, UPLOAD_FOLDER)
+    os.makedirs(pasta_upload, exist_ok=True)
+    caminho = os.path.join(pasta_upload, nome_unico)
     arquivo.save(caminho)
-    return nome
+    return nome_unico
 
 
 def _listar_avisos(categoria):
@@ -74,9 +80,13 @@ def novo_aviso():
             fixado=bool(request.form.get("fixado")),
         )
 
-        arquivo_nome = _salvar_arquivo_upload()
-        if arquivo_nome:
-            aviso.arquivo = arquivo_nome
+        try:
+            arquivo_nome = _salvar_arquivo_upload()
+            if arquivo_nome:
+                aviso.arquivo = arquivo_nome
+        except OSError:
+            flash("Erro ao gravar o arquivo enviado.")
+            return redirect(url_for("avisos.novo_aviso"))
 
         db.session.add(aviso)
         db.session.commit()
@@ -103,9 +113,13 @@ def editar_aviso(id):
         if request.form.get("remover_video"):
             aviso.video_url = None
 
-        arquivo_nome = _salvar_arquivo_upload()
-        if arquivo_nome:
-            aviso.arquivo = arquivo_nome
+        try:
+            arquivo_nome = _salvar_arquivo_upload()
+            if arquivo_nome:
+                aviso.arquivo = arquivo_nome
+        except OSError:
+            flash("Erro ao gravar o arquivo enviado.")
+            return redirect(url_for("avisos.editar_aviso", id=id))
 
         db.session.commit()
         return redirect(url_for("avisos.avisos"))
