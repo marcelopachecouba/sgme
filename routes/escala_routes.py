@@ -539,7 +539,8 @@ def gerar_mensal_inteligente():
 
                     ministros = selecionar_ministros(
                         missa.qtd_ministros,
-                        current_user.id_paroquia
+                        current_user.id_paroquia,
+                        missa
                     )
 
                     for ministro in ministros:
@@ -595,7 +596,8 @@ def gerar_mensal_super_inteligente():
 
                 ministros = selecionar_ministros(
                     missa.qtd_ministros,
-                    current_user.id_paroquia
+                    current_user.id_paroquia,
+                    missa
                 )
 
                 for ministro in ministros:

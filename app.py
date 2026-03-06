@@ -18,6 +18,10 @@ from routes.indisponibilidade_routes import indisp_bp
 app = Flask(__name__)
 app.config.from_object(Config)
 
+@app.route("/health")
+def health():
+    return {"status": "ok"}
+
 # Firebase
 iniciar_firebase()
 
