@@ -2,11 +2,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_DOMINIO",
-  projectId: "SEU_PROJETO",
-  messagingSenderId: "SEU_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "SAIzaSyAdzJ3cJ7riBLGw9X89tPntQ6Q4MPbUewY",
+  authDomain: "sgme-a4d52.firebaseapp.com",
+  projectId: "sgme-a4d52",
+  messagingSenderId: "sgme-a4d52",
+  appId: "1:929642581311:web:d93240da819f2cef58d78a"
 };
 
 const app = initializeApp(firebaseConfig);
