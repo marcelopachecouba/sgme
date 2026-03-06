@@ -195,6 +195,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
 
     priorizados = []
     restritos = []
+    score_map = {}
 
     for ministro in ministros:
         ministro_id = ministro.id
@@ -230,6 +231,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         }
 
         score = _calcular_score(metricas)
+        score_map[ministro_id] = score
         item = {
             "ministro": ministro,
             "score": score,
@@ -268,9 +270,54 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         ]
         candidatos_ordenados = nao_repetidos_domingo + repetidos_domingo
 
+    # Prioriza casal como unidade quando ambos estao elegiveis.
+    par_entries = []
+    ids_em_par = set()
+
+    for ministro in candidatos_ordenados:
+        if ministro.id in ids_em_par:
+            continue
+        parceiro_id = casal_map.get(ministro.id)
+        parceiro = candidatos_por_id.get(parceiro_id) if parceiro_id else None
+        if not parceiro or parceiro.id in ids_em_par:
+            continue
+
+        a, b = (ministro, parceiro) if ministro.id < parceiro.id else (parceiro, ministro)
+        if a.id in ids_em_par or b.id in ids_em_par:
+            continue
+
+        par_entries.append({
+            "a": a,
+            "b": b,
+            "qtd_mes": escalas_mes_map.get(a.id, 0) + escalas_mes_map.get(b.id, 0),
+            "qtd_domingo_mes": escalas_domingo_mes_map.get(a.id, 0) + escalas_domingo_mes_map.get(b.id, 0),
+            "score": score_map.get(a.id, 0) + score_map.get(b.id, 0),
+        })
+        ids_em_par.add(a.id)
+        ids_em_par.add(b.id)
+
+    if domingo:
+        par_entries.sort(key=lambda x: (x["qtd_domingo_mes"], x["qtd_mes"], -x["score"]))
+    else:
+        par_entries.sort(key=lambda x: (x["qtd_mes"], -x["score"]))
+
     selecionados = []
     selecionados_ids = set()
 
+    # Primeiro tenta encaixar casais completos.
+    for par in par_entries:
+        if len(selecionados) + 2 > qtd:
+            continue
+        if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
+            continue
+        selecionados.append(par["a"])
+        selecionados.append(par["b"])
+        selecionados_ids.add(par["a"].id)
+        selecionados_ids.add(par["b"].id)
+        if len(selecionados) >= qtd:
+            break
+
+    # Depois completa com candidatos individuais.
     for ministro in candidatos_ordenados:
         if len(selecionados) >= qtd:
             break
