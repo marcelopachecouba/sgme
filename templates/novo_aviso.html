@@ -1,13 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-<h3>Novo Aviso / Formação</h3>
+<h3>Novo Aviso / Formacao</h3>
 
 <form method="POST" enctype="multipart/form-data">
-
 <div class="mb-3">
-<label>Título</label>
+<label>Titulo</label>
 <input type="text" name="titulo" class="form-control" required>
 </div>
 
@@ -20,15 +18,15 @@
 <label>Tipo</label>
 <select name="tipo" class="form-control" required>
 <option value="aviso">Aviso</option>
-<option value="formacao">Formação</option>
+<option value="formacao">Formacao</option>
 <option value="foto">Foto</option>
-<option value="video">Vídeo YouTube</option>
+<option value="video">Video YouTube</option>
 <option value="pdf">Arquivo PDF</option>
 </select>
 </div>
 
 <div class="mb-3">
-<label>Link do vídeo YouTube</label>
+<label>Link do video YouTube</label>
 <input type="text" name="video_url" class="form-control">
 </div>
 
@@ -44,7 +42,5 @@
 
 <button class="btn btn-success">Salvar</button>
 <a href="{{ url_for('avisos.avisos') }}" class="btn btn-secondary">Cancelar</a>
-
 </form>
-
 {% endblock %}
