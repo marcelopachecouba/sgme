@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required, current_user
-from models import db, Missa, Escala
+from models import CasalMinisterio, db, Missa, Escala
 from datetime import datetime, date
 import calendar
 from utils.auth import admin_required
@@ -34,6 +34,15 @@ def calendario_missas():
         db.extract("year", Missa.data) == ano
     ).all()
 
+    casal_map = {}
+    casais = CasalMinisterio.query.filter_by(
+        id_paroquia=current_user.id_paroquia,
+        ativo=True
+    ).all()
+    for c in casais:
+        casal_map[c.id_ministro_1] = c.id_ministro_2
+        casal_map[c.id_ministro_2] = c.id_ministro_1
+
     estrutura = {}
 
     for missa in missas:
@@ -46,10 +55,18 @@ def calendario_missas():
         escalas = Escala.query.filter_by(id_missa=missa.id).all()
         
         ministros = []
+        ministros_ids = set()
+        for e in escalas:
+            if e.ministro:
+                ministros_ids.add(e.ministro.id)
 
         for e in escalas:
             if e.ministro:
-               ministros.append(e.ministro.nome)
+               parceiro_id = casal_map.get(e.ministro.id)
+               ministros.append({
+                   "nome": e.ministro.nome,
+                   "eh_casal": bool(parceiro_id and parceiro_id in ministros_ids)
+               })
 
         estrutura[dia].append({
             "horario": missa.horario,
