@@ -94,7 +94,7 @@ def _obter_pares_casal(id_paroquia):
     return pares
 
 
-def selecionar_ministros(qtd, id_paroquia, missa):
+def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores=True):
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
     if not ministros or qtd <= 0:
         return []
@@ -142,7 +142,7 @@ def selecionar_ministros(qtd, id_paroquia, missa):
 
     indisponiveis = indisponivel_pontual.union(indisponivel_fixo)
 
-    historico_rows = Escala.query.join(Missa).with_entities(
+    historico_query = Escala.query.join(Missa).with_entities(
         Escala.id_ministro,
         Escala.confirmado,
         Missa.data,
@@ -150,7 +150,15 @@ def selecionar_ministros(qtd, id_paroquia, missa):
         Escala.id_paroquia == id_paroquia,
         Escala.id_ministro.in_(ministro_ids),
         Missa.data < missa.data,
-    ).all()
+    )
+
+    if not considerar_periodos_anteriores:
+        historico_query = historico_query.filter(
+            extract("month", Missa.data) == missa.data.month,
+            extract("year", Missa.data) == missa.data.year,
+        )
+
+    historico_rows = historico_query.all()
 
     hist_por_ministro = defaultdict(list)
     for ministro_id, confirmado, data in historico_rows:
@@ -222,7 +230,11 @@ def selecionar_ministros(qtd, id_paroquia, missa):
         }
 
         score = _calcular_score(metricas)
-        item = (ministro, score)
+        item = {
+            "ministro": ministro,
+            "score": score,
+            "escalas_mes": metricas["escalas_mes"],
+        }
 
         if _candidato_restrito(metricas):
             restritos.append(item)
@@ -231,13 +243,15 @@ def selecionar_ministros(qtd, id_paroquia, missa):
 
     random.shuffle(priorizados)
     random.shuffle(restritos)
-    priorizados.sort(key=lambda x: x[1], reverse=True)
-    restritos.sort(key=lambda x: x[1], reverse=True)
+    # Equilibrio mensal vem primeiro: menos escalas no mes tem prioridade.
+    # Em empate no mes, usa score inteligente.
+    priorizados.sort(key=lambda x: (x["escalas_mes"], -x["score"]))
+    restritos.sort(key=lambda x: (x["escalas_mes"], -x["score"]))
 
     domingo = missa.data.weekday() == 6
     casal_map = _obter_pares_casal(id_paroquia)
 
-    candidatos_ordenados = [m for m, _ in priorizados] + [m for m, _ in restritos]
+    candidatos_ordenados = [x["ministro"] for x in priorizados] + [x["ministro"] for x in restritos]
     candidatos_por_id = {m.id: m for m in candidatos_ordenados}
 
     if domingo and candidatos_ordenados:

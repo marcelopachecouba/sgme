@@ -581,7 +581,8 @@ def gerar_mensal_inteligente():
                     ministros = selecionar_ministros(
                         missa.qtd_ministros,
                         current_user.id_paroquia,
-                        missa
+                        missa,
+                        considerar_periodos_anteriores=considerar_periodos_anteriores
                     )
 
                     for ministro in ministros:
@@ -618,6 +619,9 @@ def gerar_mensal_super_inteligente():
 
         mes = int(request.form["mes"])
         ano = int(request.form["ano"])
+        considerar_periodos_anteriores = bool(
+            request.form.get("considerar_periodos_anteriores")
+        )
 
         # ===============================
         # 1️⃣ LIMPAR ESCALAS DO MÊS
@@ -661,7 +665,8 @@ def gerar_mensal_super_inteligente():
                 ministros = selecionar_ministros(
                     missa.qtd_ministros,
                     current_user.id_paroquia,
-                    missa
+                    missa,
+                    considerar_periodos_anteriores=considerar_periodos_anteriores
                 )
 
                 for ministro in ministros:
