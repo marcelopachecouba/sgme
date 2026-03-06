@@ -154,6 +154,21 @@ def selecionar_ministros(qtd, id_paroquia, missa):
     for ministro_id, _ in escalas_mes_rows:
         escalas_mes_map[ministro_id] += 1
 
+    escalas_domingo_mes_rows = Escala.query.join(Missa).with_entities(
+        Escala.id_ministro,
+        Escala.id,
+    ).filter(
+        Escala.id_paroquia == id_paroquia,
+        Escala.id_ministro.in_(ministro_ids),
+        extract("month", Missa.data) == missa.data.month,
+        extract("year", Missa.data) == missa.data.year,
+        extract("dow", Missa.data) == 0,
+    ).all()
+
+    escalas_domingo_mes_map = defaultdict(int)
+    for ministro_id, _ in escalas_domingo_mes_rows:
+        escalas_domingo_mes_map[ministro_id] += 1
+
     priorizados = []
     restritos = []
 
@@ -204,10 +219,24 @@ def selecionar_ministros(qtd, id_paroquia, missa):
     restritos.sort(key=lambda x: x[1], reverse=True)
 
     domingo = missa.data.weekday() == 6
-    casal_map = _obter_pares_casal() if domingo else {}
+    casal_map = _obter_pares_casal()
 
     candidatos_ordenados = [m for m, _ in priorizados] + [m for m, _ in restritos]
     candidatos_por_id = {m.id: m for m in candidatos_ordenados}
+
+    if domingo and candidatos_ordenados:
+        menor_qtd_domingo = min(
+            escalas_domingo_mes_map.get(m.id, 0) for m in candidatos_ordenados
+        )
+        nao_repetidos_domingo = [
+            m for m in candidatos_ordenados
+            if escalas_domingo_mes_map.get(m.id, 0) == menor_qtd_domingo
+        ]
+        repetidos_domingo = [
+            m for m in candidatos_ordenados
+            if escalas_domingo_mes_map.get(m.id, 0) > menor_qtd_domingo
+        ]
+        candidatos_ordenados = nao_repetidos_domingo + repetidos_domingo
 
     selecionados = []
     selecionados_ids = set()
