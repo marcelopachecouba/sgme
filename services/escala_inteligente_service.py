@@ -46,6 +46,38 @@ def _candidato_restrito(metricas):
     )
 
 
+def _obter_pares_casal():
+    """
+    Formato em config:
+    ESCALA_CASAL_PARES="12:34,56:78"
+    """
+    bruto = (_cfg("ESCALA_CASAL_PARES", "") or "").strip()
+    if not bruto:
+        return {}
+
+    pares = {}
+    blocos = [b.strip() for b in bruto.replace(";", ",").split(",") if b.strip()]
+
+    for bloco in blocos:
+        if ":" not in bloco:
+            continue
+
+        a_str, b_str = bloco.split(":", 1)
+        try:
+            a = int(a_str.strip())
+            b = int(b_str.strip())
+        except ValueError:
+            continue
+
+        if a <= 0 or b <= 0 or a == b:
+            continue
+
+        pares[a] = b
+        pares[b] = a
+
+    return pares
+
+
 def selecionar_ministros(qtd, id_paroquia, missa):
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
     if not ministros or qtd <= 0:
@@ -61,18 +93,16 @@ def selecionar_ministros(qtd, id_paroquia, missa):
     inicio_7 = missa.data - timedelta(days=janela_7)
     inicio_14 = missa.data - timedelta(days=janela_14)
 
-    # 1) Conflitos da mesma data/horário em lote
+    # Bloqueia repeticao no mesmo dia, mesmo em horarios diferentes.
     conflito_ids = {
         row[0]
         for row in Escala.query.join(Missa).with_entities(Escala.id_ministro).filter(
             Escala.id_paroquia == id_paroquia,
             Escala.id_ministro.in_(ministro_ids),
             Missa.data == missa.data,
-            Missa.horario == missa.horario,
         ).all()
     }
 
-    # 2) Indisponibilidade pontual em lote
     indisponivel_pontual = {
         row[0]
         for row in Indisponibilidade.query.with_entities(Indisponibilidade.id_ministro).filter(
@@ -83,7 +113,6 @@ def selecionar_ministros(qtd, id_paroquia, missa):
         ).all()
     }
 
-    # 3) Indisponibilidade fixa em lote
     indisponivel_fixo = {
         row[0]
         for row in IndisponibilidadeFixa.query.with_entities(IndisponibilidadeFixa.id_ministro).filter(
@@ -97,7 +126,6 @@ def selecionar_ministros(qtd, id_paroquia, missa):
 
     indisponiveis = indisponivel_pontual.union(indisponivel_fixo)
 
-    # 4) Histórico em lote (somente passado)
     historico_rows = Escala.query.join(Missa).with_entities(
         Escala.id_ministro,
         Escala.confirmado,
@@ -112,7 +140,6 @@ def selecionar_ministros(qtd, id_paroquia, missa):
     for ministro_id, confirmado, data in historico_rows:
         hist_por_ministro[ministro_id].append((data, confirmado))
 
-    # 5) Escalas no mês em lote
     escalas_mes_rows = Escala.query.join(Missa).with_entities(
         Escala.id_ministro,
         Escala.id,
@@ -176,9 +203,32 @@ def selecionar_ministros(qtd, id_paroquia, missa):
     priorizados.sort(key=lambda x: x[1], reverse=True)
     restritos.sort(key=lambda x: x[1], reverse=True)
 
-    selecionados = [m for m, _ in priorizados[:qtd]]
-    if len(selecionados) < qtd:
-        faltantes = qtd - len(selecionados)
-        selecionados.extend([m for m, _ in restritos[:faltantes]])
+    domingo = missa.data.weekday() == 6
+    casal_map = _obter_pares_casal() if domingo else {}
+
+    candidatos_ordenados = [m for m, _ in priorizados] + [m for m, _ in restritos]
+    candidatos_por_id = {m.id: m for m in candidatos_ordenados}
+
+    selecionados = []
+    selecionados_ids = set()
+
+    for ministro in candidatos_ordenados:
+        if len(selecionados) >= qtd:
+            break
+        if ministro.id in selecionados_ids:
+            continue
+
+        parceiro_id = casal_map.get(ministro.id)
+        parceiro = candidatos_por_id.get(parceiro_id) if parceiro_id else None
+
+        if parceiro and parceiro.id not in selecionados_ids and len(selecionados) + 2 <= qtd:
+            selecionados.append(ministro)
+            selecionados.append(parceiro)
+            selecionados_ids.add(ministro.id)
+            selecionados_ids.add(parceiro.id)
+            continue
+
+        selecionados.append(ministro)
+        selecionados_ids.add(ministro.id)
 
     return selecionados

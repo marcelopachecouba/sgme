@@ -101,6 +101,17 @@ def gerar_escala_auto(missa_id):
         if not ministro:
             continue
 
+        conflito_dia = db.session.query(Escala)\
+            .join(Missa)\
+            .filter(
+                Escala.id_ministro == ministro.id,
+                Escala.id_paroquia == current_user.id_paroquia,
+                Missa.data == missa.data,
+            ).first()
+
+        if conflito_dia:
+            continue
+
         # indisponibilidade
         indisponivel = Indisponibilidade.query.filter(
             Indisponibilidade.id_ministro == ministro.id,
@@ -145,7 +156,6 @@ def gerar_escala_auto(missa_id):
                 .filter(
                     Escala.id_ministro == ministro.id,
                     Missa.data == missa.data,
-                    Missa.horario == missa.horario,
                     Escala.id_paroquia == current_user.id_paroquia
                 ).first()
 
@@ -715,6 +725,19 @@ def adicionar_ministro_escala(missa_id):
         id_ministro=ministro_id
     ).first()
 
+    conflito_dia = db.session.query(Escala)\
+        .join(Missa)\
+        .filter(
+            Escala.id_ministro == ministro.id,
+            Escala.id_paroquia == current_user.id_paroquia,
+            Escala.id_missa != missa_id,
+            Missa.data == missa.data,
+        ).first()
+
+    if conflito_dia:
+        flash("Este ministro ja esta escalado em outra missa no mesmo dia.")
+        return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
+
     if not existe:
         nova = Escala(
             id_missa=missa_id,
@@ -856,6 +879,7 @@ def dashboard_ministros():
         dados=resultado["dados"],
         resumo=resultado["resumo"]
     )
+
 
 
 
