@@ -4,6 +4,21 @@
 
 <h2 class="mb-4">Dashboard de Participacao dos Ministros</h2>
 
+<form method="GET" class="row g-2 align-items-end mb-4">
+    <div class="col-md-3">
+        <label class="form-label">Data inicio</label>
+        <input type="date" name="inicio" class="form-control" value="{{ inicio or '' }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Data fim</label>
+        <input type="date" name="fim" class="form-control" value="{{ fim or '' }}">
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">Aplicar periodo</button>
+        <a href="{{ url_for('escala.dashboard_ministros') }}" class="btn btn-outline-secondary">Limpar</a>
+    </div>
+</form>
+
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
@@ -55,7 +70,11 @@
                 <tbody>
                     {% for d in dados %}
                     <tr>
-                        <td>{{ d.nome }}</td>
+                        <td>
+                            <a href="{{ url_for('escala.dashboard_ministro_detalhe', ministro_id=d.ministro_id, inicio=inicio, fim=fim) }}">
+                                {{ d.nome }}
+                            </a>
+                        </td>
                         <td class="text-center">{{ d.total }}</td>
                         <td class="text-center">{{ d.confirmadas }}</td>
                         <td class="text-center">{{ d.pendentes }}</td>

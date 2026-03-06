@@ -1,12 +1,19 @@
-from sqlalchemy import and_, case, func
+from sqlalchemy import case, func
 
-from models import Escala, Ministro, db
+from models import Escala, Ministro, Missa, db
 
 
-def obter_estatisticas_participacao(id_paroquia):
-    query = db.session.query(
-        Ministro.id.label("ministro_id"),
-        Ministro.nome.label("nome"),
+def _aplicar_filtro_periodo(query, data_inicio=None, data_fim=None):
+    if data_inicio:
+        query = query.filter(Missa.data >= data_inicio)
+    if data_fim:
+        query = query.filter(Missa.data <= data_fim)
+    return query
+
+
+def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None):
+    agregados = db.session.query(
+        Escala.id_ministro.label("ministro_id"),
         func.count(Escala.id).label("total_escalas"),
         func.coalesce(
             func.sum(case((Escala.confirmado.is_(True), 1), else_=0)),
@@ -16,19 +23,33 @@ def obter_estatisticas_participacao(id_paroquia):
             func.sum(case((Escala.confirmado.is_(False), 1), else_=0)),
             0
         ).label("pendentes"),
+    ).join(
+        Missa,
+        Missa.id == Escala.id_missa
+    ).filter(
+        Escala.id_paroquia == id_paroquia,
+        Missa.id_paroquia == id_paroquia,
+    )
+
+    agregados = _aplicar_filtro_periodo(
+        agregados,
+        data_inicio=data_inicio,
+        data_fim=data_fim
+    ).group_by(Escala.id_ministro).subquery()
+
+    query = db.session.query(
+        Ministro.id.label("ministro_id"),
+        Ministro.nome.label("nome"),
+        func.coalesce(agregados.c.total_escalas, 0).label("total_escalas"),
+        func.coalesce(agregados.c.confirmadas, 0).label("confirmadas"),
+        func.coalesce(agregados.c.pendentes, 0).label("pendentes"),
     ).outerjoin(
-        Escala,
-        and_(
-            Escala.id_ministro == Ministro.id,
-            Escala.id_paroquia == id_paroquia,
-        )
+        agregados,
+        agregados.c.ministro_id == Ministro.id
     ).filter(
         Ministro.id_paroquia == id_paroquia
-    ).group_by(
-        Ministro.id,
-        Ministro.nome
     ).order_by(
-        func.count(Escala.id).desc(),
+        func.coalesce(agregados.c.total_escalas, 0).desc(),
         Ministro.nome.asc()
     )
 
@@ -56,3 +77,31 @@ def obter_estatisticas_participacao(id_paroquia):
     }
 
     return {"dados": dados, "resumo": resumo}
+
+
+def obter_missas_ministro_periodo(ministro_id, id_paroquia, data_inicio=None, data_fim=None):
+    query = db.session.query(
+        Missa.data,
+        Missa.horario,
+        Missa.comunidade,
+        Escala.confirmado,
+        Escala.presente,
+    ).join(
+        Escala,
+        Escala.id_missa == Missa.id
+    ).filter(
+        Escala.id_ministro == ministro_id,
+        Escala.id_paroquia == id_paroquia,
+        Missa.id_paroquia == id_paroquia,
+    )
+
+    query = _aplicar_filtro_periodo(
+        query,
+        data_inicio=data_inicio,
+        data_fim=data_fim
+    ).order_by(
+        Missa.data.desc(),
+        Missa.horario.asc()
+    )
+
+    return query.all()
