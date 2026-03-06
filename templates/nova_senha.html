@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Definir nova senha</h3>
+
+<form method="POST">
+    <div class="mb-3">
+        <label>Nova senha</label>
+        <input type="password" name="nova_senha" class="form-control" required>
+    </div>
+    <button class="btn btn-primary">Salvar</button>
+</form>
+
+{% endblock %}

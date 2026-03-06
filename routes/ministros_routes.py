@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
+from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file, abort
 from flask_login import login_required, current_user, login_user, logout_user
 from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
 from datetime import datetime, date, timedelta
@@ -73,9 +73,12 @@ def novo_ministro():
 
 @ministros_bp.route("/ministros/excluir/<int:id>")
 @login_required
+@admin_required
 def excluir_ministro(id):
 
     ministro = Ministro.query.get_or_404(id)
+    if ministro.id_paroquia != current_user.id_paroquia:
+        abort(403)
 
     db.session.delete(ministro)
     db.session.commit()
@@ -93,6 +96,8 @@ def excluir_ministro(id):
 def editar_ministro(id):
 
     ministro = Ministro.query.get_or_404(id)
+    if ministro.id_paroquia != current_user.id_paroquia:
+        abort(403)
 
     if request.method == "POST":
 
@@ -139,6 +144,8 @@ def admin_resetar_senha(id):
     #    return "Acesso negado"
 
     user = Ministro.query.get_or_404(id)
+    if user.id_paroquia != current_user.id_paroquia:
+        abort(403)
     user.set_senha("123456")
     user.primeiro_acesso = True
 
@@ -154,10 +161,11 @@ def admin_resetar_senha(id):
 def ativar_usuario(id):
 
     user = Ministro.query.get_or_404(id)
+    if user.id_paroquia != current_user.id_paroquia:
+        abort(403)
     user.pode_logar = True
     db.session.commit()
 
     flash("Usuário liberado com sucesso!")
     return redirect(url_for("ministros.ministros"))
-
 

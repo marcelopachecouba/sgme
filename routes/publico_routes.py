@@ -83,7 +83,7 @@ def qr_ministro(token):
     ministro = Ministro.query.filter_by(token_publico=token).first_or_404()
 
     link = url_for(
-        "calendario_publico",
+        "publico.calendario_publico",
         token=ministro.token_publico,
         _external=True
     )
@@ -147,5 +147,4 @@ def calendario_paroquia(id):
         estrutura=estrutura,
         paroquia=paroquia
     )
-
 

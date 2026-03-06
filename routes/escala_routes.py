@@ -1,5 +1,5 @@
 import random
-from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
+from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file, abort
 from flask_login import login_required, current_user, login_user, logout_user
 from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
 from datetime import datetime, date, timedelta
@@ -14,11 +14,17 @@ from services.substituicao_service import substituir_ministro
 
 escala_bp = Blueprint("escala", __name__)
 
+
+def _assert_paroquia(obj):
+    if getattr(obj, "id_paroquia", None) != current_user.id_paroquia:
+        abort(403)
+
 @escala_bp.route("/escala/<int:missa_id>", methods=["GET", "POST"])
 @login_required
 def gerar_escala(missa_id):
 
     missa = Missa.query.get_or_404(missa_id)
+    _assert_paroquia(missa)
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
     ).all()
@@ -28,7 +34,12 @@ def gerar_escala(missa_id):
         Escala.query.filter_by(id_missa=missa.id).delete()
 
         for ministro_id in selecionados:
-            ministro = Ministro.query.get(ministro_id)
+            ministro = Ministro.query.filter_by(
+                id=ministro_id,
+                id_paroquia=current_user.id_paroquia
+            ).first()
+            if not ministro:
+                continue
             nova = Escala(
                 id_missa=missa.id,
                 id_ministro=int(ministro_id),
@@ -58,6 +69,7 @@ def gerar_escala_auto(missa_id):
     from services.escala_inteligente_service import selecionar_ministros
 
     missa = Missa.query.get_or_404(missa_id)
+    _assert_paroquia(missa)
 
     # Limpa escala anterior
     Escala.query.filter_by(id_missa=missa.id).delete()
@@ -81,16 +93,21 @@ def gerar_escala_auto(missa_id):
 
     for fixa in fixos:
 
-        ministro = Ministro.query.get(fixa.id_ministro)
+        ministro = Ministro.query.filter_by(
+            id=fixa.id_ministro,
+            id_paroquia=current_user.id_paroquia
+        ).first()
 
         if not ministro:
             continue
 
         # indisponibilidade
-        indisponivel = Indisponibilidade.query.filter_by(
-            id_ministro=ministro.id,
-            data=missa.data,
-            id_paroquia=current_user.id_paroquia
+        indisponivel = Indisponibilidade.query.filter(
+            Indisponibilidade.id_ministro == ministro.id,
+            Indisponibilidade.data == missa.data,
+            Indisponibilidade.id_paroquia == current_user.id_paroquia,
+            (Indisponibilidade.horario == None)
+            | (Indisponibilidade.horario == missa.horario)
         ).first()
 
         if indisponivel:
@@ -113,7 +130,8 @@ def gerar_escala_auto(missa_id):
 
         candidatos = selecionar_ministros(
             restantes,
-            current_user.id_paroquia
+            current_user.id_paroquia,
+            missa
         )
 
         for ministro in candidatos:
@@ -135,10 +153,12 @@ def gerar_escala_auto(missa_id):
                 continue
 
             # indisponibilidade
-            indisponivel = Indisponibilidade.query.filter_by(
-                id_ministro=ministro.id,
-                data=missa.data,
-                id_paroquia=current_user.id_paroquia
+            indisponivel = Indisponibilidade.query.filter(
+                Indisponibilidade.id_ministro == ministro.id,
+                Indisponibilidade.data == missa.data,
+                Indisponibilidade.id_paroquia == current_user.id_paroquia,
+                (Indisponibilidade.horario == None)
+                | (Indisponibilidade.horario == missa.horario)
             ).first()
 
             if indisponivel:
@@ -180,6 +200,7 @@ def gerar_escala_auto(missa_id):
 def visualizar_escala(missa_id):
 
     missa = Missa.query.get_or_404(missa_id)
+    _assert_paroquia(missa)
 
     escalas = Escala.query.filter_by(
         id_missa=missa.id,
@@ -220,13 +241,19 @@ def escala_fixa():
             return redirect(url_for("escala.escala_fixa"))
 
         for ministro_id in ministros_ids:
+            ministro = Ministro.query.filter_by(
+                id=ministro_id,
+                id_paroquia=current_user.id_paroquia
+            ).first()
+            if not ministro:
+                continue
 
             nova = EscalaFixa(
                 semana=int(semana) if semana else None,
                 dia_semana=int(dia_semana) if dia_semana else None,
                 horario=horario if horario else None,
                 comunidade=comunidade if comunidade else None,
-                id_ministro=int(ministro_id),
+                id_ministro=ministro.id,
                 id_paroquia=current_user.id_paroquia
             )
 
@@ -250,9 +277,11 @@ def escala_fixa():
 
 @escala_bp.route("/escala_fixa/editar/<int:id>", methods=["GET", "POST"])
 @login_required
+@admin_required
 def editar_escala_fixa(id):
 
     fixa = EscalaFixa.query.get_or_404(id)
+    _assert_paroquia(fixa)
 
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
@@ -283,6 +312,7 @@ from utils.auth import admin_required
 def excluir_escala_fixa(id):
 
     fixa = EscalaFixa.query.get_or_404(id)
+    _assert_paroquia(fixa)
     db.session.delete(fixa)
     db.session.commit()
 
@@ -658,6 +688,7 @@ from utils.auth import admin_required
 def remover_ministro_escala(escala_id):
 
     escala = Escala.query.get_or_404(escala_id)
+    _assert_paroquia(escala)
 
     ministro = escala.ministro
     missa = escala.missa
@@ -676,11 +707,16 @@ def remover_ministro_escala(escala_id):
 
 @escala_bp.route("/escala/adicionar/<int:missa_id>", methods=["POST"])
 @login_required
+@admin_required
 def adicionar_ministro_escala(missa_id):
 
     ministro_id = request.form.get("ministro_id")
-    missa = Missa.query.get(missa_id)
-    ministro = Ministro.query.get(ministro_id)  
+    missa = Missa.query.get_or_404(missa_id)
+    _assert_paroquia(missa)
+    ministro = Ministro.query.filter_by(
+        id=ministro_id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
 
     existe = Escala.query.filter_by(
         id_missa=missa_id,
@@ -796,6 +832,7 @@ def escala_publica(token):
         elif acao == "recusar":
 
             missa = escala.missa
+            paroquia_id = escala.id_paroquia
 
             # remove da escala
             db.session.delete(escala)
@@ -806,7 +843,7 @@ def escala_publica(token):
 
             flash("Você foi removido da escala. Um substituto será chamado.")
 
-            return redirect(url_for("escala.escala_publica", token=token))
+            return redirect(url_for("publico.calendario_paroquia", id=paroquia_id))
 
     return render_template(
         "escala_publica.html",

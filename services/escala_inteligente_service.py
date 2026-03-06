@@ -1,12 +1,45 @@
-from datetime import date
-from models import Ministro, Escala, Missa, Indisponibilidade
+from models import (
+    Ministro,
+    Escala,
+    Missa,
+    Indisponibilidade,
+    IndisponibilidadeFixa,
+)
 from sqlalchemy import extract
 import random
 
 
-def selecionar_ministros(qtd, id_paroquia, missa):
+def _esta_indisponivel(ministro_id, id_paroquia, missa):
 
-    hoje = date.today()
+    indisponibilidade = Indisponibilidade.query.filter(
+        Indisponibilidade.id_ministro == ministro_id,
+        Indisponibilidade.data == missa.data,
+        Indisponibilidade.id_paroquia == id_paroquia,
+        (Indisponibilidade.horario == None)
+        | (Indisponibilidade.horario == missa.horario),
+    ).first()
+
+    if indisponibilidade:
+        return True
+
+    semana = (missa.data.day - 1) // 7 + 1
+    dia_semana = missa.data.weekday()
+
+    indisponibilidade_fixa = IndisponibilidadeFixa.query.filter(
+        IndisponibilidadeFixa.id_ministro == ministro_id,
+        IndisponibilidadeFixa.id_paroquia == id_paroquia,
+        (IndisponibilidadeFixa.semana == semana)
+        | (IndisponibilidadeFixa.semana == None),
+        (IndisponibilidadeFixa.dia_semana == dia_semana)
+        | (IndisponibilidadeFixa.dia_semana == None),
+        (IndisponibilidadeFixa.horario == missa.horario)
+        | (IndisponibilidadeFixa.horario == None),
+    ).first()
+
+    return indisponibilidade_fixa is not None
+
+
+def selecionar_ministros(qtd, id_paroquia, missa):
 
     ministros = Ministro.query.filter_by(
         id_paroquia=id_paroquia
@@ -16,14 +49,7 @@ def selecionar_ministros(qtd, id_paroquia, missa):
 
     for ministro in ministros:
 
-        # indisponibilidade
-        indisponivel = Indisponibilidade.query.filter_by(
-            id_ministro=ministro.id,
-            data=missa.data,
-            id_paroquia=id_paroquia
-        ).first()
-
-        if indisponivel:
+        if _esta_indisponivel(ministro.id, id_paroquia, missa):
             continue
 
         # conflito mesmo horário
@@ -44,7 +70,7 @@ def selecionar_ministros(qtd, id_paroquia, missa):
         ).order_by(Missa.data.desc()).first()
 
         if ultima and ultima.missa:
-            dias_sem_servir = (hoje - ultima.missa.data).days
+            dias_sem_servir = (missa.data - ultima.missa.data).days
         else:
             dias_sem_servir = 60
 
@@ -80,6 +106,7 @@ def selecionar_ministros(qtd, id_paroquia, missa):
         ranking.append((ministro, score))
 
     # ordenar melhor score
+    random.shuffle(ranking)
     ranking.sort(key=lambda x: x[1], reverse=True)
 
     selecionados = []
