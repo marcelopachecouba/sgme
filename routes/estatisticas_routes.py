@@ -1,13 +1,17 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
-from flask_login import login_required, current_user, login_user, logout_user
-from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
-from datetime import datetime, date, timedelta
-import calendar, uuid, urllib.parse, base64, io
+from datetime import datetime
+import io
+import urllib.parse
+from collections import defaultdict
+
+from flask import Blueprint, render_template, request, url_for, send_file
+from flask_login import login_required, current_user
+from models import db, Ministro, Missa, Escala
 from utils.auth import admin_required
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from services.estatisticas_service import dados_confiabilidade
 
 estatisticas_bp = Blueprint("estatisticas", __name__)
 
@@ -110,10 +114,6 @@ def estatisticas_pdf():
     return send_file(buffer, as_attachment=True,
                      download_name="relatorio_escalas.pdf",
                      mimetype="application/pdf")
-import urllib.parse
-from collections import defaultdict
-
-
 @estatisticas_bp.route("/estatisticas/whatsapp", methods=["POST"])
 @login_required
 def whatsapp_periodo():
@@ -135,9 +135,6 @@ def whatsapp_periodo():
         query = query.filter(db.func.date(Missa.data) <= data_fim_date)
 
     escalas = query.order_by(Ministro.nome, Missa.data).all()
-
-    from collections import defaultdict
-    import urllib.parse
 
     ministros_dict = defaultdict(list)
 
@@ -206,44 +203,6 @@ from utils.auth import admin_required
 @login_required
 @admin_required
 def confiabilidade():
-
-    ministros = Ministro.query.filter_by(
-        id_paroquia=current_user.id_paroquia
-    ).all()
-
-    dados = []
-
-    for ministro in ministros:
-
-        total = Escala.query.filter_by(
-            id_ministro=ministro.id,
-            id_paroquia=current_user.id_paroquia
-        ).count()
-
-        confirmadas = Escala.query.filter_by(
-            id_ministro=ministro.id,
-            confirmado=True,
-            id_paroquia=current_user.id_paroquia
-        ).count()
-
-        pendentes = Escala.query.filter_by(
-            id_ministro=ministro.id,
-            confirmado=False,
-            id_paroquia=current_user.id_paroquia
-        ).count()
-
-        percentual = 0
-
-        if total > 0:
-            percentual = round((confirmadas / total) * 100)
-
-        dados.append({
-            "ministro": ministro.nome,
-            "total": total,
-            "confirmadas": confirmadas,
-            "pendentes": pendentes,
-            "percentual": percentual
-        })
-
+    dados = dados_confiabilidade(current_user.id_paroquia)
     return render_template("confiabilidade.html", dados=dados)
 
