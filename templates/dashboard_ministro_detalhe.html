@@ -23,6 +23,7 @@
                 <thead class="table-dark">
                     <tr>
                         <th>Data</th>
+                        <th>Dia da semana</th>
                         <th>Horario</th>
                         <th>Comunidade</th>
                         <th class="text-center">Confirmado</th>
@@ -31,8 +32,10 @@
                 </thead>
                 <tbody>
                     {% for m in missas %}
+                    {% set dias = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"] %}
                     <tr>
                         <td>{{ m.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ dias[m.data.weekday()] }}</td>
                         <td>{{ m.horario or '-' }}</td>
                         <td>{{ m.comunidade or '-' }}</td>
                         <td class="text-center">{{ "Sim" if m.confirmado else "Nao" }}</td>
@@ -40,7 +43,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted">
+                        <td colspan="6" class="text-center text-muted">
                             Nenhuma missa encontrada para este periodo.
                         </td>
                     </tr>

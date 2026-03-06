@@ -215,3 +215,29 @@ class IndisponibilidadeFixa(db.Model):
     horario = db.Column(db.String(10))
 
     ministro = db.relationship("Ministro")
+
+
+class CasalMinisterio(db.Model):
+    __tablename__ = "casal_ministerio"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    id_ministro_1 = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+    id_ministro_2 = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False
+    )
+    ativo = db.Column(db.Boolean, default=True, nullable=False)
+
+    ministro_1 = db.relationship("Ministro", foreign_keys=[id_ministro_1])
+    ministro_2 = db.relationship("Ministro", foreign_keys=[id_ministro_2])
