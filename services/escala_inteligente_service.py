@@ -1,6 +1,7 @@
 from datetime import date
 from models import Ministro, Escala, Missa
 import random
+from sqlalchemy import extract
 
 def calcular_score(ministro):
 
@@ -16,19 +17,23 @@ def calcular_score(ministro):
     else:
         dias_sem_servir = 30
 
-    total = Escala.query.filter_by(id_ministro=ministro.id).count()
+    total = Escala.query.filter_by(
+        id_ministro=ministro.id
+    ).count()
 
-    confirmadas = Escala.query\
-        .filter_by(id_ministro=ministro.id, confirmado=True)\
-        .count()
+    confirmadas = Escala.query.filter_by(
+        id_ministro=ministro.id,
+        confirmado=True
+    ).count()
 
     confiabilidade = confirmadas / total if total else 1
 
-    escalas_mes = Escala.query.join(Missa)\
-        .filter(
-            Escala.id_ministro == ministro.id,
-            Missa.data.month == hoje.month
-        ).count()
+    # escalas no mês atual
+    escalas_mes = Escala.query.join(Missa).filter(
+        Escala.id_ministro == ministro.id,
+        extract("month", Missa.data) == hoje.month,
+        extract("year", Missa.data) == hoje.year
+    ).count()
 
     score = (
         dias_sem_servir * 2
@@ -45,7 +50,6 @@ def selecionar_ministros(qtd, id_paroquia):
         id_paroquia=id_paroquia
     ).all()
 
-    
     random.shuffle(ministros)
 
     ranking = []
