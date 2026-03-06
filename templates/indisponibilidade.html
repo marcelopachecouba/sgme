@@ -21,7 +21,9 @@
 <td>{{r.horario}}</td>
 
 <td>
-<a href="/indisponibilidade/excluir/{{r.id}}">Excluir</a>
+<form method="POST" action="/indisponibilidade/excluir/{{r.id}}" style="display:inline;">
+<button type="submit">Excluir</button>
+</form>
 </td>
 
 </tr>

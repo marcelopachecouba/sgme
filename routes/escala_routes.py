@@ -306,7 +306,7 @@ def editar_escala_fixa(id):
     )
 
 from utils.auth import admin_required
-@escala_bp.route("/escala_fixa/excluir/<int:id>")
+@escala_bp.route("/escala_fixa/excluir/<int:id>", methods=["POST"])
 @login_required
 @admin_required
 def excluir_escala_fixa(id):
@@ -682,7 +682,7 @@ def gerar_mensal_super_inteligente():
     return render_template("form_gerar_mensal_super.html")
 
 from utils.auth import admin_required
-@escala_bp.route("/escala/remover/<int:escala_id>")
+@escala_bp.route("/escala/remover/<int:escala_id>", methods=["POST"])
 @login_required
 @admin_required
 def remover_ministro_escala(escala_id):
@@ -795,7 +795,8 @@ def salvar_mensal():
                     nova = Escala(
                         id_missa=missa.id,
                         id_ministro=regra.id_ministro,
-                        id_paroquia=current_user.id_paroquia
+                        id_paroquia=current_user.id_paroquia,
+                        token=str(uuid.uuid4())
                     )
                     db.session.add(nova)
 
@@ -866,16 +867,19 @@ def dashboard_ministros():
     for m in ministros:
 
         total = Escala.query.filter_by(
-            id_ministro=m.id
+            id_ministro=m.id,
+            id_paroquia=current_user.id_paroquia
         ).count()
 
         confirmadas = Escala.query.filter_by(
             id_ministro=m.id,
-            confirmado=True
+            confirmado=True,
+            id_paroquia=current_user.id_paroquia
         ).count()
 
-        recusas = Escala.query.filter(
+        pendentes = Escala.query.filter(
             Escala.id_ministro == m.id,
+            Escala.id_paroquia == current_user.id_paroquia,
             Escala.confirmado == False
         ).count()
 
@@ -883,7 +887,7 @@ def dashboard_ministros():
             "nome": m.nome,
             "total": total,
             "confirmadas": confirmadas,
-            "recusas": recusas
+            "pendentes": pendentes
         })
 
     return render_template(

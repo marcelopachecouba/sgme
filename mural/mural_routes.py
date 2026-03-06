@@ -1,7 +1,27 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, abort
 from flask_login import login_required, current_user
 from models import db, MuralPost, MuralCurtida, MuralComentario
 from services.firebase_storage_service import upload_arquivo
+from werkzeug.utils import secure_filename
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "mp4", "mov", "webm"}
+
+
+def _arquivo_permitido(file):
+    if not file or not file.filename:
+        return False
+    nome = secure_filename(file.filename)
+    return "." in nome and nome.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _get_post_da_paroquia(post_id):
+    post = MuralPost.query.filter_by(
+        id=post_id,
+        id_paroquia=current_user.id_paroquia
+    ).first()
+    if not post:
+        abort(403)
+    return post
 
 mural_bp = Blueprint("mural", __name__)
 
@@ -31,10 +51,10 @@ def novo_post():
         imagem_url = None
         video_url = None
 
-        if imagem:
+        if imagem and _arquivo_permitido(imagem):
             imagem_url = upload_arquivo(imagem)
 
-        if video:
+        if video and _arquivo_permitido(video):
             video_url = upload_arquivo(video)
 
         post = MuralPost(
@@ -55,6 +75,7 @@ def novo_post():
 @mural_bp.route("/mural/comentar/<int:post_id>", methods=["POST"])
 @login_required
 def comentar(post_id):
+    _get_post_da_paroquia(post_id)
 
     texto = request.form.get("comentario")
 
@@ -69,9 +90,10 @@ def comentar(post_id):
 
     return redirect(url_for("mural.mural"))
 
-@mural_bp.route("/mural/curtir/<int:post_id>")
+@mural_bp.route("/mural/curtir/<int:post_id>", methods=["POST"])
 @login_required
 def curtir(post_id):
+    _get_post_da_paroquia(post_id)
 
     existe = MuralCurtida.query.filter_by(
         id_post=post_id,

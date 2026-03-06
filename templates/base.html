@@ -110,6 +110,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <!-- Firebase Push Notifications -->
+{% if current_user.is_authenticated %}
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -126,23 +127,23 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-Notification.requestPermission().then((permission) => {
-  if (permission === "granted") {
-    getToken(messaging, {
-      vapidKey: "SUA_VAPID_PUBLIC_KEY"
-    }).then((currentToken) => {
-      if (currentToken) {
+const vapidKey = "{{ config.get('FIREBASE_VAPID_KEY', '') }}";
 
-        fetch("/salvar-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: currentToken })
-        });
-
-      }
-    });
-  }
-});
+if (vapidKey) {
+  Notification.requestPermission().then((permission) => {
+    if (permission === "granted") {
+      getToken(messaging, { vapidKey }).then((currentToken) => {
+        if (currentToken) {
+          fetch("/salvar-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: currentToken })
+          });
+        }
+      });
+    }
+  });
+}
 
 onMessage(messaging, (payload) => {
   new Notification(
@@ -152,6 +153,7 @@ onMessage(messaging, (payload) => {
 });
 
 </script>
+{% endif %}
 
 </body>
 </html>

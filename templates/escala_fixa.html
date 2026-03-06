@@ -105,10 +105,12 @@
         <td>{{ f.comunidade if f.comunidade else "Todas" }}</td>
         <td>{{ f.ministro.nome }}</td>
         <td>
-            <a href="{{ url_for('escala.excluir_escala_fixa', id=f.id) }}"
-               class="btn btn-sm btn-danger">
-               Excluir
-            </a>
+            <form method="POST"
+                  action="{{ url_for('escala.excluir_escala_fixa', id=f.id) }}"
+                  onsubmit="return confirm('Excluir esta regra fixa?')"
+                  style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+            </form>
 
             <a href="{{ url_for('escala.editar_escala_fixa', id=f.id) }}"
                class="btn btn-warning btn-sm">

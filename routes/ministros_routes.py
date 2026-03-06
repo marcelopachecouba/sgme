@@ -71,7 +71,7 @@ def novo_ministro():
 
 
 
-@ministros_bp.route("/ministros/excluir/<int:id>")
+@ministros_bp.route("/ministros/excluir/<int:id>", methods=["POST"])
 @login_required
 @admin_required
 def excluir_ministro(id):
@@ -168,4 +168,3 @@ def ativar_usuario(id):
 
     flash("Usuário liberado com sucesso!")
     return redirect(url_for("ministros.ministros"))
-

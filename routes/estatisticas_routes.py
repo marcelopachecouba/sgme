@@ -216,17 +216,20 @@ def confiabilidade():
     for ministro in ministros:
 
         total = Escala.query.filter_by(
-            id_ministro=ministro.id
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
         ).count()
 
         confirmadas = Escala.query.filter_by(
             id_ministro=ministro.id,
-            confirmado=True
+            confirmado=True,
+            id_paroquia=current_user.id_paroquia
         ).count()
 
-        recusadas = Escala.query.filter_by(
+        pendentes = Escala.query.filter_by(
             id_ministro=ministro.id,
-            confirmado=False
+            confirmado=False,
+            id_paroquia=current_user.id_paroquia
         ).count()
 
         percentual = 0
@@ -238,7 +241,7 @@ def confiabilidade():
             "ministro": ministro.nome,
             "total": total,
             "confirmadas": confirmadas,
-            "recusadas": recusadas,
+            "pendentes": pendentes,
             "percentual": percentual
         })
 

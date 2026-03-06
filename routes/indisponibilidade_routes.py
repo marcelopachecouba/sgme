@@ -59,7 +59,7 @@ def nova_indisponibilidade():
     )
 
 
-@indisp_bp.route("/indisponibilidade/excluir/<int:id>")
+@indisp_bp.route("/indisponibilidade/excluir/<int:id>", methods=["POST"])
 @login_required
 def excluir_indisponibilidade(id):
 

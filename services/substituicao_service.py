@@ -2,6 +2,7 @@ from models import Ministro, Escala, Missa, Indisponibilidade, db
 from sqlalchemy import func
 from datetime import date
 from services.notificacao_service import notificar_escala_criada
+import uuid
 
 
 def substituir_ministro(escala):
@@ -76,7 +77,8 @@ def substituir_ministro(escala):
     nova = Escala(
         id_missa=missa.id,
         id_ministro=escolhido.id,
-        id_paroquia=paroquia
+        id_paroquia=paroquia,
+        token=str(uuid.uuid4())
     )
 
     db.session.add(nova)
