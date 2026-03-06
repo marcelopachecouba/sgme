@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+Ôªø{% extends "base.html" %}
 {% block content %}
 
 <h3 class="mb-4">
-    Calend√°rio de Missas - {{ mes }}/{{ ano }}
+    Calendario de Missas - {{ mes }}/{{ ano }}
 </h3>
 
 <div class="row mb-3">
@@ -26,7 +26,7 @@
             <th>Qua</th>
             <th>Qui</th>
             <th>Sex</th>
-            <th>S√°b</th>
+            <th>Sab</th>
             <th>Dom</th>
         </tr>
     </thead>
@@ -61,10 +61,10 @@
                                     <div style="font-size:12px;">
                                         {% if ministro.eh_casal %}
                                         <span class="badge" style="background-color:#fff3cd; color:#7a5200;">
-                                            ï {{ ministro.nome }} (casal)
+                                            * {{ ministro.nome }} (casal)
                                         </span>
                                         {% else %}
-                                        ï {{ ministro.nome }}
+                                        * {{ ministro.nome }}
                                         {% endif %}
                                     </div>
                                 {% endfor %}
@@ -87,4 +87,3 @@
 </table>
 
 {% endblock %}
-
