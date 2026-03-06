@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from datetime import datetime
 from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
 from flask_login import login_required, current_user
@@ -16,6 +17,11 @@ from services.participacao_service import (
 )
 
 from services.substituicao_service import substituir_ministro
+from services.firebase_service import enviar_push
+from services.pedido_substituicao_service import (
+    aceitar_substituicao,
+    criar_pedido_substituicao,
+)
 from services.paroquia_scope_service import (
     get_escala_fixa_or_404,
     get_escala_or_404,
@@ -477,6 +483,59 @@ def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriore
 
     db.session.commit()
 
+
+def _enviar_escala_mes_ministros(id_paroquia, mes, ano):
+    escalas_mes = Escala.query.join(Missa).filter(
+        Escala.id_paroquia == id_paroquia,
+        extract("month", Missa.data) == mes,
+        extract("year", Missa.data) == ano,
+    ).all()
+
+    por_ministro = defaultdict(list)
+    for e in escalas_mes:
+        if e.ministro:
+            por_ministro[e.ministro].append(e)
+
+    enviados = 0
+    sem_token = 0
+    sem_link_publico = 0
+
+    for ministro, lista in por_ministro.items():
+        pendentes = [e for e in lista if e.confirmado is not True]
+        if not pendentes:
+            continue
+
+        if not ministro.token_publico:
+            sem_link_publico += 1
+            continue
+
+        link = url_for(
+            "escala.pendencias_ministro",
+            token_publico=ministro.token_publico,
+            mes=mes,
+            ano=ano,
+            _external=True,
+        )
+
+        if ministro.firebase_token:
+            enviar_push(
+                ministro.firebase_token,
+                "Escala do Mes",
+                (
+                    f"Voce possui {len(pendentes)} escala(s) pendente(s) em {mes}/{ano}. "
+                    f"Acesse para confirmar ou recusar: {link}"
+                ),
+            )
+            enviados += 1
+        else:
+            sem_token += 1
+
+    return {
+        "enviados": enviados,
+        "sem_token": sem_token,
+        "sem_link_publico": sem_link_publico,
+    }
+
     inicio = date(ano, mes, 1)
     ultimo_dia = calendar.monthrange(ano, mes)[1]
     fim = date(ano, mes, ultimo_dia)
@@ -521,12 +580,27 @@ def gerar_escala_inteligente():
         considerar_periodos_anteriores = bool(
             request.form.get("considerar_periodos_anteriores")
         )
+        enviar_escala_ministros = bool(
+            request.form.get("enviar_escala_ministros")
+        )
 
         _executar_geracao_escala_inteligente(
             mes=mes,
             ano=ano,
             considerar_periodos_anteriores=considerar_periodos_anteriores
         )
+
+        if enviar_escala_ministros:
+            resultado_envio = _enviar_escala_mes_ministros(
+                id_paroquia=current_user.id_paroquia,
+                mes=mes,
+                ano=ano,
+            )
+            flash(
+                f"Envio mensal: {resultado_envio['enviados']} ministro(s) notificado(s), "
+                f"{resultado_envio['sem_token']} sem token, "
+                f"{resultado_envio['sem_link_publico']} sem link publico."
+            )
 
         flash("Escala inteligente do mes gerada com sucesso!")
         return redirect(url_for("missas.missas"))
@@ -539,6 +613,40 @@ def gerar_escala_inteligente():
 @admin_required
 def gerar_mensal_super_inteligente():
     return gerar_escala_inteligente()
+
+
+@escala_bp.route("/escala/pendencias/<token_publico>")
+def pendencias_ministro(token_publico):
+    ministro = Ministro.query.filter_by(token_publico=token_publico).first_or_404()
+
+    hoje = date.today()
+    mes = int(request.args.get("mes", hoje.month))
+    ano = int(request.args.get("ano", hoje.year))
+
+    escalas = Escala.query.join(Missa).filter(
+        Escala.id_ministro == ministro.id,
+        Escala.id_paroquia == ministro.id_paroquia,
+        extract("month", Missa.data) == mes,
+        extract("year", Missa.data) == ano,
+    ).order_by(Missa.data.asc(), Missa.horario.asc()).all()
+
+    return render_template(
+        "pendencias_ministro.html",
+        ministro=ministro,
+        escalas=escalas,
+        mes=mes,
+        ano=ano,
+    )
+
+
+@escala_bp.route("/substituicao/aceitar/<pedido_token>/<ministro_token_publico>")
+def aceitar_substituicao_publica(pedido_token, ministro_token_publico):
+    sucesso, mensagem = aceitar_substituicao(pedido_token, ministro_token_publico)
+    return render_template(
+        "substituicao_publica_resultado.html",
+        sucesso=sucesso,
+        mensagem=mensagem,
+    )
 from utils.auth import admin_required
 @escala_bp.route("/escala/remover/<int:escala_id>", methods=["POST"])
 @login_required
@@ -712,6 +820,14 @@ def escala_publica(token):
 
             return redirect(url_for("publico.calendario_paroquia", id=paroquia_id))
 
+        elif acao == "substituicao":
+            pedido, enviados = criar_pedido_substituicao(escala)
+            flash(
+                f"Pedido de substituicao aberto. "
+                f"Ministros notificados: {enviados}."
+            )
+            return redirect(url_for("escala.escala_publica", token=escala.token))
+
     return render_template(
         "escala_publica.html",
         escala=escala,
@@ -769,6 +885,8 @@ def dashboard_ministro_detalhe(ministro_id):
         inicio=inicio_str,
         fim=fim_str,
     )
+
+
 
 
 
