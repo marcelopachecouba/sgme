@@ -53,6 +53,7 @@ def construir_dashboard(id_paroquia, inicio, fim):
 
         estrutura_missas.append({
             "missa": missa,
+            "missa_id": missa.id,
             "ministros": ministros,
             "whatsapp": link_whatsapp,
         })
