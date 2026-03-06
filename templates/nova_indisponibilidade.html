@@ -1,45 +1,74 @@
-<h2>Nova Indisponibilidade</h2>
+{% extends "base.html" %}
+{% block content %}
 
-<form method="POST">
+<h2 class="mb-4">Nova Indisponibilidade</h2>
 
-<label>Ministro</label>
-<select name="ministro">
-{% for m in ministros %}
-<option value="{{m.id}}">{{m.nome}}</option>
-{% endfor %}
-</select>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-warning">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
 
-<br><br>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST" class="row g-3">
 
-<label>Semana</label>
-<select name="semana">
-<option value="">Todas</option>
-<option value="1">1ª semana</option>
-<option value="2">2ª semana</option>
-<option value="3">3ª semana</option>
-<option value="4">4ª semana</option>
-</select>
+            <div class="col-md-6">
+                <label class="form-label">Ministro</label>
+                <select name="ministro" class="form-select" required>
+                    {% for m in ministros %}
+                    <option value="{{ m.id }}">{{ m.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-<br><br>
+            <div class="col-md-3">
+                <label class="form-label">Semana</label>
+                <select name="semana" class="form-select">
+                    <option value="">Todas</option>
+                    <option value="1">1ª semana</option>
+                    <option value="2">2ª semana</option>
+                    <option value="3">3ª semana</option>
+                    <option value="4">4ª semana</option>
+                    <option value="5">5ª semana</option>
+                </select>
+            </div>
 
-<label>Dia da semana</label>
-<select name="dia_semana">
-<option value="0">Segunda</option>
-<option value="1">Terça</option>
-<option value="2">Quarta</option>
-<option value="3">Quinta</option>
-<option value="4">Sexta</option>
-<option value="5">Sábado</option>
-<option value="6">Domingo</option>
-</select>
+            <div class="col-md-3">
+                <label class="form-label">Dia da Semana</label>
+                <select name="dia_semana" class="form-select" required>
+                    <option value="0">Segunda</option>
+                    <option value="1">Terça</option>
+                    <option value="2">Quarta</option>
+                    <option value="3">Quinta</option>
+                    <option value="4">Sexta</option>
+                    <option value="5">Sábado</option>
+                    <option value="6">Domingo</option>
+                </select>
+            </div>
 
-<br><br>
+            <div class="col-md-3">
+                <label class="form-label">Horário (opcional)</label>
+                <input type="text"
+                       name="horario"
+                       class="form-control"
+                       placeholder="19:30"
+                       pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
+                       title="Use o formato HH:MM">
+                <small class="text-muted">Deixe vazio para todos os horários.</small>
+            </div>
 
-<label>Horário</label>
-<input type="text" name="horario" placeholder="19:30">
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+                <a href="{{ url_for('indisponibilidade.listar_indisponibilidade') }}" class="btn btn-secondary">
+                    Voltar
+                </a>
+            </div>
 
-<br><br>
+        </form>
+    </div>
+</div>
 
-<button type="submit">Salvar</button>
-
-</form>
+{% endblock %}

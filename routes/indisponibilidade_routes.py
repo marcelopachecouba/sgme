@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort
+from flask import Blueprint, render_template, request, redirect, url_for, abort, flash
 from flask_login import login_required, current_user
 from models import db, Ministro, IndisponibilidadeFixa
+import re
 
 indisp_bp = Blueprint("indisponibilidade", __name__)
 
@@ -11,6 +12,10 @@ def listar_indisponibilidade():
 
     regras = IndisponibilidadeFixa.query.filter_by(
         id_paroquia=current_user.id_paroquia
+    ).order_by(
+        IndisponibilidadeFixa.semana.asc(),
+        IndisponibilidadeFixa.dia_semana.asc(),
+        IndisponibilidadeFixa.horario.asc()
     ).all()
 
     return render_template(
@@ -25,7 +30,7 @@ def nova_indisponibilidade():
 
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
-    ).all()
+    ).order_by(Ministro.nome.asc()).all()
 
     if request.method == "POST":
 
@@ -38,18 +43,23 @@ def nova_indisponibilidade():
             abort(403)
         semana = request.form.get("semana")
         dia_semana = request.form["dia_semana"]
-        horario = request.form["horario"]
+        horario = (request.form.get("horario") or "").strip()
+
+        if horario and not re.match(r"^\d{2}:\d{2}$", horario):
+            flash("Horario invalido. Use o formato HH:MM.")
+            return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
 
         regra = IndisponibilidadeFixa(
             id_ministro=ministro_id,
             id_paroquia=current_user.id_paroquia,
             semana=int(semana) if semana else None,
             dia_semana=int(dia_semana),
-            horario=horario
+            horario=horario if horario else None
         )
 
         db.session.add(regra)
         db.session.commit()
+        flash("Indisponibilidade cadastrada com sucesso.")
 
         return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
 
@@ -69,5 +79,6 @@ def excluir_indisponibilidade(id):
 
     db.session.delete(regra)
     db.session.commit()
+    flash("Indisponibilidade removida.")
 
     return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
