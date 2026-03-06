@@ -3,9 +3,10 @@ from datetime import timedelta
 import random
 
 from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import extract, or_
 
-from models import Escala, Indisponibilidade, IndisponibilidadeFixa, Ministro, Missa
+from models import CasalMinisterio, Escala, Indisponibilidade, IndisponibilidadeFixa, Ministro, Missa
 
 
 def _cfg(key, default):
@@ -46,16 +47,29 @@ def _candidato_restrito(metricas):
     )
 
 
-def _obter_pares_casal():
+def _obter_pares_casal(id_paroquia):
     """
     Formato em config:
     ESCALA_CASAL_PARES="12:34,56:78"
     """
-    bruto = (_cfg("ESCALA_CASAL_PARES", "") or "").strip()
-    if not bruto:
-        return {}
-
     pares = {}
+
+    try:
+        casais_db = CasalMinisterio.query.filter_by(
+            id_paroquia=id_paroquia,
+            ativo=True
+        ).all()
+        for casal in casais_db:
+            a = int(casal.id_ministro_1)
+            b = int(casal.id_ministro_2)
+            if a <= 0 or b <= 0 or a == b:
+                continue
+            pares[a] = b
+            pares[b] = a
+    except SQLAlchemyError:
+        pass
+
+    bruto = (_cfg("ESCALA_CASAL_PARES", "") or "").strip()
     blocos = [b.strip() for b in bruto.replace(";", ",").split(",") if b.strip()]
 
     for bloco in blocos:
@@ -72,8 +86,10 @@ def _obter_pares_casal():
         if a <= 0 or b <= 0 or a == b:
             continue
 
-        pares[a] = b
-        pares[b] = a
+        if a not in pares:
+            pares[a] = b
+        if b not in pares:
+            pares[b] = a
 
     return pares
 
@@ -219,7 +235,7 @@ def selecionar_ministros(qtd, id_paroquia, missa):
     restritos.sort(key=lambda x: x[1], reverse=True)
 
     domingo = missa.data.weekday() == 6
-    casal_map = _obter_pares_casal()
+    casal_map = _obter_pares_casal(id_paroquia)
 
     candidatos_ordenados = [m for m, _ in priorizados] + [m for m, _ in restritos]
     candidatos_por_id = {m.id: m for m in candidatos_ordenados}

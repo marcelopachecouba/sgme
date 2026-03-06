@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import (
+    CasalMinisterio,
     db,
     Escala,
     EscalaFixa,
@@ -13,6 +14,7 @@ from models import (
     MuralPost,
 )
 from datetime import datetime
+from sqlalchemy import or_
 from utils.auth import admin_required
 from services.paroquia_scope_service import get_ministro_or_404
 
@@ -122,6 +124,14 @@ def excluir_ministro(id):
         MuralPost.query.filter_by(
             id_ministro=ministro.id,
             id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        CasalMinisterio.query.filter(
+            CasalMinisterio.id_paroquia == current_user.id_paroquia,
+            or_(
+                CasalMinisterio.id_ministro_1 == ministro.id,
+                CasalMinisterio.id_ministro_2 == ministro.id,
+            )
         ).delete(synchronize_session=False)
 
         db.session.delete(ministro)
