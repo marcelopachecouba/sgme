@@ -1,30 +1,31 @@
 import random
-from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file, abort
-from flask_login import login_required, current_user, login_user, logout_user
-from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
-from datetime import datetime, date, timedelta
+from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
+from flask_login import login_required, current_user
+from models import db, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
+from datetime import date, timedelta
 import calendar, uuid, urllib.parse, base64, io
 from utils.auth import admin_required
 from services.notificacao_service import (
     notificar_escala_criada,
     notificar_escala_removida
 )
+from services.participacao_service import obter_estatisticas_participacao
 
 from services.substituicao_service import substituir_ministro
+from services.paroquia_scope_service import (
+    get_escala_fixa_or_404,
+    get_escala_or_404,
+    get_ministro_or_404,
+    get_missa_or_404,
+)
 
 escala_bp = Blueprint("escala", __name__)
-
-
-def _assert_paroquia(obj):
-    if getattr(obj, "id_paroquia", None) != current_user.id_paroquia:
-        abort(403)
 
 @escala_bp.route("/escala/<int:missa_id>", methods=["GET", "POST"])
 @login_required
 def gerar_escala(missa_id):
 
-    missa = Missa.query.get_or_404(missa_id)
-    _assert_paroquia(missa)
+    missa = get_missa_or_404(missa_id, current_user.id_paroquia)
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
     ).all()
@@ -68,8 +69,7 @@ def gerar_escala_auto(missa_id):
 
     from services.escala_inteligente_service import selecionar_ministros
 
-    missa = Missa.query.get_or_404(missa_id)
-    _assert_paroquia(missa)
+    missa = get_missa_or_404(missa_id, current_user.id_paroquia)
 
     # Limpa escala anterior
     Escala.query.filter_by(id_missa=missa.id).delete()
@@ -199,8 +199,7 @@ def gerar_escala_auto(missa_id):
 @login_required
 def visualizar_escala(missa_id):
 
-    missa = Missa.query.get_or_404(missa_id)
-    _assert_paroquia(missa)
+    missa = get_missa_or_404(missa_id, current_user.id_paroquia)
 
     escalas = Escala.query.filter_by(
         id_missa=missa.id,
@@ -280,8 +279,7 @@ def escala_fixa():
 @admin_required
 def editar_escala_fixa(id):
 
-    fixa = EscalaFixa.query.get_or_404(id)
-    _assert_paroquia(fixa)
+    fixa = get_escala_fixa_or_404(id, current_user.id_paroquia)
 
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
@@ -311,8 +309,7 @@ from utils.auth import admin_required
 @admin_required
 def excluir_escala_fixa(id):
 
-    fixa = EscalaFixa.query.get_or_404(id)
-    _assert_paroquia(fixa)
+    fixa = get_escala_fixa_or_404(id, current_user.id_paroquia)
     db.session.delete(fixa)
     db.session.commit()
 
@@ -687,8 +684,7 @@ from utils.auth import admin_required
 @admin_required
 def remover_ministro_escala(escala_id):
 
-    escala = Escala.query.get_or_404(escala_id)
-    _assert_paroquia(escala)
+    escala = get_escala_or_404(escala_id, current_user.id_paroquia)
 
     ministro = escala.ministro
     missa = escala.missa
@@ -711,12 +707,8 @@ def remover_ministro_escala(escala_id):
 def adicionar_ministro_escala(missa_id):
 
     ministro_id = request.form.get("ministro_id")
-    missa = Missa.query.get_or_404(missa_id)
-    _assert_paroquia(missa)
-    ministro = Ministro.query.filter_by(
-        id=ministro_id,
-        id_paroquia=current_user.id_paroquia
-    ).first_or_404()
+    missa = get_missa_or_404(missa_id, current_user.id_paroquia)
+    ministro = get_ministro_or_404(ministro_id, current_user.id_paroquia)
 
     existe = Escala.query.filter_by(
         id_missa=missa_id,
@@ -857,42 +849,12 @@ def escala_publica(token):
 @login_required
 @admin_required
 def dashboard_ministros():
-
-    ministros = Ministro.query.filter_by(
-        id_paroquia=current_user.id_paroquia
-    ).all()
-
-    dados = []
-
-    for m in ministros:
-
-        total = Escala.query.filter_by(
-            id_ministro=m.id,
-            id_paroquia=current_user.id_paroquia
-        ).count()
-
-        confirmadas = Escala.query.filter_by(
-            id_ministro=m.id,
-            confirmado=True,
-            id_paroquia=current_user.id_paroquia
-        ).count()
-
-        pendentes = Escala.query.filter(
-            Escala.id_ministro == m.id,
-            Escala.id_paroquia == current_user.id_paroquia,
-            Escala.confirmado == False
-        ).count()
-
-        dados.append({
-            "nome": m.nome,
-            "total": total,
-            "confirmadas": confirmadas,
-            "pendentes": pendentes
-        })
+    resultado = obter_estatisticas_participacao(current_user.id_paroquia)
 
     return render_template(
         "dashboard_ministros.html",
-        dados=dados
+        dados=resultado["dados"],
+        resumo=resultado["resumo"]
     )
 
 

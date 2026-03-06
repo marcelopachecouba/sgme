@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file, abort
-from flask_login import login_required, current_user, login_user, logout_user
-from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
-from datetime import datetime, date, timedelta
-import calendar, uuid, urllib.parse, base64, io
+from flask import Blueprint, render_template, redirect, request, url_for, flash
+from flask_login import login_required, current_user
+from models import db, Missa, Escala
+from datetime import datetime, date
+import calendar
 from utils.auth import admin_required
+from services.paroquia_scope_service import get_missa_or_404
 
 missas_bp = Blueprint("missas", __name__)
 
@@ -97,9 +98,7 @@ from utils.auth import admin_required
 
 def editar_missa(id):
 
-    missa = Missa.query.get_or_404(id)
-    if missa.id_paroquia != current_user.id_paroquia:
-        abort(403)
+    missa = get_missa_or_404(id, current_user.id_paroquia)
 
     if request.method == "POST":
 
@@ -121,9 +120,7 @@ from utils.auth import admin_required
 @admin_required
 def excluir_missa(id):
 
-    missa = Missa.query.get_or_404(id)
-    if missa.id_paroquia != current_user.id_paroquia:
-        abort(403)
+    missa = get_missa_or_404(id, current_user.id_paroquia)
 
     # Remove escalas vinculadas primeiro
     Escala.query.filter_by(id_missa=missa.id).delete()

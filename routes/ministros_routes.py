@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file, abort
-from flask_login import login_required, current_user, login_user, logout_user
-from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
-from datetime import datetime, date, timedelta
-import calendar, uuid, urllib.parse, base64, io
+from flask import Blueprint, render_template, redirect, request, url_for, flash
+from flask_login import login_required, current_user
+from models import db, Ministro
+from datetime import datetime
 from utils.auth import admin_required
+from services.paroquia_scope_service import get_ministro_or_404
 
 ministros_bp = Blueprint("ministros", __name__)
 
@@ -76,9 +76,7 @@ def novo_ministro():
 @admin_required
 def excluir_ministro(id):
 
-    ministro = Ministro.query.get_or_404(id)
-    if ministro.id_paroquia != current_user.id_paroquia:
-        abort(403)
+    ministro = get_ministro_or_404(id, current_user.id_paroquia)
 
     db.session.delete(ministro)
     db.session.commit()
@@ -95,9 +93,7 @@ def excluir_ministro(id):
 @admin_required
 def editar_ministro(id):
 
-    ministro = Ministro.query.get_or_404(id)
-    if ministro.id_paroquia != current_user.id_paroquia:
-        abort(403)
+    ministro = get_ministro_or_404(id, current_user.id_paroquia)
 
     if request.method == "POST":
 
@@ -132,9 +128,6 @@ def editar_ministro(id):
 
     return render_template("editar_ministro.html", ministro=ministro)
 
-from datetime import datetime
-
-
 @ministros_bp.route("/admin/resetar-senha/<int:id>")
 @login_required
 @admin_required
@@ -143,9 +136,7 @@ def admin_resetar_senha(id):
     #if current_user.tipo != "admin":
     #    return "Acesso negado"
 
-    user = Ministro.query.get_or_404(id)
-    if user.id_paroquia != current_user.id_paroquia:
-        abort(403)
+    user = get_ministro_or_404(id, current_user.id_paroquia)
     user.set_senha("123456")
     user.primeiro_acesso = True
 
@@ -160,9 +151,7 @@ def admin_resetar_senha(id):
 @admin_required
 def ativar_usuario(id):
 
-    user = Ministro.query.get_or_404(id)
-    if user.id_paroquia != current_user.id_paroquia:
-        abort(403)
+    user = get_ministro_or_404(id, current_user.id_paroquia)
     user.pode_logar = True
     db.session.commit()
 

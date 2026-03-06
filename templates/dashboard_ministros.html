@@ -2,34 +2,76 @@
 
 {% block content %}
 
-<h2>📊 Dashboard de Ministros</h2>
+<h2 class="mb-4">Dashboard de Participacao dos Ministros</h2>
 
-<table class="table table-striped">
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Ministros</small>
+                <h4 class="mb-0">{{ resumo.ministros }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Missas Servidas</small>
+                <h4 class="mb-0">{{ resumo.total_escalas }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Confirmadas</small>
+                <h4 class="mb-0 text-success">{{ resumo.confirmadas }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Pendentes</small>
+                <h4 class="mb-0 text-warning">{{ resumo.pendentes }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
 
-<thead>
-<tr>
-<th>Ministro</th>
-<th>Total Escalas</th>
-<th>Confirmadas</th>
-<th>Pendentes</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for d in dados %}
-
-<tr>
-<td>{{ d.nome }}</td>
-<td>{{ d.total }}</td>
-<td>{{ d.confirmadas }}</td>
-<td>{{ d.pendentes }}</td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Ministro</th>
+                        <th class="text-center">Missas Servidas</th>
+                        <th class="text-center">Confirmadas</th>
+                        <th class="text-center">Pendentes</th>
+                        <th class="text-center">Taxa Confirmacao</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dados %}
+                    <tr>
+                        <td>{{ d.nome }}</td>
+                        <td class="text-center">{{ d.total }}</td>
+                        <td class="text-center">{{ d.confirmadas }}</td>
+                        <td class="text-center">{{ d.pendentes }}</td>
+                        <td class="text-center">{{ d.taxa_confirmacao }}%</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            Nenhum dado de participacao encontrado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
