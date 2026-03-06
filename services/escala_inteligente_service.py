@@ -1,16 +1,11 @@
+from collections import defaultdict
 from datetime import timedelta
 import random
 
-from sqlalchemy import extract
 from flask import current_app
+from sqlalchemy import extract, or_
 
-from models import (
-    Escala,
-    Indisponibilidade,
-    IndisponibilidadeFixa,
-    Ministro,
-    Missa,
-)
+from models import Escala, Indisponibilidade, IndisponibilidadeFixa, Ministro, Missa
 
 
 def _cfg(key, default):
@@ -18,94 +13,6 @@ def _cfg(key, default):
         return current_app.config.get(key, default)
     except RuntimeError:
         return default
-
-
-def _esta_indisponivel(ministro_id, id_paroquia, missa):
-    indisponibilidade = Indisponibilidade.query.filter(
-        Indisponibilidade.id_ministro == ministro_id,
-        Indisponibilidade.data == missa.data,
-        Indisponibilidade.id_paroquia == id_paroquia,
-        (Indisponibilidade.horario == None)
-        | (Indisponibilidade.horario == missa.horario),
-    ).first()
-
-    if indisponibilidade:
-        return True
-
-    semana = (missa.data.day - 1) // 7 + 1
-    dia_semana = missa.data.weekday()
-
-    indisponibilidade_fixa = IndisponibilidadeFixa.query.filter(
-        IndisponibilidadeFixa.id_ministro == ministro_id,
-        IndisponibilidadeFixa.id_paroquia == id_paroquia,
-        (IndisponibilidadeFixa.semana == semana)
-        | (IndisponibilidadeFixa.semana == None),
-        (IndisponibilidadeFixa.dia_semana == dia_semana)
-        | (IndisponibilidadeFixa.dia_semana == None),
-        (IndisponibilidadeFixa.horario == missa.horario)
-        | (IndisponibilidadeFixa.horario == None),
-    ).first()
-
-    return indisponibilidade_fixa is not None
-
-
-def _tem_conflito_mesmo_horario(ministro_id, id_paroquia, missa):
-    return Escala.query.join(Missa).filter(
-        Escala.id_ministro == ministro_id,
-        Escala.id_paroquia == id_paroquia,
-        Missa.data == missa.data,
-        Missa.horario == missa.horario,
-    ).first() is not None
-
-
-def _coletar_metricas(ministro_id, id_paroquia, missa):
-    historico = Escala.query.join(Missa).filter(
-        Escala.id_ministro == ministro_id,
-        Escala.id_paroquia == id_paroquia,
-        Missa.data < missa.data,
-    )
-
-    ultima_escala = historico.order_by(Missa.data.desc()).first()
-    ultima_data = ultima_escala.missa.data if ultima_escala and ultima_escala.missa else None
-
-    if ultima_data:
-        dias_sem_servir = max((missa.data - ultima_data).days, 0)
-    else:
-        dias_sem_servir = 999
-
-    total_historico = historico.count()
-    confirmadas_historico = historico.filter(Escala.confirmado == True).count()
-
-    confiabilidade = (
-        confirmadas_historico / total_historico
-        if total_historico
-        else 1
-    )
-
-    janela_7 = int(_cfg("ESCALA_JANELA_7_DIAS", 7))
-    janela_14 = int(_cfg("ESCALA_JANELA_14_DIAS", 14))
-
-    inicio_7_dias = missa.data - timedelta(days=janela_7)
-    inicio_14_dias = missa.data - timedelta(days=janela_14)
-
-    escalas_7_dias = historico.filter(Missa.data >= inicio_7_dias).count()
-    escalas_14_dias = historico.filter(Missa.data >= inicio_14_dias).count()
-
-    escalas_mes = Escala.query.join(Missa).filter(
-        Escala.id_ministro == ministro_id,
-        Escala.id_paroquia == id_paroquia,
-        extract("month", Missa.data) == missa.data.month,
-        extract("year", Missa.data) == missa.data.year,
-    ).count()
-
-    return {
-        "dias_sem_servir": dias_sem_servir,
-        "confiabilidade": confiabilidade,
-        "escalas_mes": escalas_mes,
-        "escalas_7_dias": escalas_7_dias,
-        "escalas_14_dias": escalas_14_dias,
-        "total_historico": total_historico,
-    }
 
 
 def _calcular_score(metricas):
@@ -141,18 +48,121 @@ def _candidato_restrito(metricas):
 
 def selecionar_ministros(qtd, id_paroquia, missa):
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
+    if not ministros or qtd <= 0:
+        return []
+
+    ministro_ids = [m.id for m in ministros]
+    ids_set = set(ministro_ids)
+
+    semana = (missa.data.day - 1) // 7 + 1
+    dia_semana = missa.data.weekday()
+    janela_7 = int(_cfg("ESCALA_JANELA_7_DIAS", 7))
+    janela_14 = int(_cfg("ESCALA_JANELA_14_DIAS", 14))
+    inicio_7 = missa.data - timedelta(days=janela_7)
+    inicio_14 = missa.data - timedelta(days=janela_14)
+
+    # 1) Conflitos da mesma data/horário em lote
+    conflito_ids = {
+        row[0]
+        for row in Escala.query.join(Missa).with_entities(Escala.id_ministro).filter(
+            Escala.id_paroquia == id_paroquia,
+            Escala.id_ministro.in_(ministro_ids),
+            Missa.data == missa.data,
+            Missa.horario == missa.horario,
+        ).all()
+    }
+
+    # 2) Indisponibilidade pontual em lote
+    indisponivel_pontual = {
+        row[0]
+        for row in Indisponibilidade.query.with_entities(Indisponibilidade.id_ministro).filter(
+            Indisponibilidade.id_paroquia == id_paroquia,
+            Indisponibilidade.id_ministro.in_(ministro_ids),
+            Indisponibilidade.data == missa.data,
+            or_(Indisponibilidade.horario == None, Indisponibilidade.horario == missa.horario),
+        ).all()
+    }
+
+    # 3) Indisponibilidade fixa em lote
+    indisponivel_fixo = {
+        row[0]
+        for row in IndisponibilidadeFixa.query.with_entities(IndisponibilidadeFixa.id_ministro).filter(
+            IndisponibilidadeFixa.id_paroquia == id_paroquia,
+            IndisponibilidadeFixa.id_ministro.in_(ministro_ids),
+            or_(IndisponibilidadeFixa.semana == semana, IndisponibilidadeFixa.semana == None),
+            or_(IndisponibilidadeFixa.dia_semana == dia_semana, IndisponibilidadeFixa.dia_semana == None),
+            or_(IndisponibilidadeFixa.horario == missa.horario, IndisponibilidadeFixa.horario == None),
+        ).all()
+    }
+
+    indisponiveis = indisponivel_pontual.union(indisponivel_fixo)
+
+    # 4) Histórico em lote (somente passado)
+    historico_rows = Escala.query.join(Missa).with_entities(
+        Escala.id_ministro,
+        Escala.confirmado,
+        Missa.data,
+    ).filter(
+        Escala.id_paroquia == id_paroquia,
+        Escala.id_ministro.in_(ministro_ids),
+        Missa.data < missa.data,
+    ).all()
+
+    hist_por_ministro = defaultdict(list)
+    for ministro_id, confirmado, data in historico_rows:
+        hist_por_ministro[ministro_id].append((data, confirmado))
+
+    # 5) Escalas no mês em lote
+    escalas_mes_rows = Escala.query.join(Missa).with_entities(
+        Escala.id_ministro,
+        Escala.id,
+    ).filter(
+        Escala.id_paroquia == id_paroquia,
+        Escala.id_ministro.in_(ministro_ids),
+        extract("month", Missa.data) == missa.data.month,
+        extract("year", Missa.data) == missa.data.year,
+    ).all()
+
+    escalas_mes_map = defaultdict(int)
+    for ministro_id, _ in escalas_mes_rows:
+        escalas_mes_map[ministro_id] += 1
 
     priorizados = []
     restritos = []
 
     for ministro in ministros:
-        if _esta_indisponivel(ministro.id, id_paroquia, missa):
+        ministro_id = ministro.id
+        if ministro_id not in ids_set:
+            continue
+        if ministro_id in conflito_ids:
+            continue
+        if ministro_id in indisponiveis:
             continue
 
-        if _tem_conflito_mesmo_horario(ministro.id, id_paroquia, missa):
-            continue
+        hist = hist_por_ministro.get(ministro_id, [])
+        total_historico = len(hist)
+        confirmadas_historico = sum(1 for _, conf in hist if conf is True)
+        confiabilidade = (confirmadas_historico / total_historico) if total_historico else 1
 
-        metricas = _coletar_metricas(ministro.id, id_paroquia, missa)
+        if hist:
+            ultima_data = max(data for data, _ in hist)
+            dias_sem_servir = max((missa.data - ultima_data).days, 0)
+            escalas_7_dias = sum(1 for data, _ in hist if data >= inicio_7)
+            escalas_14_dias = sum(1 for data, _ in hist if data >= inicio_14)
+        else:
+            dias_sem_servir = 999
+            escalas_7_dias = 0
+            escalas_14_dias = 0
+
+        metricas = {
+            "dias_sem_servir": dias_sem_servir,
+            "confiabilidade": confiabilidade,
+            "escalas_mes": escalas_mes_map.get(ministro_id, 0),
+            "escalas_7_dias": escalas_7_dias,
+            "escalas_14_dias": escalas_14_dias,
+            "total_historico": total_historico,
+        }
+
         score = _calcular_score(metricas)
         item = (ministro, score)
 
@@ -163,12 +173,10 @@ def selecionar_ministros(qtd, id_paroquia, missa):
 
     random.shuffle(priorizados)
     random.shuffle(restritos)
-
     priorizados.sort(key=lambda x: x[1], reverse=True)
     restritos.sort(key=lambda x: x[1], reverse=True)
 
     selecionados = [m for m, _ in priorizados[:qtd]]
-
     if len(selecionados) < qtd:
         faltantes = qtd - len(selecionados)
         selecionados.extend([m for m, _ in restritos[:faltantes]])
