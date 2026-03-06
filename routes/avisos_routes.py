@@ -2,6 +2,7 @@ import os
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from models import Aviso, db
@@ -37,7 +38,10 @@ def _listar_avisos(categoria):
     if tipo:
         query = query.filter_by(tipo=tipo)
 
-    lista = query.order_by(Aviso.fixado.desc(), Aviso.data.desc()).all()
+    lista = query.order_by(
+        func.coalesce(Aviso.fixado, False).desc(),
+        Aviso.data.desc()
+    ).all()
     return render_template(
         "avisos.html",
         avisos=lista,
