@@ -4,6 +4,10 @@ from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, Esc
 from datetime import datetime, date, timedelta
 import calendar, uuid, urllib.parse, base64, io
 from utils.auth import admin_required
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 estatisticas_bp = Blueprint("estatisticas", __name__)
 
@@ -178,7 +182,7 @@ def whatsapp_periodo():
         # 🔹 LINK CALENDÁRIO COMPLETO
         if ministro.token_publico:
             link_calendario = url_for(
-                "calendario_publico",
+                "publico.calendario_publico",
                 token=ministro.token_publico,
                 _external=True
             )
@@ -239,14 +243,4 @@ def confiabilidade():
         })
 
     return render_template("confiabilidade.html", dados=dados)
-
-# ======================
-# EXECUÇÃO
-# ======================
-
-if __name__ == "__main__":
-   # with app.app_context():
-   #     db.create_all()
-    app.run(debug=True)
-
 

@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for
+from flask_login import login_required
 from werkzeug.utils import secure_filename
 from models import db, Aviso
+from utils.auth import admin_required
 import os
 
 avisos_bp = Blueprint("avisos", __name__)
@@ -17,6 +19,8 @@ def avisos():
 
 
 @avisos_bp.route("/avisos/novo", methods=["GET","POST"])
+@login_required
+@admin_required
 def novo_aviso():
 
     if request.method == "POST":
@@ -41,7 +45,7 @@ def novo_aviso():
             # cria pasta se não existir
             os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-            caminho = os.path.join(UPLOAD_FOLDER, arquivo.filename)
+            caminho = os.path.join(UPLOAD_FOLDER, nome)
 
             arquivo.save(caminho)
             arquivo_nome = nome

@@ -1,46 +1,42 @@
 from datetime import datetime, timedelta
-from flask import current_app
 
-from models import Missa, Escala
+from models import Escala, Missa
 from services.firebase_service import enviar_push
 
 
-def enviar_lembretes():
+def enviar_lembretes(app=None):
+    if app is not None:
+        with app.app_context():
+            _processar_lembretes()
+        return
 
-    # abre contexto do Flask (necessário para SQLAlchemy)
-    with current_app.app_context():
+    _processar_lembretes()
 
-        agora = datetime.now()
 
-        # verifica missas nas próximas 2 horas
-        limite = agora + timedelta(hours=2)
+def _processar_lembretes():
+    agora = datetime.now()
+    limite = agora + timedelta(hours=2)
 
-        missas = Missa.query.filter(
-            Missa.data >= agora.date(),
-            Missa.data <= limite.date()
-        ).all()
+    missas = Missa.query.filter(
+        Missa.data >= agora.date(),
+        Missa.data <= limite.date()
+    ).all()
 
-        for missa in missas:
+    for missa in missas:
+        horario_missa = datetime.combine(
+            missa.data,
+            datetime.strptime(missa.horario, "%H:%M").time()
+        )
 
-            horario_missa = datetime.combine(
-                missa.data,
-                datetime.strptime(missa.horario, "%H:%M").time()
-            )
+        if not (agora <= horario_missa <= limite):
+            continue
 
-            if agora <= horario_missa <= limite:
-
-                escalas = Escala.query.filter_by(
-                    id_missa=missa.id
-                ).all()
-
-                for escala in escalas:
-
-                    ministro = escala.ministro
-
-                    if ministro and ministro.firebase_token:
-
-                        enviar_push(
-                            ministro.firebase_token,
-                            "Lembrete de Escala",
-                            f"Você tem escala hoje às {missa.horario} - {missa.comunidade}"
-                        )
+        escalas = Escala.query.filter_by(id_missa=missa.id).all()
+        for escala in escalas:
+            ministro = escala.ministro
+            if ministro and ministro.firebase_token:
+                enviar_push(
+                    ministro.firebase_token,
+                    "Lembrete de Escala",
+                    f"Voce tem escala hoje as {missa.horario} - {missa.comunidade}"
+                )

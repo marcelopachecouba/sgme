@@ -31,6 +31,7 @@ def substituir_ministro(escala):
             .join(Missa)\
             .filter(
                 Escala.id_ministro == ministro.id,
+                Escala.id_paroquia == paroquia,
                 Missa.data == missa.data,
                 Missa.horario == missa.horario
             ).first()
@@ -39,9 +40,12 @@ def substituir_ministro(escala):
             continue
 
         # indisponibilidade
-        indisponivel = Indisponibilidade.query.filter_by(
-            id_ministro=ministro.id,
-            data=missa.data
+        indisponivel = Indisponibilidade.query.filter(
+            Indisponibilidade.id_ministro == ministro.id,
+            Indisponibilidade.id_paroquia == paroquia,
+            Indisponibilidade.data == missa.data,
+            (Indisponibilidade.horario == None)
+            | (Indisponibilidade.horario == missa.horario),
         ).first()
 
         if indisponivel:
@@ -52,6 +56,7 @@ def substituir_ministro(escala):
             .join(Missa)\
             .filter(
                 Escala.id_ministro == ministro.id,
+                Escala.id_paroquia == paroquia,
                 Missa.data >= inicio_mes
             ).scalar()
 

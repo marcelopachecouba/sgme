@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, abort
 from flask_login import login_required, current_user
 from models import db, Ministro, IndisponibilidadeFixa
 
@@ -30,6 +30,12 @@ def nova_indisponibilidade():
     if request.method == "POST":
 
         ministro_id = request.form["ministro"]
+        ministro = Ministro.query.filter_by(
+            id=ministro_id,
+            id_paroquia=current_user.id_paroquia
+        ).first()
+        if not ministro:
+            abort(403)
         semana = request.form.get("semana")
         dia_semana = request.form["dia_semana"]
         horario = request.form["horario"]
@@ -58,6 +64,8 @@ def nova_indisponibilidade():
 def excluir_indisponibilidade(id):
 
     regra = IndisponibilidadeFixa.query.get_or_404(id)
+    if regra.id_paroquia != current_user.id_paroquia:
+        abort(403)
 
     db.session.delete(regra)
     db.session.commit()

@@ -8,6 +8,8 @@ from utils.auth import admin_required
 admin_bp = Blueprint("admin", __name__)
 
 @admin_bp.route("/criar-admin")
+@login_required
+@admin_required
 def criar_admin():
 
     paroquia = Paroquia.query.first()
@@ -42,5 +44,4 @@ def criar_admin():
 @admin_bp.app_errorhandler(403)
 def acesso_negado(e):
     return render_template("403.html"), 403
-
 
