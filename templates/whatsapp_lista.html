@@ -29,4 +29,24 @@
     </tbody>
 </table>
 
+<button onclick="enviarTodos()" class="btn btn-success">
+📲 Enviar para todos
+</button>
+
+<script>
+function enviarTodos(){
+
+    const links = document.querySelectorAll(".link-wpp")
+
+    links.forEach((link, i) => {
+
+        setTimeout(() => {
+            window.open(link.href, "_blank")
+        }, i * 1000)
+
+    })
+
+}
+</script>
+
 {% endblock %}
