@@ -453,6 +453,9 @@ def gerar_mensal():
 
         mes = int(request.form["mes"])
         ano = int(request.form["ano"])
+        considerar_periodos_anteriores = bool(
+            request.form.get("considerar_periodos_anteriores")
+        )
 
         cal = calendar.monthcalendar(ano, mes)
 

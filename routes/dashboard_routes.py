@@ -40,11 +40,15 @@ def avisar_missa(missa_id):
 
     enviados = 0
     sem_token = 0
+    nomes_enviados = []
+    nomes_sem_token = []
 
     for escala in escalas:
         ministro = escala.ministro
         if not ministro or not ministro.firebase_token:
             sem_token += 1
+            if ministro:
+                nomes_sem_token.append(ministro.nome)
             continue
 
         enviar_push(
@@ -56,9 +60,14 @@ def avisar_missa(missa_id):
             )
         )
         enviados += 1
+        nomes_enviados.append(ministro.nome)
 
-    flash(
-        f"Aviso enviado via Firebase para {enviados} ministro(s). "
-        f"{sem_token} sem token ativo."
-    )
+    resumo = f"Aviso enviado via Firebase para {enviados} ministro(s). {sem_token} sem token ativo."
+    flash(resumo)
+
+    if nomes_enviados:
+        flash("Receberam push: " + ", ".join(nomes_enviados))
+    if nomes_sem_token:
+        flash("Sem token ativo: " + ", ".join(nomes_sem_token))
+
     return redirect(url_for("dashboard.home"))
