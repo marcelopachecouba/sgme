@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="container">
-
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Mural dos Ministros</h2>
     {% if current_user.is_authenticated and current_user.tipo == "admin" %}
@@ -14,14 +12,13 @@
 <div class="btn-group mb-4" role="group" aria-label="Categorias de avisos">
     <a href="{{ url_for('avisos.avisos') }}" class="btn btn-outline-dark {% if categoria_ativa == 'todos' %}active{% endif %}">Todos</a>
     <a href="{{ url_for('avisos.avisos_categoria', categoria='avisos') }}" class="btn btn-outline-dark {% if categoria_ativa == 'avisos' %}active{% endif %}">Avisos</a>
-    <a href="{{ url_for('avisos.avisos_categoria', categoria='formacoes') }}" class="btn btn-outline-dark {% if categoria_ativa == 'formacoes' %}active{% endif %}">Formações</a>
+    <a href="{{ url_for('avisos.avisos_categoria', categoria='formacoes') }}" class="btn btn-outline-dark {% if categoria_ativa == 'formacoes' %}active{% endif %}">Formacoes</a>
     <a href="{{ url_for('avisos.avisos_categoria', categoria='fotos') }}" class="btn btn-outline-dark {% if categoria_ativa == 'fotos' %}active{% endif %}">Fotos</a>
 </div>
 
 {% for a in avisos %}
 <div class="card shadow mb-4">
     <div class="card-body">
-
         <div class="d-flex justify-content-between align-items-start gap-3">
             <div>
                 <h4 class="mb-1">{{ a.titulo }}</h4>
@@ -30,7 +27,6 @@
                 <span class="badge bg-warning text-dark ms-2">Fixado</span>
                 {% endif %}
             </div>
-
             {% if current_user.is_authenticated and current_user.tipo == "admin" %}
             <div class="d-flex gap-2">
                 <a href="{{ url_for('avisos.editar_aviso', id=a.id) }}" class="btn btn-sm btn-secondary">Editar</a>
@@ -55,15 +51,13 @@
 
         {% if a.tipo == "pdf" and a.arquivo %}
         <a href="/static/uploads/{{ a.arquivo }}" target="_blank" class="btn btn-outline-primary mt-3">
-            Abrir material de formação
+            Abrir material de formacao
         </a>
         {% endif %}
     </div>
 </div>
 {% else %}
-<div class="alert alert-secondary">Nenhum conteúdo encontrado nesta categoria.</div>
+<div class="alert alert-secondary">Nenhum conteudo encontrado nesta categoria.</div>
 {% endfor %}
-
 </div>
-
 {% endblock %}
