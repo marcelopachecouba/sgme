@@ -1,0 +1,31 @@
+<h2>Indisponibilidades</h2>
+
+<a href="/indisponibilidade/nova">Nova indisponibilidade</a>
+
+<table border="1">
+
+<tr>
+<th>Ministro</th>
+<th>Semana</th>
+<th>Dia</th>
+<th>Horário</th>
+<th>Ação</th>
+</tr>
+
+{% for r in regras %}
+
+<tr>
+<td>{{r.ministro.nome}}</td>
+<td>{{r.semana or "Todas"}}</td>
+<td>{{r.dia_semana}}</td>
+<td>{{r.horario}}</td>
+
+<td>
+<a href="/indisponibilidade/excluir/{{r.id}}">Excluir</a>
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
