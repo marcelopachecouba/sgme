@@ -241,3 +241,43 @@ class CasalMinisterio(db.Model):
 
     ministro_1 = db.relationship("Ministro", foreign_keys=[id_ministro_1])
     ministro_2 = db.relationship("Ministro", foreign_keys=[id_ministro_2])
+
+
+class PedidoSubstituicao(db.Model):
+    __tablename__ = "pedido_substituicao"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(120), unique=True, nullable=False, index=True)
+
+    id_escala = db.Column(
+        db.Integer,
+        db.ForeignKey("escala.id"),
+        nullable=False,
+        index=True
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True
+    )
+    id_ministro_solicitante = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False,
+        index=True
+    )
+    id_ministro_aceite = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=True,
+        index=True
+    )
+
+    status = db.Column(db.String(20), default="aberto", nullable=False, index=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    respondido_em = db.Column(db.DateTime, nullable=True)
+
+    escala = db.relationship("Escala", foreign_keys=[id_escala])
+    solicitante = db.relationship("Ministro", foreign_keys=[id_ministro_solicitante])
+    aceite = db.relationship("Ministro", foreign_keys=[id_ministro_aceite])
