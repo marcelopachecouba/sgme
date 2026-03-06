@@ -1,19 +1,29 @@
 <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
-
 <a href="{{ url_for('ministros.ministros') }}">Ministros</a>
 <a href="{{ url_for('missas.missas') }}">Missas</a>
-<a href="{{ url_for('estatisticas.estatisticas') }}">Estatísticas</a>
-<a href="{{ url_for('estatisticas.confiabilidade') }}">📊 Confiabilidade</a>
-<a href="{{ url_for('avisos.avisos') }}">📢 Avisos</a>
-<a href="{{ url_for('avisos.novo_aviso') }}" class="btn btn-primary mb-3">Novo Aviso</a>
+<a href="{{ url_for('estatisticas.estatisticas') }}">Estatisticas</a>
+<a href="{{ url_for('estatisticas.confiabilidade') }}">Confiabilidade</a>
 <a href="{{ url_for('indisponibilidade.listar_indisponibilidade') }}">Indisponibilidades</a>
 
 <hr class="text-white">
 
+<a href="{{ url_for('avisos.avisos') }}">Mural</a>
+<a href="{{ url_for('avisos.avisos_categoria', categoria='avisos') }}">- Avisos</a>
+<a href="{{ url_for('avisos.avisos_categoria', categoria='formacoes') }}">- Formacoes</a>
+<a href="{{ url_for('avisos.avisos_categoria', categoria='fotos') }}">- Fotos</a>
+{% if current_user.tipo == "admin" %}
+<a href="{{ url_for('avisos.novo_aviso') }}">Novo Aviso</a>
+{% endif %}
+
+<hr class="text-white">
+
 <a href="{{ url_for('escala.escala_fixa') }}">Escala Fixa</a>
-<a href="{{ url_for('escala.visao_escala_fixa') }}">Visão Organizada</a>
-<a href="{{ url_for('escala.gerar_mensal') }}">📅 Gerar Escala Mensal</a>
-<a href="/gerar_mensal_inteligente" class="btn btn-primary">⚡ Gerar Escala Inteligente</a>
-<a href="/gerar_mensal_super_inteligente" class="btn btn-warning">⚡ Gerar Escala Inteligente do Mês</a>
-<a href="{{ url_for('escala.dashboard_ministros') }}" class="btn btn-info">📊 Dashboard de Ministros</a>
-<hr class="text-white"><a href="{{ url_for('auth.logout') }}">Sair</a>
+<a href="{{ url_for('escala.visao_escala_fixa') }}">Visao Organizada</a>
+<a href="{{ url_for('escala.gerar_mensal') }}">Gerar Escala Mensal</a>
+<a href="/gerar_mensal_inteligente">Gerar Escala Inteligente</a>
+<a href="/gerar_mensal_super_inteligente">Gerar Escala Inteligente do Mes</a>
+<a href="{{ url_for('escala.dashboard_ministros') }}">Dashboard de Ministros</a>
+
+<hr class="text-white">
+
+<a href="{{ url_for('auth.logout') }}">Sair</a>
