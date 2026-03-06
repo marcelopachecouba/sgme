@@ -464,10 +464,15 @@ from sqlalchemy import extract
 def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriores):
     from services.escala_inteligente_service import selecionar_ministros
 
-    Escala.query.join(Missa).filter(
-        Escala.id_paroquia == current_user.id_paroquia,
+    missas_mes_subquery = db.session.query(Missa.id).filter(
+        Missa.id_paroquia == current_user.id_paroquia,
         extract("month", Missa.data) == mes,
         extract("year", Missa.data) == ano
+    ).subquery()
+
+    Escala.query.filter(
+        Escala.id_paroquia == current_user.id_paroquia,
+        Escala.id_missa.in_(missas_mes_subquery)
     ).delete(synchronize_session=False)
 
     db.session.commit()
