@@ -52,6 +52,8 @@ class Ministro(UserMixin, db.Model):
         self.senha_hash = generate_password_hash(senha)
 
     def check_senha(self, senha):
+        if not self.senha_hash:
+            return False
         return check_password_hash(self.senha_hash, senha)
 
     def gerar_token(self):
@@ -99,7 +101,12 @@ class Escala(db.Model):
 
     missa = db.relationship("Missa", lazy="joined")
     ministro = db.relationship("Ministro", lazy="joined")
-    token = db.Column(db.String(100), unique=True, nullable=True)
+    token = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid.uuid4())
+    )
 
 class Indisponibilidade(db.Model):
     id = db.Column(db.Integer, primary_key=True)

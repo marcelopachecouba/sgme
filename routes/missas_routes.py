@@ -116,7 +116,7 @@ def editar_missa(id):
     return render_template("editar_missa.html", missa=missa)
 
 from utils.auth import admin_required
-@missas_bp.route("/missas/excluir/<int:id>")
+@missas_bp.route("/missas/excluir/<int:id>", methods=["POST"])
 @login_required
 @admin_required
 def excluir_missa(id):
@@ -172,4 +172,3 @@ def visao_missas():
 # ======================
 # ESCALA MANUAL
 # ======================
-

@@ -2,6 +2,7 @@ from flask import Flask
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_login import LoginManager
 from flask_migrate import Migrate
+import os
 
 from config import Config
 from models import db, Ministro
@@ -21,6 +22,8 @@ def health():
 iniciar_firebase()
 
 def iniciar_scheduler():
+    if os.environ.get("ENABLE_SCHEDULER", "1") != "1":
+        return
     scheduler = BackgroundScheduler(daemon=True)
     scheduler.add_job(
         lambda: enviar_lembretes(app),
@@ -69,4 +72,4 @@ app.register_blueprint(mural_bp)
 iniciar_scheduler()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")

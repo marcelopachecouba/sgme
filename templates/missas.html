@@ -70,11 +70,12 @@
                    Editar
                 </a>
 
-                <a href="{{ url_for('missas.excluir_missa', id=m.id) }}"
-                   class="btn btn-sm btn-dark"
-                   onclick="return confirm('Tem certeza que deseja excluir esta missa?')">
-                   Excluir
-                </a>
+                <form method="POST"
+                      action="{{ url_for('missas.excluir_missa', id=m.id) }}"
+                      onsubmit="return confirm('Tem certeza que deseja excluir esta missa?')"
+                      style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-dark">Excluir</button>
+                </form>
             </td>
 
         </tr>

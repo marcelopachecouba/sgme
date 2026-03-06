@@ -55,7 +55,11 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="mb-3">Escalas por Ministro</h6>
+                    {% if grafico_barra %}
                     <img src="data:image/png;base64,{{ grafico_barra }}" class="img-fluid rounded">
+                    {% else %}
+                    <p class="text-muted mb-0">Gráfico indisponível.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -64,7 +68,11 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="mb-3">Distribuição</h6>
+                    {% if grafico_pizza %}
                     <img src="data:image/png;base64,{{ grafico_pizza }}" class="img-fluid rounded">
+                    {% else %}
+                    <p class="text-muted mb-0">Gráfico indisponível.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
