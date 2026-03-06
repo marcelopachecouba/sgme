@@ -38,6 +38,7 @@ class Config:
     ESCALA_RESTRICAO_MAX_7_DIAS = int(os.environ.get("ESCALA_RESTRICAO_MAX_7_DIAS", "2"))
     ESCALA_JANELA_7_DIAS = int(os.environ.get("ESCALA_JANELA_7_DIAS", "7"))
     ESCALA_JANELA_14_DIAS = int(os.environ.get("ESCALA_JANELA_14_DIAS", "14"))
+    ESCALA_CASAL_PARES = os.environ.get("ESCALA_CASAL_PARES", "")
 
     SQLALCHEMY_ENGINE_OPTIONS = {
         "connect_args": {
