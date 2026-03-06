@@ -564,7 +564,9 @@ def gerar_mensal_inteligente():
 
     return render_template("form_gerar_mensal_inteligente.html")
 
-@escala_bp.route("/gerar_mensal_super_inteligente", methods=["GET","POST"])
+from sqlalchemy import extract
+
+@escala_bp.route("/gerar_mensal_super_inteligente", methods=["GET", "POST"])
 @login_required
 @admin_required
 def gerar_mensal_super_inteligente():
@@ -576,23 +578,44 @@ def gerar_mensal_super_inteligente():
         mes = int(request.form["mes"])
         ano = int(request.form["ano"])
 
+        # ===============================
+        # 1️⃣ LIMPAR ESCALAS DO MÊS
+        # ===============================
+
+        Escala.query.join(Missa).filter(
+            Escala.id_paroquia == current_user.id_paroquia,
+            extract("month", Missa.data) == mes,
+            extract("year", Missa.data) == ano
+        ).delete(synchronize_session=False)
+
+        db.session.commit()
+
+        # ===============================
+        # 2️⃣ DEFINIR INTERVALO DO MÊS
+        # ===============================
+
         inicio = date(ano, mes, 1)
-        ultimo = calendar.monthrange(ano, mes)[1]
-        fim = date(ano, mes, ultimo)
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
+        fim = date(ano, mes, ultimo_dia)
 
-        dia = inicio
+        dia_atual = inicio
 
-        while dia <= fim:
+        # ===============================
+        # 3️⃣ PERCORRER DIAS DO MÊS
+        # ===============================
+
+        while dia_atual <= fim:
 
             missas = Missa.query.filter_by(
-                data=dia,
+                data=dia_atual,
                 id_paroquia=current_user.id_paroquia
             ).all()
 
             for missa in missas:
 
-                # remove escala existente
-                Escala.query.filter_by(id_missa=missa.id).delete()
+                # ===============================
+                # GERAR MINISTROS INTELIGENTES
+                # ===============================
 
                 ministros = selecionar_ministros(
                     missa.qtd_ministros,
@@ -611,9 +634,14 @@ def gerar_mensal_super_inteligente():
 
                     db.session.add(nova)
 
+                    # 🔔 enviar notificação
                     notificar_escala_criada(ministro, missa)
 
-            dia += timedelta(days=1)
+            dia_atual += timedelta(days=1)
+
+        # ===============================
+        # 4️⃣ SALVAR NO BANCO
+        # ===============================
 
         db.session.commit()
 
