@@ -7,6 +7,14 @@
         <h3 class="fw-bold">Dashboard</h3>
     </div>
 
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-info">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
     <!-- CARDS SUPERIORES -->
     <div class="row g-4 mb-4">
 
@@ -89,7 +97,7 @@
 <th>Horário</th>
 <th>Comunidade</th>
 <th>Ministros</th>
-<th>WhatsApp</th>
+<th>Aviso</th>
 </tr>
 </thead>
 
@@ -109,11 +117,9 @@
 </td>
 
 <td>
-{% if item.whatsapp %}
-<a href="{{ item.whatsapp }}" target="_blank" class="btn btn-success btn-sm">
-📲 Avisar ministros
-</a>
-{% endif %}
+<form method="POST" action="{{ url_for('dashboard.avisar_missa', missa_id=item.missa_id) }}">
+    <button type="submit" class="btn btn-primary btn-sm">Avisar ministros</button>
+</form>
 </td>
 
 </tr>
@@ -127,3 +133,5 @@
 </div>
 
 {% endblock %}
+
+
