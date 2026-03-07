@@ -4,10 +4,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">Controle de Presencas</h3>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
-            <a href="{{ url_for('presencas.nova_presenca') }}" class="btn btn-primary">Novo Registro</a>
-        </div>
+        <a href="{{ url_for('presencas.nova_presenca') }}" class="btn btn-primary">Novo Registro</a>
     </div>
 
     {% if reunioes %}
@@ -53,6 +50,13 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
+                        <a
+                            href="{{ url_for('presencas.imprimir_presenca', reuniao_id=r.id) }}"
+                            class="btn btn-sm btn-outline-primary"
+                            target="_blank"
+                        >
+                            Visualizar/Imprimir
+                        </a>
                         <a href="{{ url_for('presencas.editar_presenca', reuniao_id=r.id) }}" class="btn btn-sm btn-secondary">Editar</a>
                         <form method="POST" action="{{ url_for('presencas.excluir_presenca', reuniao_id=r.id) }}" style="display:inline;" onsubmit="return confirm('Excluir este registro?');">
                             <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
