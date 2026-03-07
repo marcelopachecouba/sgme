@@ -243,6 +243,66 @@ class CasalMinisterio(db.Model):
     ministro_2 = db.relationship("Ministro", foreign_keys=[id_ministro_2])
 
 
+class ReuniaoFormacao(db.Model):
+    __tablename__ = "reuniao_formacao"
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False, index=True)
+    assunto = db.Column(db.String(200), nullable=False)
+    tipo = db.Column(db.String(20), nullable=False, default="reuniao")  # reuniao | formacao
+    observacao = db.Column(db.Text)
+
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True
+    )
+
+    presencas = db.relationship(
+        "PresencaReuniao",
+        backref="reuniao",
+        cascade="all, delete-orphan",
+        lazy="joined"
+    )
+
+
+class PresencaReuniao(db.Model):
+    __tablename__ = "presenca_reuniao"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    id_reuniao = db.Column(
+        db.Integer,
+        db.ForeignKey("reuniao_formacao.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    id_ministro = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True
+    )
+    presente = db.Column(db.Boolean, nullable=False, default=True)
+
+    ministro = db.relationship("Ministro", lazy="joined")
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "id_reuniao",
+            "id_ministro",
+            name="uq_presenca_reuniao_ministro"
+        ),
+    )
+
+
 class PedidoSubstituicao(db.Model):
     __tablename__ = "pedido_substituicao"
 

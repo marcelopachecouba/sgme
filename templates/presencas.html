@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">Controle de Presencas</h3>
+        <a href="{{ url_for('presencas.nova_presenca') }}" class="btn btn-primary">Novo Registro</a>
+    </div>
+
+    {% if reunioes %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Assunto</th>
+                    <th>Presentes</th>
+                    <th class="text-end">Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reunioes %}
+                <tr>
+                    <td>{{ r.data.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ "Formacao" if r.tipo == "formacao" else "Reuniao" }}</td>
+                    <td>{{ r.assunto }}</td>
+                    <td>{{ r.presencas|length }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('presencas.editar_presenca', reuniao_id=r.id) }}" class="btn btn-sm btn-secondary">Editar</a>
+                        <form method="POST" action="{{ url_for('presencas.excluir_presenca', reuniao_id=r.id) }}" style="display:inline;" onsubmit="return confirm('Excluir este registro?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-secondary">Nenhum registro de presenca cadastrado.</div>
+    {% endif %}
+</div>
+{% endblock %}

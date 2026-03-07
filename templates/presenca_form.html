@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h3 class="mb-4">
+        {% if reuniao %}Editar Registro de Presenca{% else %}Novo Registro de Presenca{% endif %}
+    </h3>
+
+    <form method="POST">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Data</label>
+                <input
+                    type="date"
+                    name="data"
+                    class="form-control"
+                    value="{{ reuniao.data.isoformat() if reuniao else '' }}"
+                    required
+                >
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tipo</label>
+                <select name="tipo" class="form-select" required>
+                    <option value="reuniao" {% if reuniao and reuniao.tipo == 'reuniao' %}selected{% endif %}>Reuniao</option>
+                    <option value="formacao" {% if reuniao and reuniao.tipo == 'formacao' %}selected{% endif %}>Formacao</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Assunto</label>
+                <input
+                    type="text"
+                    name="assunto"
+                    class="form-control"
+                    value="{{ reuniao.assunto if reuniao else '' }}"
+                    required
+                >
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <label class="form-label">Observacao (opcional)</label>
+            <textarea name="observacao" class="form-control" rows="3">{{ reuniao.observacao if reuniao and reuniao.observacao else '' }}</textarea>
+        </div>
+
+        <div class="mt-4">
+            <h5>Ministros Presentes</h5>
+            <div class="row">
+                {% for m in ministros %}
+                <div class="col-md-4 col-lg-3">
+                    <div class="form-check mb-2">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="presentes"
+                            value="{{ m.id }}"
+                            id="ministro_{{ m.id }}"
+                            {% if presentes_ids is defined and m.id in presentes_ids %}checked{% endif %}
+                        >
+                        <label class="form-check-label" for="ministro_{{ m.id }}">{{ m.nome }}</label>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-success">Salvar</button>
+            <a href="{{ url_for('presencas.listar_presencas') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
