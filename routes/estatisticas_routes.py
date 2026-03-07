@@ -116,6 +116,7 @@ def estatisticas_pdf():
                      mimetype="application/pdf")
 @estatisticas_bp.route("/estatisticas/whatsapp", methods=["POST"])
 @login_required
+@admin_required
 def whatsapp_periodo():
 
     data_inicio = request.form.get("data_inicio")

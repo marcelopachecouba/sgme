@@ -867,7 +867,7 @@ def escala_publica(token):
 
 @escala_bp.route("/dashboard_ministros")
 @login_required
-@admin_required
+#@admin_required
 def dashboard_ministros():
     inicio_str = (request.args.get("inicio") or "").strip()
     fim_str = (request.args.get("fim") or "").strip()
