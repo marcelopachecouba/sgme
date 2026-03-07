@@ -296,6 +296,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
             "ministro": ministro,
             "score": score,
             "escalas_mes": metricas["escalas_mes"],
+            "disponivel_preferencial": metricas["disponivel_preferencial"],
         }
 
         if _candidato_restrito(metricas):
@@ -305,10 +306,12 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
 
     random.shuffle(priorizados)
     random.shuffle(restritos)
-    # Equilibrio mensal vem primeiro: menos escalas no mes tem prioridade.
-    # Em empate no mes, usa score inteligente.
-    priorizados.sort(key=lambda x: (x["escalas_mes"], -x["score"]))
-    restritos.sort(key=lambda x: (x["escalas_mes"], -x["score"]))
+    # Prioridade de ordenacao:
+    # 1) disponibilidade declarada
+    # 2) equilibrio mensal
+    # 3) score inteligente
+    priorizados.sort(key=lambda x: (-x["disponivel_preferencial"], x["escalas_mes"], -x["score"]))
+    restritos.sort(key=lambda x: (-x["disponivel_preferencial"], x["escalas_mes"], -x["score"]))
 
     domingo = missa.data.weekday() == 6
     casal_map = _obter_pares_casal(id_paroquia)
@@ -377,15 +380,20 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
             "qtd_domingo_mes": escalas_domingo_mes_map.get(a.id, 0) + escalas_domingo_mes_map.get(b.id, 0),
             "qtd_7_dias": escalas_7_map.get(a.id, 0) + escalas_7_map.get(b.id, 0),
             "score": score_map.get(a.id, 0) + score_map.get(b.id, 0),
+            "disp_par": int(
+                a.id in disponibilidade_preferencial and b.id in disponibilidade_preferencial
+            ),
         })
         ids_em_par.add(a.id)
         ids_em_par.add(b.id)
 
     if domingo:
-        par_entries.sort(key=lambda x: (x["qtd_domingo_mes"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
+        par_entries.sort(
+            key=lambda x: (-x["disp_par"], x["qtd_domingo_mes"], x["qtd_max_mes"], x["qtd_mes"], -x["score"])
+        )
     else:
-        # Na semana, prioriza casal que serviu menos recentemente.
-        par_entries.sort(key=lambda x: (x["qtd_7_dias"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
+        # Na semana, prioriza casal disponivel e que serviu menos recentemente.
+        par_entries.sort(key=lambda x: (-x["disp_par"], x["qtd_7_dias"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
 
     # Singles incluem todos os candidatos (inclusive quem tem casal),
     # para nao bloquear o preenchimento justo quando o parceiro estiver indisponivel.
@@ -417,24 +425,26 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         vagas = qtd - len(selecionados)
         pares_escolhidos = 0
 
-        # Aos domingos tenta primeiro casais; semana permite mix livre.
-        if domingo:
-            meta_pares = min(meta_pares_base, vagas // 2)
-            for par in par_entries:
-                if pares_escolhidos >= meta_pares:
-                    break
-                if len(selecionados) + 2 > qtd:
-                    break
-                if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
-                    continue
-                if escalas_mes_map.get(par["a"].id, 0) > teto_mes or escalas_mes_map.get(par["b"].id, 0) > teto_mes:
-                    continue
-                selecionados.append(par["a"])
-                selecionados.append(par["b"])
-                selecionados_ids.add(par["a"].id)
-                selecionados_ids.add(par["b"].id)
-                pares_escolhidos += 1
-                progresso = True
+        # Casais entram antes da etapa individual (domingo e semana).
+        meta_pares = min(meta_pares_base, vagas // 2)
+        if not domingo and meta_pares == 0 and len(par_entries) > 0 and qtd >= 2:
+            # Na semana, garante ao menos uma tentativa de par quando houver casais elegiveis.
+            meta_pares = 1
+        for par in par_entries:
+            if pares_escolhidos >= meta_pares:
+                break
+            if len(selecionados) + 2 > qtd:
+                break
+            if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
+                continue
+            if escalas_mes_map.get(par["a"].id, 0) > teto_mes or escalas_mes_map.get(par["b"].id, 0) > teto_mes:
+                continue
+            selecionados.append(par["a"])
+            selecionados.append(par["b"])
+            selecionados_ids.add(par["a"].id)
+            selecionados_ids.add(par["b"].id)
+            pares_escolhidos += 1
+            progresso = True
 
         for ministro in singles_ordenados:
             if len(selecionados) >= qtd:
