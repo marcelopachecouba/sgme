@@ -3,6 +3,7 @@ from datetime import datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from utils.auth import admin_required
 
 from models import (
     Disponibilidade,
@@ -129,6 +130,7 @@ def listar_indisponibilidade():
 
 @indisp_bp.route("/indisponibilidade/nova", methods=["GET", "POST"])
 @login_required
+@admin_required
 def nova_indisponibilidade():
     ministros = _listar_ministros_paroquia()
 
@@ -195,6 +197,7 @@ def nova_indisponibilidade():
 
 @indisp_bp.route("/disponibilidade/nova", methods=["GET", "POST"])
 @login_required
+@admin_required
 def nova_disponibilidade():
     ministros = _listar_ministros_paroquia()
 
@@ -261,6 +264,7 @@ def nova_disponibilidade():
 
 @indisp_bp.route("/indisponibilidade/excluir/fixa/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def excluir_indisponibilidade_fixa(id):
     regra = IndisponibilidadeFixa.query.get_or_404(id)
     if regra.id_paroquia != current_user.id_paroquia:
@@ -273,6 +277,7 @@ def excluir_indisponibilidade_fixa(id):
 
 @indisp_bp.route("/indisponibilidade/excluir/data/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def excluir_indisponibilidade_data(id):
     regra = Indisponibilidade.query.get_or_404(id)
     if regra.id_paroquia != current_user.id_paroquia:
@@ -285,6 +290,7 @@ def excluir_indisponibilidade_data(id):
 
 @indisp_bp.route("/disponibilidade/excluir/fixa/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def excluir_disponibilidade_fixa(id):
     regra = DisponibilidadeFixa.query.get_or_404(id)
     if regra.id_paroquia != current_user.id_paroquia:
@@ -297,6 +303,7 @@ def excluir_disponibilidade_fixa(id):
 
 @indisp_bp.route("/disponibilidade/excluir/data/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def excluir_disponibilidade_data(id):
     regra = Disponibilidade.query.get_or_404(id)
     if regra.id_paroquia != current_user.id_paroquia:
