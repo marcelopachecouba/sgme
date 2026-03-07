@@ -101,6 +101,11 @@ def _fracao_casal_preferida(domingo):
     return float(_cfg("ESCALA_CASAL_FRACAO_SEMANA", 0.4))
 
 
+def _tolerancia_balanceamento_mensal():
+    # 0 = estrito (sempre prioriza menor qtd no mes), 1 = permite pequena folga.
+    return max(0, int(_cfg("ESCALA_BALANCEAMENTO_MENSAL_TOLERANCIA", 0)))
+
+
 def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores=True):
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
     if not ministros or qtd <= 0:
@@ -277,6 +282,20 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         ]
         candidatos_ordenados = nao_repetidos_domingo + repetidos_domingo
 
+    # Balanceamento mensal forte: primeiro considera quem tem menos escalas no mes.
+    if candidatos_ordenados:
+        menor_qtd_mes = min(escalas_mes_map.get(m.id, 0) for m in candidatos_ordenados)
+        tolerancia = _tolerancia_balanceamento_mensal()
+        faixa_prioritaria = [
+            m for m in candidatos_ordenados
+            if escalas_mes_map.get(m.id, 0) <= menor_qtd_mes + tolerancia
+        ]
+        faixa_restante = [
+            m for m in candidatos_ordenados
+            if escalas_mes_map.get(m.id, 0) > menor_qtd_mes + tolerancia
+        ]
+        candidatos_ordenados = faixa_prioritaria + faixa_restante
+
     # Prioriza casal como unidade quando ambos estao elegiveis.
     par_entries = []
     ids_em_par = set()
@@ -296,6 +315,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         par_entries.append({
             "a": a,
             "b": b,
+            "qtd_max_mes": max(escalas_mes_map.get(a.id, 0), escalas_mes_map.get(b.id, 0)),
             "qtd_mes": escalas_mes_map.get(a.id, 0) + escalas_mes_map.get(b.id, 0),
             "qtd_domingo_mes": escalas_domingo_mes_map.get(a.id, 0) + escalas_domingo_mes_map.get(b.id, 0),
             "score": score_map.get(a.id, 0) + score_map.get(b.id, 0),
@@ -304,9 +324,9 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         ids_em_par.add(b.id)
 
     if domingo:
-        par_entries.sort(key=lambda x: (x["qtd_domingo_mes"], x["qtd_mes"], -x["score"]))
+        par_entries.sort(key=lambda x: (x["qtd_domingo_mes"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
     else:
-        par_entries.sort(key=lambda x: (x["qtd_mes"], -x["score"]))
+        par_entries.sort(key=lambda x: (x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
 
     casados_ids = set(casal_map.keys())
     singles_ordenados = [m for m in candidatos_ordenados if m.id not in casados_ids]
