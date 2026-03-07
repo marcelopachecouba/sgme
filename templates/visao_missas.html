@@ -21,15 +21,40 @@
                 <div class="ms-3 mb-3">
                     <strong>{{ horario }}</strong>
 
-                    <ul>
-                        {% for missa in lista_missas %}
-                            <li>
-                                {{ missa.data.strftime('%d/%m/%Y') }} -
-                                {{ missa.comunidade }} -
-                                {{ missa.qtd_ministros }} ministros
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    {% set ns = namespace(max_slots=0) %}
+                    {% for missa in lista_missas %}
+                        {% if missa.qtd_ministros > ns.max_slots %}
+                            {% set ns.max_slots = missa.qtd_ministros %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Comunidade</th>
+                                    <th>Qtd</th>
+                                    {% for i in range(ns.max_slots) %}
+                                    <th>Ministro {{ i + 1 }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for missa in lista_missas %}
+                                {% set ministros = missa.ministros_nomes if missa.ministros_nomes is defined else [] %}
+                                <tr>
+                                    <td>{{ missa.data.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ missa.comunidade }}</td>
+                                    <td>{{ missa.qtd_ministros }}</td>
+                                    {% for i in range(ns.max_slots) %}
+                                    <td>{{ ministros[i] if i < ministros|length else "-" }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
 
                 </div>
             {% endfor %}
