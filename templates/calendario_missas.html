@@ -75,8 +75,8 @@
 </div>
 
 <div class="print-only">
-    <h2>Escala dos Ministros</h2>
-    <h4>{{ mes }}/{{ ano }}</h4>
+    <h4 class="mb-0">Escala dos Ministros</h4>
+    <small>{{ mes }}/{{ ano }}</small>
 
     {% for g in grupos_impressao %}
         <div class="bloco-print">
@@ -127,30 +127,30 @@
 .print-only { display: none; }
 @media print {
     @page {
-        size: A4 landscape;
+        size: A4 portrait;
         margin: 6mm;
     }
     .screen-only, .no-print { display: none !important; }
     .print-only {
         display: block !important;
-        font-size: 9px;
+        font-size: 8px;
         line-height: 1.05;
-        zoom: 0.86; /* Chrome/Edge: tenta concentrar tudo em 1 pagina */
+        zoom: 0.84; /* Chrome/Edge: tenta concentrar em retrato */
     }
     .print-only h2, .print-only h4, .print-only h5 {
-        margin: 2px 0 4px 0 !important;
+        margin: 1px 0 3px 0 !important;
     }
     .print-only .table {
-        margin-bottom: 6px !important;
+        margin-bottom: 4px !important;
     }
     .print-only .table th,
     .print-only .table td {
-        padding: 2px 4px !important;
+        padding: 1px 3px !important;
         vertical-align: middle !important;
     }
     .bloco-print {
         page-break-inside: avoid;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
 }
 </style>

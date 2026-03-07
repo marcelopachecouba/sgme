@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import urllib.parse
 
 from flask import Blueprint, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
@@ -10,6 +11,18 @@ from utils.auth import admin_required
 
 
 dashboard_bp = Blueprint("dashboard", __name__)
+
+
+def _escala_missa_da_paroquia(missa_id):
+    missa = Missa.query.filter_by(
+        id=missa_id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+    escalas = Escala.query.filter_by(
+        id_missa=missa.id,
+        id_paroquia=current_user.id_paroquia
+    ).all()
+    return missa, escalas
 
 
 @dashboard_bp.route("/")
@@ -28,15 +41,7 @@ def home():
 @login_required
 @admin_required
 def avisar_missa(missa_id):
-    missa = Missa.query.filter_by(
-        id=missa_id,
-        id_paroquia=current_user.id_paroquia
-    ).first_or_404()
-
-    escalas = Escala.query.filter_by(
-        id_missa=missa.id,
-        id_paroquia=current_user.id_paroquia
-    ).all()
+    missa, escalas = _escala_missa_da_paroquia(missa_id)
 
     enviados = 0
     sem_token = 0
@@ -71,3 +76,77 @@ def avisar_missa(missa_id):
         flash("Sem token ativo: " + ", ".join(nomes_sem_token))
 
     return redirect(url_for("dashboard.home"))
+
+
+@dashboard_bp.route("/dashboard/sem_token/<int:missa_id>")
+@login_required
+@admin_required
+def sem_token_missa(missa_id):
+    missa, escalas = _escala_missa_da_paroquia(missa_id)
+
+    sem_token = []
+    ids = set()
+    for escala in escalas:
+        ministro = escala.ministro
+        if not ministro or ministro.id in ids:
+            continue
+        ids.add(ministro.id)
+        if not ministro.firebase_token:
+            link_wpp = None
+            if ministro.telefone:
+                mensagem = (
+                    f"Ola {ministro.nome},\n\n"
+                    "Ative as notificacoes no app/site para receber avisos de escala.\n"
+                    f"Voce esta escalado para {missa.data.strftime('%d/%m/%Y')} as {missa.horario} "
+                    f"na comunidade {missa.comunidade}.\n\n"
+                    "Abra o sistema e permita notificacoes no navegador."
+                )
+                link_wpp = f"https://wa.me/55{ministro.telefone}?text={urllib.parse.quote(mensagem)}"
+
+            sem_token.append({
+                "nome": ministro.nome,
+                "telefone": ministro.telefone,
+                "link_wpp": link_wpp,
+            })
+
+    return render_template(
+        "dashboard_sem_token.html",
+        missa=missa,
+        ministros=sem_token
+    )
+
+
+@dashboard_bp.route("/dashboard/whatsapp_sem_token/<int:missa_id>")
+@login_required
+@admin_required
+def whatsapp_sem_token_missa(missa_id):
+    missa, escalas = _escala_missa_da_paroquia(missa_id)
+
+    links = []
+    ids = set()
+    for escala in escalas:
+        ministro = escala.ministro
+        if not ministro or ministro.id in ids:
+            continue
+        ids.add(ministro.id)
+
+        if ministro.firebase_token or not ministro.telefone:
+            continue
+
+        mensagem = (
+            f"Ola {ministro.nome},\n\n"
+            "Ative as notificacoes no app/site para receber avisos de escala.\n"
+            f"Voce esta escalado para {missa.data.strftime('%d/%m/%Y')} as {missa.horario} "
+            f"na comunidade {missa.comunidade}.\n\n"
+            "Abra o sistema e permita notificacoes no navegador."
+        )
+        links.append({
+            "nome": ministro.nome,
+            "link": f"https://wa.me/55{ministro.telefone}?text={urllib.parse.quote(mensagem)}"
+        })
+
+    if not links:
+        flash("Nenhum ministro sem token ativo com telefone cadastrado.")
+        return redirect(url_for("dashboard.home"))
+
+    return render_template("whatsapp_lista.html", links=links)
