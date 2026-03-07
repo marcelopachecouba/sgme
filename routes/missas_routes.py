@@ -91,6 +91,7 @@ def calendario_missas():
 
         estrutura[dia].append({
             "horario": missa.horario,
+            "periodo": _normalizar_periodo(missa.periodo, missa.horario) or "-",
             "comunidade": missa.comunidade,
             "ministros": ministros
         })

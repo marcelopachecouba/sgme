@@ -5,7 +5,7 @@
     Calendario de Missas - {{ mes }}/{{ ano }}
 </h3>
 
-<div class="row mb-3">
+<div class="row mb-3 no-print">
     <div class="col-md-4">
         <form method="get">
             <div class="input-group">
@@ -14,6 +14,9 @@
                 <button class="btn btn-primary">Atualizar</button>
             </div>
         </form>
+    </div>
+    <div class="col-md-4 mt-2 mt-md-0">
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
     </div>
 </div>
 
@@ -52,6 +55,9 @@
 
                                 <small>
                                     <strong>{{ missa.horario }}</strong><br>
+                                    <span class="text-muted">
+                                        {% if missa.periodo == "manha" %}Manha{% elif missa.periodo == "tarde" %}Tarde{% elif missa.periodo == "noite" %}Noite{% else %}-{% endif %}
+                                    </span><br>
                                     {{ missa.comunidade }}
                                 </small>
 
@@ -85,5 +91,11 @@
     </tbody>
 
 </table>
+
+<style>
+@media print {
+    .no-print { display: none !important; }
+}
+</style>
 
 {% endblock %}
