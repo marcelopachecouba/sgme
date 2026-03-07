@@ -2,6 +2,9 @@
 {% block content %}
 
 <h3 class="mb-4">Visao Organizada das Missas</h3>
+<div class="mb-3 no-print">
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+</div>
 
 {% set dias = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"] %}
 
@@ -64,5 +67,11 @@
     </div>
 </div>
 {% endfor %}
+
+<style>
+@media print {
+    .no-print { display: none !important; }
+}
+</style>
 
 {% endblock %}

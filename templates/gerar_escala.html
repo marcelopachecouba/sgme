@@ -2,6 +2,14 @@
 {% block content %}
 
 <h2>Selecionar Ministros</h2>
+<p class="text-muted mb-3">
+    {{ missa.data.strftime('%d/%m/%Y') }} - {{ missa.horario }}
+    {% if missa.periodo == "manha" %}(Manha)
+    {% elif missa.periodo == "tarde" %}(Tarde)
+    {% elif missa.periodo == "noite" %}(Noite)
+    {% endif %}
+    - {{ missa.comunidade }}
+</p>
 
 <form method="POST">
 
