@@ -98,6 +98,7 @@
 <th>Comunidade</th>
 <th>Ministros</th>
 <th>Aviso</th>
+<th>Sem Token</th>
 </tr>
 </thead>
 
@@ -120,6 +121,17 @@
 <form method="POST" action="{{ url_for('dashboard.avisar_missa', missa_id=item.missa_id) }}">
     <button type="submit" class="btn btn-primary btn-sm">Avisar ministros</button>
 </form>
+</td>
+
+<td>
+    <div class="d-flex gap-1 flex-wrap">
+        <a href="{{ url_for('dashboard.sem_token_missa', missa_id=item.missa_id) }}" class="btn btn-outline-secondary btn-sm">
+            Ver sem token
+        </a>
+        <a href="{{ url_for('dashboard.whatsapp_sem_token_missa', missa_id=item.missa_id) }}" class="btn btn-outline-success btn-sm" target="_blank">
+            Lembrete WhatsApp
+        </a>
+    </div>
 </td>
 
 </tr>

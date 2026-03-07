@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Ministros Sem Token Ativo</h3>
+        <a href="{{ url_for('dashboard.home') }}" class="btn btn-secondary">Voltar</a>
+    </div>
+
+    <div class="alert alert-info">
+        Missa: {{ missa.data.strftime('%d/%m/%Y') }} - {{ missa.horario }} - {{ missa.comunidade }}
+    </div>
+
+    {% if ministros %}
+    <table class="table table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Ministro</th>
+                <th>Telefone</th>
+                <th>Acao</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in ministros %}
+            <tr>
+                <td>{{ m.nome }}</td>
+                <td>{{ m.telefone or "-" }}</td>
+                <td>
+                    {% if m.link_wpp %}
+                    <a href="{{ m.link_wpp }}" target="_blank" class="btn btn-sm btn-outline-success">
+                        WhatsApp
+                    </a>
+                    {% else %}
+                    <span class="text-muted">Sem telefone</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-success">Todos os ministros dessa missa possuem token ativo.</div>
+    {% endif %}
+</div>
+{% endblock %}
