@@ -2,50 +2,47 @@
 
 {% block content %}
 
-<h2>📢 Mural dos Ministros</h2>
+<h2>Mural dos Ministros</h2>
 
-<a href="/mural/novo" class="btn btn-success">
-➕ Novo Aviso
-</a>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-info">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<a href="/mural/novo" class="btn btn-success">Novo Aviso</a>
 
 <hr>
 
 {% for post in posts %}
-
 <div class="card mb-4">
+    <div class="card-body">
+        <h5>{{ post.ministro.nome }}</h5>
+        <p>{{ post.texto }}</p>
 
-<div class="card-body">
+        {% if post.imagem %}
+        <img src="{{ post.imagem }}" class="img-fluid">
+        {% endif %}
 
-<h5>{{ post.ministro.nome }}</h5>
+        {% if post.video %}
+        <video controls width="100%">
+            <source src="{{ post.video }}">
+        </video>
+        {% endif %}
 
-<p>{{ post.texto }}</p>
+        <br><br>
 
-{% if post.imagem %}
-<img src="{{ post.imagem }}" class="img-fluid">
-{% endif %}
+        <form method="POST" action="/mural/curtir/{{ post.id }}" style="display:inline;">
+            <button type="submit" class="btn btn-outline-primary">Curtir</button>
+        </form>
 
-{% if post.video %}
-<video controls width="100%">
-<source src="{{ post.video }}">
-</video>
-{% endif %}
-
-<br><br>
-
-<form method="POST" action="/mural/curtir/{{ post.id }}" style="display:inline;">
-<button type="submit" class="btn btn-outline-primary">Curtir</button>
-</form>
-
-<form method="POST" action="/mural/comentar/{{ post.id }}">
-
-<input type="text" name="comentario" class="form-control"
-placeholder="Escreva um comentário">
-
-</form>
-
+        <form method="POST" action="/mural/comentar/{{ post.id }}">
+            <input type="text" name="comentario" class="form-control" placeholder="Escreva um comentario">
+        </form>
+    </div>
 </div>
-</div>
-
 {% endfor %}
 
 {% endblock %}

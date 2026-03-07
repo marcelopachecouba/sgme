@@ -1,100 +1,134 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
 
-<h3 class="mb-4">
-    Calendario de Missas - {{ mes }}/{{ ano }}
-</h3>
+{% set dias_semana = ["Segunda-feira", "Terca-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sabado", "Domingo"] %}
 
-<div class="row mb-3 no-print">
-    <div class="col-md-4">
-        <form method="get">
-            <div class="input-group">
-                <input type="number" name="mes" min="1" max="12" value="{{ mes }}" class="form-control">
-                <input type="number" name="ano" value="{{ ano }}" class="form-control">
-                <button class="btn btn-primary">Atualizar</button>
-            </div>
-        </form>
+<div class="screen-only">
+    <h3 class="mb-4">Calendario de Missas - {{ mes }}/{{ ano }}</h3>
+
+    <div class="row mb-3 no-print">
+        <div class="col-md-6">
+            <form method="get">
+                <div class="input-group">
+                    <input type="number" name="mes" min="1" max="12" value="{{ mes }}" class="form-control">
+                    <input type="number" name="ano" value="{{ ano }}" class="form-control">
+                    <button class="btn btn-primary">Atualizar</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-6 mt-2 mt-md-0 text-md-end">
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+        </div>
     </div>
-    <div class="col-md-4 mt-2 mt-md-0">
-        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
-    </div>
+
+    <table class="table table-bordered text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sab</th>
+                <th>Dom</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for semana in cal %}
+            <tr>
+            {% for dia in semana %}
+                <td style="height:150px; vertical-align:top;">
+                    {% if dia != 0 %}
+                        <div class="fw-bold mb-2">{{ dia }}</div>
+                        {% if dia in estrutura %}
+                            {% for missa in estrutura[dia] %}
+                                <div class="card mb-2 shadow-sm p-1">
+                                    <small>
+                                        <strong>{{ missa.horario }}</strong><br>
+                                        <span class="text-muted">
+                                            {% if missa.periodo == "manha" %}Manha{% elif missa.periodo == "tarde" %}Tarde{% elif missa.periodo == "noite" %}Noite{% else %}-{% endif %}
+                                        </span><br>
+                                        {{ missa.comunidade }}
+                                    </small>
+                                    <hr class="m-1">
+                                    {% for ministro in missa.ministros %}
+                                        <div style="font-size:12px;">
+                                            {% if ministro.eh_casal %}
+                                            <span class="badge" style="background-color:#fff3cd; color:#7a5200;">
+                                                * {{ ministro.nome }} (casal)
+                                            </span>
+                                            {% else %}
+                                            * {{ ministro.nome }}
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endif %}
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
 
-<table class="table table-bordered text-center align-middle">
+<div class="print-only">
+    <h2>Escala dos Ministros</h2>
+    <h4>{{ mes }}/{{ ano }}</h4>
 
-    <thead class="table-dark">
-        <tr>
-            <th>Seg</th>
-            <th>Ter</th>
-            <th>Qua</th>
-            <th>Qui</th>
-            <th>Sex</th>
-            <th>Sab</th>
-            <th>Dom</th>
-        </tr>
-    </thead>
+    {% for g in grupos_impressao %}
+        <div class="bloco-print">
+            <h5>{{ dias_semana[g.dia_semana] }} -> Horario: {{ g.horario }} ({{ g.periodo|title }})</h5>
 
-    <tbody>
-
-    {% for semana in cal %}
-        <tr>
-        {% for dia in semana %}
-            <td style="height:150px; vertical-align:top;">
-
-                {% if dia != 0 %}
-
-                    <div class="fw-bold mb-2">
-                        {{ dia }}
-                    </div>
-
-                    {% if dia in estrutura %}
-
-                        {% for missa in estrutura[dia] %}
-
-                            <div class="card mb-2 shadow-sm p-1">
-
-                                <small>
-                                    <strong>{{ missa.horario }}</strong><br>
-                                    <span class="text-muted">
-                                        {% if missa.periodo == "manha" %}Manha{% elif missa.periodo == "tarde" %}Tarde{% elif missa.periodo == "noite" %}Noite{% else %}-{% endif %}
-                                    </span><br>
-                                    {{ missa.comunidade }}
-                                </small>
-
-                                <hr class="m-1">
-
-                                {% for ministro in missa.ministros %}
-                                    <div style="font-size:12px;">
-                                        {% if ministro.eh_casal %}
-                                        <span class="badge" style="background-color:#fff3cd; color:#7a5200;">
-                                            * {{ ministro.nome }} (casal)
-                                        </span>
-                                        {% else %}
-                                        * {{ ministro.nome }}
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-
-                            </div>
-
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        {% for s in range(1, 6) %}
+                        <th>{{ s }}a Semana</th>
                         {% endfor %}
-
-                    {% endif %}
-
-                {% endif %}
-
-            </td>
-        {% endfor %}
-        </tr>
+                    </tr>
+                    <tr>
+                        <th>Data</th>
+                        {% for s in range(1, 6) %}
+                        {% set item = g.semanas.get(s) %}
+                        <th>{{ item.data.strftime('%d/%m/%Y') if item else "-" }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set max_linhas = g.max_ministros if g.max_ministros > 0 else 1 %}
+                    {% for i in range(max_linhas) %}
+                    <tr>
+                        <td><strong>{{ i + 1 }}</strong></td>
+                        {% for s in range(1, 6) %}
+                        {% set item = g.semanas.get(s) %}
+                        <td>
+                            {% if item and i < item.ministros|length %}
+                                {{ item.ministros[i] }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Nenhuma missa encontrada para este mes.</p>
     {% endfor %}
-
-    </tbody>
-
-</table>
+</div>
 
 <style>
+.print-only { display: none; }
 @media print {
-    .no-print { display: none !important; }
+    .screen-only, .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    .bloco-print { page-break-inside: avoid; margin-bottom: 18px; }
 }
 </style>
 
