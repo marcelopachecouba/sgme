@@ -1,9 +1,9 @@
-import os
-import uuid
+from collections import defaultdict
 from datetime import datetime
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import extract
 from werkzeug.utils import secure_filename
 
 from models import Ministro, PresencaReuniao, ReuniaoFormacao, db
@@ -12,7 +12,6 @@ from utils.auth import admin_required
 
 
 presencas_bp = Blueprint("presencas", __name__)
-UPLOAD_FOLDER = "static/uploads"
 
 
 def _parse_data(valor):
@@ -37,17 +36,9 @@ def _salvar_upload(campo_arquivo):
     if not nome_original:
         return None
 
-    try:
-        arquivo.stream.seek(0)
-        return upload_arquivo(arquivo)
-    except Exception:
-        arquivo.stream.seek(0)
-        nome_unico = f"{uuid.uuid4().hex}_{nome_original}"
-        pasta_upload = os.path.join(current_app.root_path, UPLOAD_FOLDER)
-        os.makedirs(pasta_upload, exist_ok=True)
-        caminho = os.path.join(pasta_upload, nome_unico)
-        arquivo.save(caminho)
-        return nome_unico
+    arquivo.stream.seek(0)
+    # Upload obrigatorio no Firebase para evitar perda de arquivo em disco efemero.
+    return upload_arquivo(arquivo)
 
 
 @presencas_bp.route("/presencas")
@@ -59,6 +50,70 @@ def listar_presencas():
     ).order_by(ReuniaoFormacao.data.desc(), ReuniaoFormacao.id.desc()).all()
 
     return render_template("presencas.html", reunioes=reunioes)
+
+
+@presencas_bp.route("/presencas/relatorio")
+@login_required
+@admin_required
+def relatorio_presencas():
+    ano_atual = datetime.utcnow().year
+    ano = request.args.get("ano", type=int) or ano_atual
+
+    anos_rows = db.session.query(
+        extract("year", ReuniaoFormacao.data)
+    ).filter(
+        ReuniaoFormacao.id_paroquia == current_user.id_paroquia
+    ).distinct().order_by(
+        extract("year", ReuniaoFormacao.data).desc()
+    ).all()
+
+    anos_disponiveis = sorted(
+        {
+            int(row[0])
+            for row in anos_rows
+            if row and row[0] is not None
+        },
+        reverse=True
+    )
+    if ano not in anos_disponiveis:
+        anos_disponiveis = sorted({ano, *anos_disponiveis}, reverse=True)
+
+    ministros = _listar_ministros_paroquia()
+
+    reunioes_ano = ReuniaoFormacao.query.filter(
+        ReuniaoFormacao.id_paroquia == current_user.id_paroquia,
+        extract("year", ReuniaoFormacao.data) == ano
+    ).order_by(
+        ReuniaoFormacao.data.asc(),
+        ReuniaoFormacao.id.asc()
+    ).all()
+
+    datas = sorted({r.data for r in reunioes_ano})
+
+    presencas_rows = db.session.query(
+        PresencaReuniao.id_ministro,
+        ReuniaoFormacao.data
+    ).join(
+        ReuniaoFormacao, PresencaReuniao.id_reuniao == ReuniaoFormacao.id
+    ).filter(
+        PresencaReuniao.id_paroquia == current_user.id_paroquia,
+        ReuniaoFormacao.id_paroquia == current_user.id_paroquia,
+        PresencaReuniao.presente.is_(True),
+        extract("year", ReuniaoFormacao.data) == ano
+    ).all()
+
+    presenca_map = defaultdict(set)
+    for ministro_id, data in presencas_rows:
+        presenca_map[ministro_id].add(data)
+
+    return render_template(
+        "presencas_relatorio.html",
+        ano=ano,
+        anos_disponiveis=anos_disponiveis,
+        datas=datas,
+        ministros=ministros,
+        presenca_map=presenca_map
+    )
 
 
 @presencas_bp.route("/presencas/imprimir/<int:reuniao_id>")
@@ -118,8 +173,8 @@ def nova_presenca():
         try:
             reuniao.foto_url = _salvar_upload("foto")
             reuniao.video_arquivo_url = _salvar_upload("video_arquivo")
-        except OSError:
-            flash("Erro ao gravar foto/video enviado.")
+        except Exception:
+            flash("Erro ao enviar foto/video para o Firebase. Tente novamente.")
             return render_template("presenca_form.html", ministros=ministros, reuniao=None)
 
         db.session.add(reuniao)
@@ -189,8 +244,8 @@ def editar_presenca(reuniao_id):
         try:
             foto_url = _salvar_upload("foto")
             video_arquivo_url = _salvar_upload("video_arquivo")
-        except OSError:
-            flash("Erro ao gravar foto/video enviado.")
+        except Exception:
+            flash("Erro ao enviar foto/video para o Firebase. Tente novamente.")
             presentes_atual = {p.id_ministro for p in reuniao.presencas if p.presente}
             return render_template(
                 "presenca_form.html",

@@ -13,7 +13,7 @@ missas_bp = Blueprint("missas", __name__)
 def missas():
     lista = Missa.query.filter_by(
         id_paroquia=current_user.id_paroquia
-    ).all()
+    ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
     return render_template("missas.html", missas=lista)
 
 

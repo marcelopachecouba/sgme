@@ -215,6 +215,41 @@ def gerar_escala_auto(missa_id):
     return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
 
 
+@escala_bp.route("/escala/auto_inteligente/<int:missa_id>")
+@login_required
+@admin_required
+def gerar_escala_auto_inteligente(missa_id):
+    from services.escala_inteligente_service import selecionar_ministros
+
+    missa = get_missa_or_404(missa_id, current_user.id_paroquia)
+
+    Escala.query.filter_by(
+        id_missa=missa.id,
+        id_paroquia=current_user.id_paroquia
+    ).delete(synchronize_session=False)
+
+    selecionados = selecionar_ministros(
+        missa.qtd_ministros,
+        current_user.id_paroquia,
+        missa,
+        considerar_periodos_anteriores=True
+    )
+
+    for ministro in selecionados:
+        nova = Escala(
+            id_missa=missa.id,
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia,
+            token=str(uuid.uuid4())
+        )
+        db.session.add(nova)
+        notificar_escala_criada(ministro, missa)
+
+    db.session.commit()
+    flash("Escala auto inteligente gerada com sucesso!")
+    return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
+
+
 @escala_bp.route("/escala/visualizar/<int:missa_id>")
 @login_required
 def visualizar_escala(missa_id):

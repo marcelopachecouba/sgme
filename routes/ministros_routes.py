@@ -4,6 +4,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from models import (
     CasalMinisterio,
+    Disponibilidade,
+    DisponibilidadeFixa,
     db,
     Escala,
     EscalaFixa,
@@ -112,6 +114,16 @@ def excluir_ministro(id):
         ).delete(synchronize_session=False)
 
         IndisponibilidadeFixa.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        Disponibilidade.query.filter_by(
+            id_ministro=ministro.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        DisponibilidadeFixa.query.filter_by(
             id_ministro=ministro.id,
             id_paroquia=current_user.id_paroquia
         ).delete(synchronize_session=False)

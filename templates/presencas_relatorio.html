@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Relatorio Anual de Presencas</h3>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+            <a href="{{ url_for('presencas.listar_presencas') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </div>
+
+    <form method="GET" class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+            <label for="ano" class="form-label mb-1">Ano</label>
+            <select name="ano" id="ano" class="form-select">
+                {% for a in anos_disponiveis %}
+                <option value="{{ a }}" {% if a == ano %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Gerar Relatorio</button>
+        </div>
+    </form>
+
+    {% if datas %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle">
+            <thead>
+                <tr>
+                    <th style="min-width: 260px;">Ministro</th>
+                    {% for d in datas %}
+                    <th class="text-center">{{ d.strftime('%d/%m') }}</th>
+                    {% endfor %}
+                    <th class="text-center">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in ministros %}
+                {% set total_m = namespace(v=0) %}
+                <tr>
+                    <td><strong>{{ m.nome }}</strong></td>
+                    {% for d in datas %}
+                    {% set presente = d in presenca_map.get(m.id, set()) %}
+                    {% if presente %}
+                    {% set total_m.v = total_m.v + 1 %}
+                    {% endif %}
+                    <td class="text-center">
+                        {% if presente %}
+                        <span class="badge bg-success">P</span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-center"><strong>{{ total_m.v }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-secondary">
+        Nao existem reunioes/formacoes cadastradas para {{ ano }}.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
