@@ -17,6 +17,7 @@ estatisticas_bp = Blueprint("estatisticas", __name__)
 
 @estatisticas_bp.route("/estatisticas", methods=["GET", "POST"])
 @login_required
+@admin_required
 def estatisticas():
 
     data_inicio = ""
