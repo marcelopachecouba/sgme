@@ -402,6 +402,57 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
     selecionados = []
     selecionados_ids = set()
 
+    # Etapa 1: prioridade absoluta para quem declarou disponibilidade
+    # (pontual ou fixa), respeitando limite de vagas da missa.
+    disponiveis_ordenados = [
+        m for m in candidatos_ordenados
+        if m.id in disponibilidade_preferencial
+    ]
+
+    if disponiveis_ordenados:
+        disp_por_id = {m.id: m for m in disponiveis_ordenados}
+        pares_disp = []
+        usados_disp = set()
+
+        for ministro in disponiveis_ordenados:
+            if ministro.id in usados_disp:
+                continue
+            parceiro_id = casal_map.get(ministro.id)
+            parceiro = disp_por_id.get(parceiro_id) if parceiro_id else None
+            if not parceiro or parceiro.id in usados_disp:
+                continue
+
+            a, b = (ministro, parceiro) if ministro.id < parceiro.id else (parceiro, ministro)
+            if a.id in usados_disp or b.id in usados_disp:
+                continue
+
+            pares_disp.append((a, b))
+            usados_disp.add(a.id)
+            usados_disp.add(b.id)
+
+        # Casais disponiveis entram primeiro.
+        for a, b in pares_disp:
+            if len(selecionados) + 2 > qtd:
+                break
+            if a.id in selecionados_ids or b.id in selecionados_ids:
+                continue
+            selecionados.append(a)
+            selecionados.append(b)
+            selecionados_ids.add(a.id)
+            selecionados_ids.add(b.id)
+
+        # Depois, completa com disponiveis restantes (inclusive casados sem parceiro disponivel).
+        for ministro in disponiveis_ordenados:
+            if len(selecionados) >= qtd:
+                break
+            if ministro.id in selecionados_ids:
+                continue
+            selecionados.append(ministro)
+            selecionados_ids.add(ministro.id)
+
+    if len(selecionados) >= qtd:
+        return selecionados[:qtd]
+
     # Balanceamento mensal estrito: tenta preencher com quem esta na menor quantidade no mes.
     # So amplia o teto (0->1->2...) se nao houver candidatos suficientes.
     if candidatos_ordenados:
