@@ -54,6 +54,7 @@ def calendario_missas():
         db.extract("month", Missa.data) == mes,
         db.extract("year", Missa.data) == ano
     ).all()
+    missas_ids = [m.id for m in missas]
 
     casal_map = {}
     casais = CasalMinisterio.query.filter_by(
@@ -63,6 +64,15 @@ def calendario_missas():
     for c in casais:
         casal_map[c.id_ministro_1] = c.id_ministro_2
         casal_map[c.id_ministro_2] = c.id_ministro_1
+
+    escalas_por_missa = {}
+    if missas_ids:
+        escalas = Escala.query.filter(
+            Escala.id_paroquia == current_user.id_paroquia,
+            Escala.id_missa.in_(missas_ids)
+        ).all()
+        for e in escalas:
+            escalas_por_missa.setdefault(e.id_missa, []).append(e)
 
     estrutura = {}
     estrutura_impressao = {}
@@ -74,7 +84,7 @@ def calendario_missas():
         if dia not in estrutura:
             estrutura[dia] = []
 
-        escalas = Escala.query.filter_by(id_missa=missa.id).all()
+        escalas = escalas_por_missa.get(missa.id, [])
         
         ministros = []
         ministros_ids = set()

@@ -1,12 +1,14 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+import logging
 
 from models import db, Ministro, Paroquia
 from services.firebase_service import enviar_push
 
 
 auth_bp = Blueprint("auth", __name__)
+logger = logging.getLogger(__name__)
 
 RESET_SALT = "sgme-reset-senha"
 RESET_TOKEN_MAX_AGE_SECONDS = 3600
@@ -100,7 +102,7 @@ def reset_senha():
         if user:
             token = gerar_token(email)
             link = url_for("auth.nova_senha", token=token, _external=True)
-            print("LINK RESET:", link)
+            logger.info("Link de reset gerado para email=%s: %s", email, link)
 
         flash("Se o email existir, o link de redefinicao foi gerado.")
         return redirect(url_for("auth.login"))

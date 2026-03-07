@@ -42,8 +42,12 @@
             <td class="d-flex gap-1 flex-wrap">
                 <a href="{{ url_for('escala.gerar_escala', missa_id=m.id) }}" class="btn btn-sm btn-warning">Selecionar</a>
                 <a href="{{ url_for('escala.visualizar_escala', missa_id=m.id) }}" class="btn btn-sm btn-info">Ver Escala</a>
-                <a href="{{ url_for('escala.gerar_escala_auto', missa_id=m.id) }}" class="btn btn-sm btn-danger">Auto</a>
-                <a href="{{ url_for('escala.gerar_escala_auto_inteligente', missa_id=m.id) }}" class="btn btn-sm btn-primary">Auto Inteligente</a>
+                <form method="POST" action="{{ url_for('escala.gerar_escala_auto', missa_id=m.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-danger">Auto</button>
+                </form>
+                <form method="POST" action="{{ url_for('escala.gerar_escala_auto_inteligente', missa_id=m.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-primary">Auto Inteligente</button>
+                </form>
                 <a href="{{ url_for('missas.editar_missa', id=m.id) }}" class="btn btn-sm btn-secondary">Editar</a>
                 <form method="POST" action="{{ url_for('missas.excluir_missa', id=m.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir esta missa?')" style="display:inline;">
                     <button type="submit" class="btn btn-sm btn-dark">Excluir</button>
