@@ -65,6 +65,7 @@ def calendario_missas():
         casal_map[c.id_ministro_2] = c.id_ministro_1
 
     estrutura = {}
+    estrutura_impressao = {}
 
     for missa in missas:
 
@@ -89,17 +90,45 @@ def calendario_missas():
                    "eh_casal": bool(parceiro_id and parceiro_id in ministros_ids)
                })
 
+        periodo_exibicao = _normalizar_periodo(missa.periodo, missa.horario) or "-"
+
         estrutura[dia].append({
             "horario": missa.horario,
-            "periodo": _normalizar_periodo(missa.periodo, missa.horario) or "-",
+            "periodo": periodo_exibicao,
             "comunidade": missa.comunidade,
             "ministros": ministros
         })
+
+        semana_mes = ((missa.data.day - 1) // 7) + 1
+        chave = (missa.data.weekday(), missa.horario or "", periodo_exibicao)
+        if chave not in estrutura_impressao:
+            estrutura_impressao[chave] = {
+                "dia_semana": missa.data.weekday(),
+                "horario": missa.horario,
+                "periodo": periodo_exibicao,
+                "semanas": {},
+                "max_ministros": 0,
+            }
+
+        estrutura_impressao[chave]["semanas"][semana_mes] = {
+            "data": missa.data,
+            "ministros": [m["nome"] for m in ministros],
+        }
+        estrutura_impressao[chave]["max_ministros"] = max(
+            estrutura_impressao[chave]["max_ministros"],
+            len(ministros)
+        )
+
+    grupos_impressao = sorted(
+        estrutura_impressao.values(),
+        key=lambda g: (g["dia_semana"], g["horario"] or "", g["periodo"] or "")
+    )
 
     return render_template(
         "calendario_missas.html",
         cal=cal,
         estrutura=estrutura,
+        grupos_impressao=grupos_impressao,
         mes=mes,
         ano=ano
     )

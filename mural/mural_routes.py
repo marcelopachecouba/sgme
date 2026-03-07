@@ -1,17 +1,20 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort
+from flask import Blueprint, render_template, request, redirect, url_for, abort, flash
 from flask_login import login_required, current_user
 from models import db, MuralPost, MuralCurtida, MuralComentario
 from services.firebase_storage_service import upload_arquivo
 from werkzeug.utils import secure_filename
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "mp4", "mov", "webm"}
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp", "jfif", "heic", "heif"}
+ALLOWED_VIDEO_EXTENSIONS = {"mp4", "mov", "webm"}
 
 
-def _arquivo_permitido(file):
+def _extensao_arquivo(file):
     if not file or not file.filename:
-        return False
+        return None
     nome = secure_filename(file.filename)
-    return "." in nome and nome.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    if "." not in nome:
+        return None
+    return nome.rsplit(".", 1)[1].lower()
 
 
 def _get_post_da_paroquia(post_id):
@@ -51,11 +54,31 @@ def novo_post():
         imagem_url = None
         video_url = None
 
-        if imagem and _arquivo_permitido(imagem):
-            imagem_url = upload_arquivo(imagem)
+        ext_imagem = _extensao_arquivo(imagem)
+        if imagem and imagem.filename:
+            if not ext_imagem or ext_imagem not in ALLOWED_IMAGE_EXTENSIONS:
+                flash("Formato de foto nao suportado. Use: png, jpg, jpeg, gif, webp, jfif, heic ou heif.")
+                return render_template("novo_post.html")
+            try:
+                imagem_url = upload_arquivo(imagem)
+            except Exception:
+                flash("Erro ao enviar a foto. Verifique o Firebase e tente novamente.")
+                return render_template("novo_post.html")
 
-        if video and _arquivo_permitido(video):
-            video_url = upload_arquivo(video)
+        ext_video = _extensao_arquivo(video)
+        if video and video.filename:
+            if not ext_video or ext_video not in ALLOWED_VIDEO_EXTENSIONS:
+                flash("Formato de video nao suportado. Use: mp4, mov ou webm.")
+                return render_template("novo_post.html")
+            try:
+                video_url = upload_arquivo(video)
+            except Exception:
+                flash("Erro ao enviar o video. Verifique o Firebase e tente novamente.")
+                return render_template("novo_post.html")
+
+        if not (texto and texto.strip()) and not imagem_url and not video_url:
+            flash("Escreva uma mensagem ou envie foto/video para publicar.")
+            return render_template("novo_post.html")
 
         post = MuralPost(
             texto=texto,
@@ -67,6 +90,7 @@ def novo_post():
 
         db.session.add(post)
         db.session.commit()
+        flash("Post publicado com sucesso.")
 
         return redirect(url_for("mural.mural"))
 
