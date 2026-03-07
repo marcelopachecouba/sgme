@@ -158,9 +158,23 @@ def visao_missas():
         id_paroquia=current_user.id_paroquia
     ).order_by(Missa.data, Missa.horario).all()
 
+    missas_ids = [m.id for m in missas]
+    ministros_por_missa = {}
+    if missas_ids:
+        escalas = Escala.query.filter(
+            Escala.id_paroquia == current_user.id_paroquia,
+            Escala.id_missa.in_(missas_ids)
+        ).order_by(Escala.id.asc()).all()
+
+        for escala in escalas:
+            if not escala.ministro:
+                continue
+            ministros_por_missa.setdefault(escala.id_missa, []).append(escala.ministro.nome)
+
     estrutura = {}
 
     for missa in missas:
+        missa.ministros_nomes = ministros_por_missa.get(missa.id, [])
 
         data = missa.data
         semana = (data.day - 1) // 7 + 1

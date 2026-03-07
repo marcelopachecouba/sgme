@@ -42,7 +42,7 @@
                 <tr>
                     <td><strong>{{ m.nome }}</strong></td>
                     {% for d in datas %}
-                    {% set presente = d in presenca_map.get(m.id, set()) %}
+                    {% set presente = d in presenca_map.get(m.id, []) %}
                     {% if presente %}
                     {% set total_m.v = total_m.v + 1 %}
                     {% endif %}
