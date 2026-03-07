@@ -68,6 +68,7 @@ class Missa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.Date, nullable=False, index=True)
     horario = db.Column(db.String(10))
+    periodo = db.Column(db.String(20), nullable=True)
     comunidade = db.Column(db.String(100))
     qtd_ministros = db.Column(db.Integer)
     id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))    

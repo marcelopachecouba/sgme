@@ -49,9 +49,11 @@
                 {% if reuniao and reuniao.foto_url %}
                 {% set foto_url = reuniao.foto_url %}
                 {% if not (foto_url.startswith('http://') or foto_url.startswith('https://')) %}
-                {% set foto_url = url_for('static', filename='uploads/' ~ foto_url) %}
+                {% set foto_url = None %}
                 {% endif %}
+                {% if foto_url %}
                 <div class="form-text"><a href="{{ foto_url }}" target="_blank">Ver foto atual</a></div>
+                {% endif %}
                 <div class="form-check mt-1">
                     <input class="form-check-input" type="checkbox" name="remover_foto" id="remover_foto">
                     <label class="form-check-label" for="remover_foto">Remover foto atual</label>
@@ -64,9 +66,11 @@
                 {% if reuniao and reuniao.video_arquivo_url %}
                 {% set video_arquivo_url = reuniao.video_arquivo_url %}
                 {% if not (video_arquivo_url.startswith('http://') or video_arquivo_url.startswith('https://')) %}
-                {% set video_arquivo_url = url_for('static', filename='uploads/' ~ video_arquivo_url) %}
+                {% set video_arquivo_url = None %}
                 {% endif %}
+                {% if video_arquivo_url %}
                 <div class="form-text"><a href="{{ video_arquivo_url }}" target="_blank">Ver video atual</a></div>
+                {% endif %}
                 <div class="form-check mt-1">
                     <input class="form-check-input" type="checkbox" name="remover_video_arquivo" id="remover_video_arquivo">
                     <label class="form-check-label" for="remover_video_arquivo">Remover video atual</label>
