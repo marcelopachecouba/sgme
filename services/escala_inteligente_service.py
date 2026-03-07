@@ -346,77 +346,83 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         # Na semana, prioriza casal que serviu menos recentemente.
         par_entries.sort(key=lambda x: (x["qtd_7_dias"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
 
-    casados_ids = set(casal_map.keys())
-    singles_ordenados = [m for m in candidatos_ordenados if m.id not in casados_ids]
+    # Singles incluem todos os candidatos (inclusive quem tem casal),
+    # para nao bloquear o preenchimento justo quando o parceiro estiver indisponivel.
+    singles_ordenados = list(candidatos_ordenados)
 
     selecionados = []
     selecionados_ids = set()
 
-    # Balanceamento: parte da escala com casais e parte com ministros sem casal.
+    # Balanceamento mensal estrito: tenta preencher com quem esta na menor quantidade no mes.
+    # So amplia o teto (0->1->2...) se nao houver candidatos suficientes.
+    if candidatos_ordenados:
+        menor_qtd_mes = min(escalas_mes_map.get(m.id, 0) for m in candidatos_ordenados)
+        maior_qtd_mes = max(escalas_mes_map.get(m.id, 0) for m in candidatos_ordenados)
+    else:
+        menor_qtd_mes = 0
+        maior_qtd_mes = 0
+
     fracao_casal = max(0.0, min(1.0, _fracao_casal_preferida(domingo)))
     meta_slots_casal = int(round(qtd * fracao_casal))
-    meta_pares = min(len(par_entries), meta_slots_casal // 2)
-    if domingo and meta_pares == 0 and len(par_entries) > 0 and qtd >= 2:
-        meta_pares = 1
+    meta_pares_base = min(len(par_entries), meta_slots_casal // 2)
+    if domingo and meta_pares_base == 0 and len(par_entries) > 0 and qtd >= 2:
+        meta_pares_base = 1
 
-    pares_escolhidos = 0
-    for par in par_entries:
-        if pares_escolhidos >= meta_pares:
-            break
-        if len(selecionados) + 2 > qtd:
-            break
-        if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
-            continue
-        selecionados.append(par["a"])
-        selecionados.append(par["b"])
-        selecionados_ids.add(par["a"].id)
-        selecionados_ids.add(par["b"].id)
-        pares_escolhidos += 1
+    teto_mes = menor_qtd_mes
+    teto_limite = maior_qtd_mes + qtd
 
-    # Completa com ministros sem casal.
-    for ministro in singles_ordenados:
-        if len(selecionados) >= qtd:
-            break
-        if ministro.id in selecionados_ids:
-            continue
-        selecionados.append(ministro)
-        selecionados_ids.add(ministro.id)
+    while len(selecionados) < qtd and teto_mes <= teto_limite:
+        progresso = False
+        vagas = qtd - len(selecionados)
+        pares_escolhidos = 0
 
-    # Se faltarem vagas, encaixa mais casais.
-    for par in par_entries:
-        if len(selecionados) >= qtd:
-            break
-        if len(selecionados) + 2 > qtd:
-            continue
-        if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
-            continue
-        selecionados.append(par["a"])
-        selecionados.append(par["b"])
-        selecionados_ids.add(par["a"].id)
-        selecionados_ids.add(par["b"].id)
+        # Aos domingos tenta primeiro casais; semana permite mix livre.
+        if domingo:
+            meta_pares = min(meta_pares_base, vagas // 2)
+            for par in par_entries:
+                if pares_escolhidos >= meta_pares:
+                    break
+                if len(selecionados) + 2 > qtd:
+                    break
+                if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
+                    continue
+                if escalas_mes_map.get(par["a"].id, 0) > teto_mes or escalas_mes_map.get(par["b"].id, 0) > teto_mes:
+                    continue
+                selecionados.append(par["a"])
+                selecionados.append(par["b"])
+                selecionados_ids.add(par["a"].id)
+                selecionados_ids.add(par["b"].id)
+                pares_escolhidos += 1
+                progresso = True
 
-    # Fallback final: evita selecionar apenas um membro de casal.
-    for ministro in candidatos_ordenados:
-        if len(selecionados) >= qtd:
-            break
-        if ministro.id in selecionados_ids:
-            continue
-
-        parceiro_id = casal_map.get(ministro.id)
-        if not parceiro_id:
+        for ministro in singles_ordenados:
+            if len(selecionados) >= qtd:
+                break
+            if ministro.id in selecionados_ids:
+                continue
+            if escalas_mes_map.get(ministro.id, 0) > teto_mes:
+                continue
             selecionados.append(ministro)
             selecionados_ids.add(ministro.id)
-            continue
+            progresso = True
 
-        parceiro = candidatos_por_id.get(parceiro_id)
-        if not parceiro or parceiro.id in selecionados_ids:
-            continue
-        if len(selecionados) + 2 > qtd:
-            continue
+        # Se faltar vaga, tenta mais casais mantendo teto.
+        for par in par_entries:
+            if len(selecionados) >= qtd:
+                break
+            if len(selecionados) + 2 > qtd:
+                continue
+            if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
+                continue
+            if escalas_mes_map.get(par["a"].id, 0) > teto_mes or escalas_mes_map.get(par["b"].id, 0) > teto_mes:
+                continue
+            selecionados.append(par["a"])
+            selecionados.append(par["b"])
+            selecionados_ids.add(par["a"].id)
+            selecionados_ids.add(par["b"].id)
+            progresso = True
 
-        selecionados.append(ministro)
-        selecionados.append(parceiro)
-        selecionados_ids.add(ministro.id)
-        selecionados_ids.add(parceiro.id)
+        if not progresso:
+            teto_mes += 1
 
     return selecionados

@@ -4,7 +4,10 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">Controle de Presencas</h3>
-        <a href="{{ url_for('presencas.nova_presenca') }}" class="btn btn-primary">Novo Registro</a>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+            <a href="{{ url_for('presencas.nova_presenca') }}" class="btn btn-primary">Novo Registro</a>
+        </div>
     </div>
 
     {% if reunioes %}
@@ -16,16 +19,39 @@
                     <th>Tipo</th>
                     <th>Assunto</th>
                     <th>Presentes</th>
+                    <th>Midias</th>
                     <th class="text-end">Acoes</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in reunioes %}
+                {% set foto_url = r.foto_url %}
+                {% if foto_url and not (foto_url.startswith('http://') or foto_url.startswith('https://')) %}
+                {% set foto_url = url_for('static', filename='uploads/' ~ foto_url) %}
+                {% endif %}
+                {% set video_arquivo_url = r.video_arquivo_url %}
+                {% if video_arquivo_url and not (video_arquivo_url.startswith('http://') or video_arquivo_url.startswith('https://')) %}
+                {% set video_arquivo_url = url_for('static', filename='uploads/' ~ video_arquivo_url) %}
+                {% endif %}
                 <tr>
                     <td>{{ r.data.strftime('%d/%m/%Y') }}</td>
                     <td>{{ "Formacao" if r.tipo == "formacao" else "Reuniao" }}</td>
                     <td>{{ r.assunto }}</td>
                     <td>{{ r.presencas|length }}</td>
+                    <td>
+                        {% if foto_url %}
+                        <a href="{{ foto_url }}" target="_blank" class="btn btn-sm btn-outline-primary">Foto</a>
+                        {% endif %}
+                        {% if video_arquivo_url %}
+                        <a href="{{ video_arquivo_url }}" target="_blank" class="btn btn-sm btn-outline-primary">Video</a>
+                        {% endif %}
+                        {% if r.video_url %}
+                        <a href="{{ r.video_url }}" target="_blank" class="btn btn-sm btn-outline-primary">Link</a>
+                        {% endif %}
+                        {% if not foto_url and not video_arquivo_url and not r.video_url %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
                     <td class="text-end">
                         <a href="{{ url_for('presencas.editar_presenca', reuniao_id=r.id) }}" class="btn btn-sm btn-secondary">Editar</a>
                         <form method="POST" action="{{ url_for('presencas.excluir_presenca', reuniao_id=r.id) }}" style="display:inline;" onsubmit="return confirm('Excluir este registro?');">
