@@ -106,6 +106,11 @@ def _tolerancia_balanceamento_mensal():
     return max(0, int(_cfg("ESCALA_BALANCEAMENTO_MENSAL_TOLERANCIA", 0)))
 
 
+def _meta_mensal_por_ministro():
+    # Objetivo operacional: preencher 1 escala para todos, depois +1 (ex.: 2), e assim por rodadas.
+    return max(1, int(_cfg("ESCALA_META_MENSAL_POR_MINISTRO", 2)))
+
+
 def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores=True):
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
     if not ministros or qtd <= 0:
@@ -208,6 +213,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
     priorizados = []
     restritos = []
     score_map = {}
+    escalas_7_map = {}
 
     for ministro in ministros:
         ministro_id = ministro.id
@@ -244,6 +250,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
 
         score = _calcular_score(metricas)
         score_map[ministro_id] = score
+        escalas_7_map[ministro_id] = metricas["escalas_7_dias"]
         item = {
             "ministro": ministro,
             "score": score,
@@ -282,17 +289,26 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         ]
         candidatos_ordenados = nao_repetidos_domingo + repetidos_domingo
 
-    # Balanceamento mensal forte: primeiro considera quem tem menos escalas no mes.
+    # Balanceamento mensal forte por rodadas:
+    # primeiro todos com 0, depois todos com 1, depois todos com 2...
     if candidatos_ordenados:
         menor_qtd_mes = min(escalas_mes_map.get(m.id, 0) for m in candidatos_ordenados)
+        meta_mensal = _meta_mensal_por_ministro()
         tolerancia = _tolerancia_balanceamento_mensal()
+
+        if menor_qtd_mes < meta_mensal:
+            limite_rodada = menor_qtd_mes + tolerancia
+        else:
+            # Apos atingir a meta base, continua em rodadas (N, N+1, ...).
+            limite_rodada = menor_qtd_mes
+
         faixa_prioritaria = [
             m for m in candidatos_ordenados
-            if escalas_mes_map.get(m.id, 0) <= menor_qtd_mes + tolerancia
+            if escalas_mes_map.get(m.id, 0) <= limite_rodada
         ]
         faixa_restante = [
             m for m in candidatos_ordenados
-            if escalas_mes_map.get(m.id, 0) > menor_qtd_mes + tolerancia
+            if escalas_mes_map.get(m.id, 0) > limite_rodada
         ]
         candidatos_ordenados = faixa_prioritaria + faixa_restante
 
@@ -318,6 +334,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
             "qtd_max_mes": max(escalas_mes_map.get(a.id, 0), escalas_mes_map.get(b.id, 0)),
             "qtd_mes": escalas_mes_map.get(a.id, 0) + escalas_mes_map.get(b.id, 0),
             "qtd_domingo_mes": escalas_domingo_mes_map.get(a.id, 0) + escalas_domingo_mes_map.get(b.id, 0),
+            "qtd_7_dias": escalas_7_map.get(a.id, 0) + escalas_7_map.get(b.id, 0),
             "score": score_map.get(a.id, 0) + score_map.get(b.id, 0),
         })
         ids_em_par.add(a.id)
@@ -326,7 +343,8 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
     if domingo:
         par_entries.sort(key=lambda x: (x["qtd_domingo_mes"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
     else:
-        par_entries.sort(key=lambda x: (x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
+        # Na semana, prioriza casal que serviu menos recentemente.
+        par_entries.sort(key=lambda x: (x["qtd_7_dias"], x["qtd_max_mes"], x["qtd_mes"], -x["score"]))
 
     casados_ids = set(casal_map.keys())
     singles_ordenados = [m for m in candidatos_ordenados if m.id not in casados_ids]
