@@ -1,4 +1,5 @@
 import urllib.parse
+from collections import defaultdict
 
 from sqlalchemy.orm import joinedload
 
@@ -23,10 +24,20 @@ def construir_dashboard(id_paroquia, inicio, fim):
         confirmado=True,
     ).count()
 
-    for missa in proximas_missas:
+    missas_ids = [m.id for m in proximas_missas]
+    escalas_por_missa = defaultdict(list)
+    if missas_ids:
         escalas = Escala.query.options(
             joinedload(Escala.ministro)
-        ).filter_by(id_missa=missa.id).all()
+        ).filter(
+            Escala.id_paroquia == id_paroquia,
+            Escala.id_missa.in_(missas_ids)
+        ).all()
+        for escala in escalas:
+            escalas_por_missa[escala.id_missa].append(escala)
+
+    for missa in proximas_missas:
+        escalas = escalas_por_missa.get(missa.id, [])
 
         ministros = []
         telefones = []

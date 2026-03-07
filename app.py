@@ -1,4 +1,5 @@
-from flask import Flask
+from urllib.parse import urlparse
+from flask import Flask, abort, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -19,6 +20,36 @@ app.config.from_object(Config)
 @app.route("/health")
 def health():
     return {"status": "ok"}
+
+
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+
+
+def _is_same_origin(source_url: str) -> bool:
+    source = urlparse(source_url)
+    target = urlparse(request.host_url)
+    return source.scheme == target.scheme and source.netloc == target.netloc
+
+
+@app.before_request
+def csrf_same_origin_protection():
+    if request.method in SAFE_METHODS:
+        return
+    if request.endpoint == "health":
+        return
+
+    origin = request.headers.get("Origin")
+    referer = request.headers.get("Referer")
+
+    if origin:
+        if not _is_same_origin(origin):
+            abort(403)
+        return
+    if referer:
+        if not _is_same_origin(referer):
+            abort(403)
+        return
+    abort(403)
 
 # Firebase
 iniciar_firebase()

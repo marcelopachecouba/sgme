@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
+import logging
 
 from models import (
     CasalMinisterio,
@@ -21,6 +22,7 @@ from utils.auth import admin_required
 from services.paroquia_scope_service import get_ministro_or_404
 
 ministros_bp = Blueprint("ministros", __name__)
+logger = logging.getLogger(__name__)
 
 @ministros_bp.route("/ministros")
 @login_required
@@ -50,9 +52,6 @@ def novo_ministro():
         cpf = request.form.get("cpf")
         comunidade = request.form.get("comunidade")
 
-        print("DEBUG:")
-        print(nome, telefone, email, data_nascimento, tempo_ministerio,cpf,comunidade)
-
         novo = Ministro(
             nome=nome,
             telefone=telefone,
@@ -75,10 +74,11 @@ def novo_ministro():
 
         try:
             db.session.commit()
-            print("SALVOU COM SUCESSO")
         except Exception as e:
-            print("ERRO AO SALVAR:", e)
+            logger.exception("Erro ao salvar ministro: %s", e)
             db.session.rollback()
+            flash("Erro ao salvar ministro.")
+            return redirect(url_for("ministros.novo_ministro"))
 
         return redirect(url_for("ministros.ministros"))
 
@@ -200,7 +200,7 @@ def editar_ministro(id):
 
     return render_template("editar_ministro.html", ministro=ministro)
 
-@ministros_bp.route("/admin/resetar-senha/<int:id>")
+@ministros_bp.route("/admin/resetar-senha/<int:id>", methods=["POST"])
 @login_required
 @admin_required
 def admin_resetar_senha(id):
@@ -218,7 +218,7 @@ def admin_resetar_senha(id):
     return redirect(url_for("ministros.ministros"))
 
 
-@ministros_bp.route("/ativar_usuario/<int:id>")
+@ministros_bp.route("/ativar_usuario/<int:id>", methods=["POST"])
 @login_required
 @admin_required
 def ativar_usuario(id):

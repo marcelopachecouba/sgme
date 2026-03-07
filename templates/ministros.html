@@ -64,9 +64,9 @@
                 {% else %}
                     Pendente
                     {% if current_user.tipo == "admin" %}
-                        <a href="{{ url_for('ministros.ativar_usuario', id=ministro.id) }}" class="btn btn-sm btn-success">
-                            Liberar
-                        </a>
+                        <form method="POST" action="{{ url_for('ministros.ativar_usuario', id=ministro.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-success">Liberar</button>
+                        </form>
                     {% endif %}
                 {% endif %}
                 </td>

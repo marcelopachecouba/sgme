@@ -1,32 +1,31 @@
+import logging
+
 from services.firebase_service import enviar_push
 from services.whatsapp_service import gerar_link_whatsapp
 
 
-def notificar_escala_criada(ministro, missa):
+logger = logging.getLogger(__name__)
 
+
+def notificar_escala_criada(ministro, missa):
     if ministro.firebase_token:
         enviar_push(
             ministro.firebase_token,
             "Nova Escala",
-            f"Você foi escalado para {missa.data.strftime('%d/%m')} às {missa.horario}"
+            f"Voce foi escalado para {missa.data.strftime('%d/%m')} as {missa.horario}",
         )
 
-    # gera link whatsapp
-    link = gerar_link_whatsapp(ministro, missa)
-
-    return link
+    return gerar_link_whatsapp(ministro, missa)
 
 
 def notificar_escala_removida(ministro, missa):
-
     data = missa.data.strftime("%d/%m/%Y")
 
     titulo = "Escala Alterada"
-
     mensagem = (
-        f"Você foi removido da escala.\n"
+        "Voce foi removido da escala.\n"
         f"Data: {data}\n"
-        f"Horário: {missa.horario}\n"
+        f"Horario: {missa.horario}\n"
         f"Comunidade: {missa.comunidade}"
     )
 
@@ -34,22 +33,20 @@ def notificar_escala_removida(ministro, missa):
         enviar_push(ministro.firebase_token, titulo, mensagem)
 
     link = gerar_link_whatsapp(ministro, missa)
+    logger.info("Link WhatsApp remocao gerado para ministro_id=%s", getattr(ministro, "id", None))
+    return link
 
-    print("WhatsApp remoção:", link)
 
 def notificar_confirmacao(admin, ministro, missa):
-
     if not admin.firebase_token:
         return
 
     data = missa.data.strftime("%d/%m/%Y")
-
-    titulo = "Presença Confirmada"
-
+    titulo = "Presenca Confirmada"
     mensagem = (
-        f"{ministro.nome} confirmou presença.\n"
+        f"{ministro.nome} confirmou presenca.\n"
         f"Data: {data}\n"
-        f"Horário: {missa.horario}"
+        f"Horario: {missa.horario}"
     )
 
     enviar_push(admin.firebase_token, titulo, mensagem)

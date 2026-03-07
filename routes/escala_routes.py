@@ -72,7 +72,7 @@ def gerar_escala(missa_id):
 # ======================
 
 from utils.auth import admin_required
-@escala_bp.route("/escala/auto/<int:missa_id>")
+@escala_bp.route("/escala/auto/<int:missa_id>", methods=["POST"])
 @login_required
 @admin_required
 def gerar_escala_auto(missa_id):
@@ -215,7 +215,7 @@ def gerar_escala_auto(missa_id):
     return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
 
 
-@escala_bp.route("/escala/auto_inteligente/<int:missa_id>")
+@escala_bp.route("/escala/auto_inteligente/<int:missa_id>", methods=["POST"])
 @login_required
 @admin_required
 def gerar_escala_auto_inteligente(missa_id):
