@@ -7,6 +7,7 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from models import Aviso, db
+from services.firebase_storage_service import upload_arquivo
 from utils.auth import admin_required
 
 
@@ -30,12 +31,19 @@ def _salvar_arquivo_upload():
     if not nome_original:
         return None
 
-    nome_unico = f"{uuid.uuid4().hex}_{nome_original}"
-    pasta_upload = os.path.join(current_app.root_path, UPLOAD_FOLDER)
-    os.makedirs(pasta_upload, exist_ok=True)
-    caminho = os.path.join(pasta_upload, nome_unico)
-    arquivo.save(caminho)
-    return nome_unico
+    # Preferencia por armazenamento persistente (Firebase Storage).
+    try:
+        arquivo.stream.seek(0)
+        return upload_arquivo(arquivo)
+    except Exception:
+        # Fallback local para manter compatibilidade quando Firebase nao estiver pronto.
+        arquivo.stream.seek(0)
+        nome_unico = f"{uuid.uuid4().hex}_{nome_original}"
+        pasta_upload = os.path.join(current_app.root_path, UPLOAD_FOLDER)
+        os.makedirs(pasta_upload, exist_ok=True)
+        caminho = os.path.join(pasta_upload, nome_unico)
+        arquivo.save(caminho)
+        return nome_unico
 
 
 def _listar_avisos(categoria):

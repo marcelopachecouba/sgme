@@ -11,6 +11,7 @@ from services.lembrete_service import enviar_lembretes
 from routes.avisos_routes import avisos_bp
 from routes.indisponibilidade_routes import indisp_bp
 from routes.casais_routes import casais_bp
+from routes.presencas_routes import presencas_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -69,6 +70,7 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(avisos_bp)
 app.register_blueprint(indisp_bp)
 app.register_blueprint(casais_bp)
+app.register_blueprint(presencas_bp)
 app.register_blueprint(mural_bp)
 
 iniciar_scheduler()
