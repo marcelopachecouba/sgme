@@ -8,12 +8,33 @@ from services.paroquia_scope_service import get_missa_or_404
 
 missas_bp = Blueprint("missas", __name__)
 
+
+def _normalizar_periodo(periodo, horario=None):
+    valor = (periodo or "").strip().lower()
+    if valor in {"manha", "tarde", "noite"}:
+        return valor
+
+    if horario:
+        try:
+            hora = int(horario.split(":", 1)[0])
+            if hora < 12:
+                return "manha"
+            if hora < 18:
+                return "tarde"
+            return "noite"
+        except Exception:
+            pass
+
+    return None
+
 @missas_bp.route("/missas")
 @login_required
 def missas():
     lista = Missa.query.filter_by(
         id_paroquia=current_user.id_paroquia
     ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
+    for missa in lista:
+        missa.periodo_exibicao = _normalizar_periodo(missa.periodo, missa.horario) or "-"
     return render_template("missas.html", missas=lista)
 
 
@@ -90,12 +111,14 @@ def nova_missa():
     if request.method == "POST":
         data = datetime.strptime(request.form["data"], "%Y-%m-%d")
         horario = request.form["horario"]
+        periodo = _normalizar_periodo(request.form.get("periodo"), horario)
         comunidade = request.form["comunidade"]
         qtd = request.form["qtd"]
 
         missa = Missa(
             data=data,
             horario=horario,
+            periodo=periodo,
             comunidade=comunidade,
             qtd_ministros=qtd,
             id_paroquia=current_user.id_paroquia
@@ -121,6 +144,7 @@ def editar_missa(id):
 
         missa.data = datetime.strptime(request.form["data"], "%Y-%m-%d")
         missa.horario = request.form["horario"]
+        missa.periodo = _normalizar_periodo(request.form.get("periodo"), missa.horario)
         missa.comunidade = request.form["comunidade"]
         missa.qtd_ministros = int(request.form["qtd"])
 
@@ -129,6 +153,7 @@ def editar_missa(id):
         flash("Missa atualizada com sucesso!")
         return redirect(url_for("missas.missas"))
 
+    missa.periodo_exibicao = _normalizar_periodo(missa.periodo, missa.horario)
     return render_template("editar_missa.html", missa=missa)
 
 from utils.auth import admin_required
@@ -175,6 +200,7 @@ def visao_missas():
 
     for missa in missas:
         missa.ministros_nomes = ministros_por_missa.get(missa.id, [])
+        missa.periodo_exibicao = _normalizar_periodo(missa.periodo, missa.horario) or "-"
 
         data = missa.data
         semana = (data.day - 1) // 7 + 1

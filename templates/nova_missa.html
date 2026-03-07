@@ -9,7 +9,16 @@
     </div>
 
     <div class="mb-3">
-        <input type="text" name="horario" class="form-control" placeholder="Horário">
+        <input type="text" name="horario" class="form-control" placeholder="Horario" required>
+    </div>
+
+    <div class="mb-3">
+        <select name="periodo" class="form-select">
+            <option value="">Periodo (automatico pelo horario)</option>
+            <option value="manha">Manha</option>
+            <option value="tarde">Tarde</option>
+            <option value="noite">Noite</option>
+        </select>
     </div>
 
     <div class="mb-3">
@@ -17,7 +26,7 @@
     </div>
 
     <div class="mb-3">
-        <input type="number" name="qtd" class="form-control" placeholder="Qtd Ministros">
+        <input type="number" name="qtd" class="form-control" placeholder="Qtd Ministros" required>
     </div>
 
     <button type="submit" class="btn btn-primary">

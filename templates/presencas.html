@@ -27,11 +27,11 @@
                 {% for r in reunioes %}
                 {% set foto_url = r.foto_url %}
                 {% if foto_url and not (foto_url.startswith('http://') or foto_url.startswith('https://')) %}
-                {% set foto_url = url_for('static', filename='uploads/' ~ foto_url) %}
+                {% set foto_url = None %}
                 {% endif %}
                 {% set video_arquivo_url = r.video_arquivo_url %}
                 {% if video_arquivo_url and not (video_arquivo_url.startswith('http://') or video_arquivo_url.startswith('https://')) %}
-                {% set video_arquivo_url = url_for('static', filename='uploads/' ~ video_arquivo_url) %}
+                {% set video_arquivo_url = None %}
                 {% endif %}
                 <tr>
                     <td>{{ r.data.strftime('%d/%m/%Y') }}</td>

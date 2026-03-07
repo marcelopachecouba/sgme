@@ -5,48 +5,64 @@
     <h3 class="mb-4">Editar Missa</h3>
 
     <form method="POST">
-
         <div class="row">
-
             <div class="col-md-3 mb-3">
                 <label>Data</label>
-                <input type="date" name="data"
-                       value="{{ missa.data.strftime('%Y-%m-%d') }}"
-                       class="form-control" required>
+                <input
+                    type="date"
+                    name="data"
+                    value="{{ missa.data.strftime('%Y-%m-%d') }}"
+                    class="form-control"
+                    required
+                >
             </div>
 
             <div class="col-md-3 mb-3">
-                <label>Horário</label>
-                <input type="text" name="horario"
-                       value="{{ missa.horario }}"
-                       class="form-control" required>
+                <label>Horario</label>
+                <input
+                    type="text"
+                    name="horario"
+                    value="{{ missa.horario }}"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label>Periodo</label>
+                {% set periodo_atual = missa.periodo_exibicao if missa.periodo_exibicao is defined else missa.periodo %}
+                <select name="periodo" class="form-select">
+                    <option value="">Automatico pelo horario</option>
+                    <option value="manha" {% if periodo_atual == "manha" %}selected{% endif %}>Manha</option>
+                    <option value="tarde" {% if periodo_atual == "tarde" %}selected{% endif %}>Tarde</option>
+                    <option value="noite" {% if periodo_atual == "noite" %}selected{% endif %}>Noite</option>
+                </select>
             </div>
 
             <div class="col-md-3 mb-3">
                 <label>Comunidade</label>
-                <input type="text" name="comunidade"
-                       value="{{ missa.comunidade }}"
-                       class="form-control">
+                <input
+                    type="text"
+                    name="comunidade"
+                    value="{{ missa.comunidade }}"
+                    class="form-control"
+                >
             </div>
 
             <div class="col-md-3 mb-3">
                 <label>Qtd. Ministros</label>
-                <input type="number" name="qtd"
-                       value="{{ missa.qtd_ministros }}"
-                       class="form-control" required>
+                <input
+                    type="number"
+                    name="qtd"
+                    value="{{ missa.qtd_ministros }}"
+                    class="form-control"
+                    required
+                >
             </div>
-
         </div>
 
-        <button class="btn btn-primary">
-            💾 Salvar Alterações
-        </button>
-
-        <a href="{{ url_for('missas.missas') }}"
-           class="btn btn-secondary">
-           Cancelar
-        </a>
-
+        <button class="btn btn-primary">Salvar Alteracoes</button>
+        <a href="{{ url_for('missas.missas') }}" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
 
