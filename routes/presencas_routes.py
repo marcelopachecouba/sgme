@@ -61,6 +61,31 @@ def listar_presencas():
     return render_template("presencas.html", reunioes=reunioes)
 
 
+@presencas_bp.route("/presencas/imprimir/<int:reuniao_id>")
+@login_required
+@admin_required
+def imprimir_presenca(reuniao_id):
+    reuniao = ReuniaoFormacao.query.filter_by(
+        id=reuniao_id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    ministros_presentes = sorted(
+        [
+            p.ministro.nome
+            for p in reuniao.presencas
+            if p.presente and p.ministro and p.ministro.nome
+        ],
+        key=lambda nome: nome.lower()
+    )
+
+    return render_template(
+        "presenca_impressao.html",
+        reuniao=reuniao,
+        ministros_presentes=ministros_presentes
+    )
+
+
 @presencas_bp.route("/presencas/nova", methods=["GET", "POST"])
 @login_required
 @admin_required

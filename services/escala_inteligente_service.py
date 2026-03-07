@@ -402,6 +402,13 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
                 continue
             if escalas_mes_map.get(ministro.id, 0) > teto_mes:
                 continue
+            if domingo:
+                # No domingo, evita escalar apenas um membro do casal
+                # quando o parceiro tambem esta elegivel.
+                parceiro_id = casal_map.get(ministro.id)
+                parceiro = candidatos_por_id.get(parceiro_id) if parceiro_id else None
+                if parceiro and parceiro.id not in selecionados_ids:
+                    continue
             selecionados.append(ministro)
             selecionados_ids.add(ministro.id)
             progresso = True
@@ -424,5 +431,16 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
 
         if not progresso:
             teto_mes += 1
+
+    if domingo and len(selecionados) < qtd:
+        # Fallback final para evitar deixar vagas abertas quando nao ha
+        # combinacao possivel apenas com casais.
+        for ministro in singles_ordenados:
+            if len(selecionados) >= qtd:
+                break
+            if ministro.id in selecionados_ids:
+                continue
+            selecionados.append(ministro)
+            selecionados_ids.add(ministro.id)
 
     return selecionados
