@@ -251,6 +251,9 @@ class ReuniaoFormacao(db.Model):
     assunto = db.Column(db.String(200), nullable=False)
     tipo = db.Column(db.String(20), nullable=False, default="reuniao")  # reuniao | formacao
     observacao = db.Column(db.Text)
+    foto_url = db.Column(db.String(300))
+    video_url = db.Column(db.String(300))
+    video_arquivo_url = db.Column(db.String(300))
 
     id_paroquia = db.Column(
         db.Integer,
