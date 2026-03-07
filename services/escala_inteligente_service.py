@@ -504,13 +504,12 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
                 continue
             if escalas_mes_map.get(ministro.id, 0) > teto_mes:
                 continue
-            if domingo:
-                # No domingo, evita escalar apenas um membro do casal
-                # quando o parceiro tambem esta elegivel.
-                parceiro_id = casal_map.get(ministro.id)
-                parceiro = candidatos_por_id.get(parceiro_id) if parceiro_id else None
-                if parceiro and parceiro.id not in selecionados_ids:
-                    continue
+            # Em qualquer dia, tenta manter casal junto quando houver parceiro elegivel
+            # e ainda existir espaco para os dois.
+            parceiro_id = casal_map.get(ministro.id)
+            parceiro = candidatos_por_id.get(parceiro_id) if parceiro_id else None
+            if parceiro and parceiro.id not in selecionados_ids and len(selecionados) + 2 <= qtd:
+                continue
             selecionados.append(ministro)
             selecionados_ids.add(ministro.id)
             progresso = True

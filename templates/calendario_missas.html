@@ -126,9 +126,32 @@
 <style>
 .print-only { display: none; }
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 6mm;
+    }
     .screen-only, .no-print { display: none !important; }
-    .print-only { display: block !important; }
-    .bloco-print { page-break-inside: avoid; margin-bottom: 18px; }
+    .print-only {
+        display: block !important;
+        font-size: 9px;
+        line-height: 1.05;
+        zoom: 0.86; /* Chrome/Edge: tenta concentrar tudo em 1 pagina */
+    }
+    .print-only h2, .print-only h4, .print-only h5 {
+        margin: 2px 0 4px 0 !important;
+    }
+    .print-only .table {
+        margin-bottom: 6px !important;
+    }
+    .print-only .table th,
+    .print-only .table td {
+        padding: 2px 4px !important;
+        vertical-align: middle !important;
+    }
+    .bloco-print {
+        page-break-inside: avoid;
+        margin-bottom: 6px;
+    }
 }
 </style>
 
