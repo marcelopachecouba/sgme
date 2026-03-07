@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 class="mb-4">Nova Indisponibilidade</h2>
+<h2 class="mb-4">Nova Disponibilidade</h2>
 
 {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -79,7 +79,7 @@
             </div>
 
             <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Salvar</button>
+                <button type="submit" class="btn btn-success">Salvar</button>
                 <a href="{{ url_for('indisponibilidade.listar_indisponibilidade') }}" class="btn btn-secondary">Voltar</a>
             </div>
         </form>

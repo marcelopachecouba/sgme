@@ -217,6 +217,43 @@ class IndisponibilidadeFixa(db.Model):
     ministro = db.relationship("Ministro")
 
 
+class Disponibilidade(db.Model):
+    __tablename__ = "disponibilidade"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    id_ministro = db.Column(db.Integer, db.ForeignKey("ministro.id"), nullable=False)
+    data = db.Column(db.Date, nullable=False)
+    horario = db.Column(db.String(10), nullable=True)
+
+    id_paroquia = db.Column(db.Integer, db.ForeignKey("paroquia.id"), nullable=False)
+
+    ministro = db.relationship("Ministro", lazy="joined")
+
+
+class DisponibilidadeFixa(db.Model):
+    __tablename__ = "disponibilidade_fixa"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    id_ministro = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False
+    )
+
+    semana = db.Column(db.Integer)      # 1,2,3,4,5 ou None
+    dia_semana = db.Column(db.Integer)  # 0=segunda ... 6=domingo
+    horario = db.Column(db.String(10))
+
+    ministro = db.relationship("Ministro")
+
+
 class CasalMinisterio(db.Model):
     __tablename__ = "casal_ministerio"
 

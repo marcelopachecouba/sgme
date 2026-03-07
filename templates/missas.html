@@ -65,6 +65,11 @@
                    Auto
                 </a>
 
+                <a href="{{ url_for('escala.gerar_escala_auto_inteligente', missa_id=m.id) }}"
+                   class="btn btn-sm btn-primary">
+                   Auto Inteligente
+                </a>
+
                 <a href="{{ url_for('missas.editar_missa', id=m.id) }}"
                    class="btn btn-sm btn-secondary">
                    Editar

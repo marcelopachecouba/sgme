@@ -6,7 +6,16 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import extract, or_
 
-from models import CasalMinisterio, Escala, Indisponibilidade, IndisponibilidadeFixa, Ministro, Missa
+from models import (
+    CasalMinisterio,
+    Disponibilidade,
+    DisponibilidadeFixa,
+    Escala,
+    Indisponibilidade,
+    IndisponibilidadeFixa,
+    Ministro,
+    Missa,
+)
 
 
 def _cfg(key, default):
@@ -24,6 +33,7 @@ def _calcular_score(metricas):
     escalas_7_peso = float(_cfg("ESCALA_SCORE_ESCALAS_7_DIAS_PESO", 12))
     escalas_14_peso = float(_cfg("ESCALA_SCORE_ESCALAS_14_DIAS_PESO", 4))
     historico_peso = float(_cfg("ESCALA_SCORE_TOTAL_HISTORICO_PESO", 0.15))
+    disponibilidade_peso = float(_cfg("ESCALA_SCORE_DISPONIBILIDADE_PESO", 8))
 
     dias_sem_servir = min(metricas["dias_sem_servir"], limite_dias)
 
@@ -34,6 +44,7 @@ def _calcular_score(metricas):
         - metricas["escalas_7_dias"] * escalas_7_peso
         - metricas["escalas_14_dias"] * escalas_14_peso
         - metricas["total_historico"] * historico_peso
+        + metricas["disponivel_preferencial"] * disponibilidade_peso
     )
 
 
@@ -159,6 +170,35 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
 
     indisponiveis = indisponivel_pontual.union(indisponivel_fixo)
 
+    try:
+        disponibilidade_pontual = {
+            row[0]
+            for row in Disponibilidade.query.with_entities(Disponibilidade.id_ministro).filter(
+                Disponibilidade.id_paroquia == id_paroquia,
+                Disponibilidade.id_ministro.in_(ministro_ids),
+                Disponibilidade.data == missa.data,
+                or_(Disponibilidade.horario == None, Disponibilidade.horario == missa.horario),
+            ).all()
+        }
+    except SQLAlchemyError:
+        disponibilidade_pontual = set()
+
+    try:
+        disponibilidade_fixa = {
+            row[0]
+            for row in DisponibilidadeFixa.query.with_entities(DisponibilidadeFixa.id_ministro).filter(
+                DisponibilidadeFixa.id_paroquia == id_paroquia,
+                DisponibilidadeFixa.id_ministro.in_(ministro_ids),
+                or_(DisponibilidadeFixa.semana == semana, DisponibilidadeFixa.semana == None),
+                or_(DisponibilidadeFixa.dia_semana == dia_semana, DisponibilidadeFixa.dia_semana == None),
+                or_(DisponibilidadeFixa.horario == missa.horario, DisponibilidadeFixa.horario == None),
+            ).all()
+        }
+    except SQLAlchemyError:
+        disponibilidade_fixa = set()
+
+    disponibilidade_preferencial = disponibilidade_pontual.union(disponibilidade_fixa)
+
     historico_query = Escala.query.join(Missa).with_entities(
         Escala.id_ministro,
         Escala.confirmado,
@@ -246,6 +286,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
             "escalas_7_dias": escalas_7_dias,
             "escalas_14_dias": escalas_14_dias,
             "total_historico": total_historico,
+            "disponivel_preferencial": 1 if ministro_id in disponibilidade_preferencial else 0,
         }
 
         score = _calcular_score(metricas)
