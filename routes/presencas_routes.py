@@ -43,7 +43,7 @@ def _salvar_upload(campo_arquivo):
 
 @presencas_bp.route("/presencas")
 @login_required
-@admin_required
+# @admin_required
 def listar_presencas():
     reunioes = ReuniaoFormacao.query.filter_by(
         id_paroquia=current_user.id_paroquia
@@ -54,7 +54,7 @@ def listar_presencas():
 
 @presencas_bp.route("/presencas/relatorio")
 @login_required
-@admin_required
+#@admin_required
 def relatorio_presencas():
     ano_atual = datetime.utcnow().year
     ano = request.args.get("ano", type=int) or ano_atual
@@ -118,7 +118,7 @@ def relatorio_presencas():
 
 @presencas_bp.route("/presencas/imprimir/<int:reuniao_id>")
 @login_required
-@admin_required
+#@admin_required
 def imprimir_presenca(reuniao_id):
     reuniao = ReuniaoFormacao.query.filter_by(
         id=reuniao_id,

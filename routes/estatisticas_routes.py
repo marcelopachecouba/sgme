@@ -201,7 +201,7 @@ def whatsapp_periodo():
 from utils.auth import admin_required
 @estatisticas_bp.route("/confiabilidade")
 @login_required
-@admin_required
+#@admin_required
 def confiabilidade():
     dados = dados_confiabilidade(current_user.id_paroquia)
     return render_template("confiabilidade.html", dados=dados)

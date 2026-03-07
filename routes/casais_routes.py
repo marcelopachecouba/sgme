@@ -11,7 +11,7 @@ casais_bp = Blueprint("casais", __name__)
 
 @casais_bp.route("/casais")
 @login_required
-@admin_required
+#@admin_required
 def listar_casais():
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
