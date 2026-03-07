@@ -33,6 +33,7 @@ escala_bp = Blueprint("escala", __name__)
 
 @escala_bp.route("/escala/<int:missa_id>", methods=["GET", "POST"])
 @login_required
+@admin_required
 def gerar_escala(missa_id):
 
     missa = get_missa_or_404(missa_id, current_user.id_paroquia)
@@ -374,6 +375,7 @@ def excluir_escala_fixa(id):
 
 @escala_bp.route("/escala_mensal", methods=["GET", "POST"])
 @login_required
+@admin_required
 def escala_mensal():
 
     if request.method == "POST":
@@ -745,6 +747,7 @@ def adicionar_ministro_escala(missa_id):
 
 @escala_bp.route("/salvar_mensal", methods=["POST"])
 @login_required
+@admin_required
 def salvar_mensal():
 
     mes = int(request.form["mes"])
