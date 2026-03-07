@@ -94,6 +94,13 @@ def _obter_pares_casal(id_paroquia):
     return pares
 
 
+def _fracao_casal_preferida(domingo):
+    # Mantem preferencia por casais, sem monopolizar a escala.
+    if domingo:
+        return float(_cfg("ESCALA_CASAL_FRACAO_DOMINGO", 0.5))
+    return float(_cfg("ESCALA_CASAL_FRACAO_SEMANA", 0.4))
+
+
 def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores=True):
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
     if not ministros or qtd <= 0:
@@ -301,11 +308,46 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
     else:
         par_entries.sort(key=lambda x: (x["qtd_mes"], -x["score"]))
 
+    casados_ids = set(casal_map.keys())
+    singles_ordenados = [m for m in candidatos_ordenados if m.id not in casados_ids]
+
     selecionados = []
     selecionados_ids = set()
 
-    # Primeiro tenta encaixar casais completos.
+    # Balanceamento: parte da escala com casais e parte com ministros sem casal.
+    fracao_casal = max(0.0, min(1.0, _fracao_casal_preferida(domingo)))
+    meta_slots_casal = int(round(qtd * fracao_casal))
+    meta_pares = min(len(par_entries), meta_slots_casal // 2)
+    if domingo and meta_pares == 0 and len(par_entries) > 0 and qtd >= 2:
+        meta_pares = 1
+
+    pares_escolhidos = 0
     for par in par_entries:
+        if pares_escolhidos >= meta_pares:
+            break
+        if len(selecionados) + 2 > qtd:
+            break
+        if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
+            continue
+        selecionados.append(par["a"])
+        selecionados.append(par["b"])
+        selecionados_ids.add(par["a"].id)
+        selecionados_ids.add(par["b"].id)
+        pares_escolhidos += 1
+
+    # Completa com ministros sem casal.
+    for ministro in singles_ordenados:
+        if len(selecionados) >= qtd:
+            break
+        if ministro.id in selecionados_ids:
+            continue
+        selecionados.append(ministro)
+        selecionados_ids.add(ministro.id)
+
+    # Se faltarem vagas, encaixa mais casais.
+    for par in par_entries:
+        if len(selecionados) >= qtd:
+            break
         if len(selecionados) + 2 > qtd:
             continue
         if par["a"].id in selecionados_ids or par["b"].id in selecionados_ids:
@@ -314,10 +356,8 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
         selecionados.append(par["b"])
         selecionados_ids.add(par["a"].id)
         selecionados_ids.add(par["b"].id)
-        if len(selecionados) >= qtd:
-            break
 
-    # Depois completa com candidatos individuais.
+    # Fallback final: evita selecionar apenas um membro de casal.
     for ministro in candidatos_ordenados:
         if len(selecionados) >= qtd:
             break
@@ -325,16 +365,20 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
             continue
 
         parceiro_id = casal_map.get(ministro.id)
-        parceiro = candidatos_por_id.get(parceiro_id) if parceiro_id else None
-
-        if parceiro and parceiro.id not in selecionados_ids and len(selecionados) + 2 <= qtd:
+        if not parceiro_id:
             selecionados.append(ministro)
-            selecionados.append(parceiro)
             selecionados_ids.add(ministro.id)
-            selecionados_ids.add(parceiro.id)
+            continue
+
+        parceiro = candidatos_por_id.get(parceiro_id)
+        if not parceiro or parceiro.id in selecionados_ids:
+            continue
+        if len(selecionados) + 2 > qtd:
             continue
 
         selecionados.append(ministro)
+        selecionados.append(parceiro)
         selecionados_ids.add(ministro.id)
+        selecionados_ids.add(parceiro.id)
 
     return selecionados
