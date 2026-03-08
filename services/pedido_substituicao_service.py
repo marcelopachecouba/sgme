@@ -41,28 +41,43 @@ def _esta_indisponivel(ministro_id, missa, id_paroquia):
 
 
 def _elegiveis_para_substituicao(escala):
+
     missa = escala.missa
+
     ministros = Ministro.query.filter_by(
         id_paroquia=escala.id_paroquia,
-        pode_logar=True,
+        comunidade=missa.comunidade,   # 🔥 FILTRO NOVO
+        pode_logar=True
     ).all()
 
     elegiveis = []
+
     for ministro in ministros:
+
+        # não pode ser o mesmo ministro
         if ministro.id == escala.id_ministro:
             continue
+
+        # conflito de escala no mesmo dia
         if _tem_conflito(
             ministro_id=ministro.id,
             missa=missa,
             id_paroquia=escala.id_paroquia,
-            ignorar_escala_id=escala.id,
+            ignorar_escala_id=escala.id
         ):
             continue
-        if _esta_indisponivel(ministro.id, missa, escala.id_paroquia):
-            continue
-        elegiveis.append(ministro)
-    return elegiveis
 
+        # indisponibilidade
+        if _esta_indisponivel(
+            ministro.id,
+            missa,
+            escala.id_paroquia
+        ):
+            continue
+
+        elegiveis.append(ministro)
+
+    return elegiveis
 
 def criar_pedido_substituicao(escala):
     pedido_aberto = PedidoSubstituicao.query.filter_by(
