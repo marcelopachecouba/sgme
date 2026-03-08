@@ -132,19 +132,33 @@ const messaging = getMessaging(app);
 const vapidKey = "{{ config.get('FIREBASE_VAPID_KEY', '') }}";
 
 if (vapidKey) {
+
   Notification.requestPermission().then((permission) => {
-    if (permission === "granted") {
-      getToken(messaging, { vapidKey }).then((currentToken) => {
-        if (currentToken) {
-          fetch("/salvar-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: currentToken })
-          });
-        }
-      });
-    }
+
+    if (permission !== "granted") return;
+
+    getToken(messaging, { vapidKey }).then((currentToken) => {
+
+      if (!currentToken) return;
+
+      const tokenSalvo = localStorage.getItem("firebase_token");
+
+      if (tokenSalvo !== currentToken) {
+
+        fetch("/salvar-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: currentToken })
+        });
+
+        localStorage.setItem("firebase_token", currentToken);
+
+      }
+
+    });
+
   });
+
 }
 
 onMessage(messaging, (payload) => {

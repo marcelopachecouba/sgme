@@ -13,6 +13,7 @@ from routes.avisos_routes import avisos_bp
 from routes.indisponibilidade_routes import indisp_bp
 from routes.casais_routes import casais_bp
 from routes.presencas_routes import presencas_bp
+from services.lembrete_missa_service import enviar_lembretes_missa
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -35,6 +36,23 @@ from flask import send_from_directory
 @app.route('/firebase-messaging-sw.js')
 def firebase_sw():
     return send_from_directory('static', 'firebase-messaging-sw.js')
+
+from flask import request, jsonify
+from flask_login import login_required, current_user
+from models import db
+
+@app.route("/salvar-token", methods=["POST"])
+@login_required
+def salvar_token():
+
+    data = request.get_json()
+    token = data.get("token")
+
+    if token:
+        current_user.firebase_token = token
+        db.session.commit()
+
+    return jsonify({"status": "ok"})
 
 @app.before_request
 def csrf_same_origin_protection():
@@ -59,17 +77,29 @@ def csrf_same_origin_protection():
 # Firebase
 iniciar_firebase()
 
+
 def iniciar_scheduler():
     if os.environ.get("ENABLE_SCHEDULER", "1") != "1":
         return
+
     scheduler = BackgroundScheduler(daemon=True)
+
+    # lembretes existentes
     scheduler.add_job(
         lambda: enviar_lembretes(app),
         trigger="interval",
         minutes=10
     )
-    scheduler.start()
 
+    # 🔔 lembrete de missa
+    scheduler.add_job(
+        enviar_lembretes_missa,
+        trigger="interval",
+        minutes=10
+    )
+
+    scheduler.start()
+    
 # Banco
 db.init_app(app)
 migrate = Migrate(app, db)
