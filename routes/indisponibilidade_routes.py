@@ -329,3 +329,71 @@ def nova_disponibilidade():
         return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
 
     return render_template("nova_disponibilidade.html", ministros=ministros)
+
+@indisp_bp.route("/indisponibilidade/fixa/excluir/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def excluir_indisponibilidade_fixa(id):
+
+    regra = IndisponibilidadeFixa.query.filter_by(
+        id=id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    db.session.delete(regra)
+    db.session.commit()
+
+    flash("Indisponibilidade fixa removida.")
+
+    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+
+@indisp_bp.route("/indisponibilidade/data/excluir/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def excluir_indisponibilidade_data(id):
+
+    regra = Indisponibilidade.query.filter_by(
+        id=id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    db.session.delete(regra)
+    db.session.commit()
+
+    flash("Indisponibilidade removida.")
+
+    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+
+@indisp_bp.route("/disponibilidade/fixa/excluir/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def excluir_disponibilidade_fixa(id):
+
+    regra = DisponibilidadeFixa.query.filter_by(
+        id=id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    db.session.delete(regra)
+    db.session.commit()
+
+    flash("Disponibilidade removida.")
+
+    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+
+@indisp_bp.route("/disponibilidade/data/excluir/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def excluir_disponibilidade_data(id):
+
+    regra = Disponibilidade.query.filter_by(
+        id=id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    db.session.delete(regra)
+    db.session.commit()
+
+    flash("Disponibilidade removida.")
+
+    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
