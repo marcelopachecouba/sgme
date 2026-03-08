@@ -5,7 +5,6 @@ import os
 import firebase_admin
 from firebase_admin import credentials, messaging
 
-
 firebase_ativo = False
 logger = logging.getLogger(__name__)
 
@@ -27,30 +26,43 @@ def iniciar_firebase():
 
         firebase_ativo = True
         logger.info("Firebase iniciado com sucesso")
+
     except Exception as e:
         logger.exception("Erro ao iniciar Firebase: %s", e)
 
 
-def enviar_push(token, titulo, mensagem):
+def enviar_push(token, titulo, mensagem, url=None):
+
     if not firebase_ativo:
         logger.warning("Firebase nao ativo")
         return
 
     try:
+
+        data_payload = {}
+
+        if url:
+            data_payload["url"] = url
+
         message = messaging.Message(
             notification=messaging.Notification(
                 title=titulo,
                 body=mensagem,
             ),
+            data=data_payload,
             token=token,
         )
+
         messaging.send(message)
         logger.info("Push enviado")
+
     except Exception as e:
         logger.exception("Erro push: %s", e)
 
+
 from firebase_admin import messaging
 from models import Ministro
+
 
 def enviar_notificacao_ministros(titulo, mensagem, ministros_ids):
 
