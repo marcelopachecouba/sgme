@@ -1,14 +1,21 @@
 {
-  "name": "SGME",
+  "name": "SGME - Escala de Ministros",
   "short_name": "SGME",
+  "description": "Sistema de Gestão de Ministros da Eucaristia",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#1f2937",
   "theme_color": "#1f2937",
   "icons": [
     {
       "src": "/static/icon-192.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
