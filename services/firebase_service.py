@@ -48,3 +48,29 @@ def enviar_push(token, titulo, mensagem):
         logger.info("Push enviado")
     except Exception as e:
         logger.exception("Erro push: %s", e)
+
+from firebase_admin import messaging
+from models import Ministro
+
+def enviar_notificacao_ministros(titulo, mensagem, ministros_ids):
+
+    tokens = []
+
+    ministros = Ministro.query.filter(Ministro.id.in_(ministros_ids)).all()
+
+    for m in ministros:
+        if m.token:
+            tokens.append(m.token)
+
+    if not tokens:
+        return
+
+    message = messaging.MulticastMessage(
+        notification=messaging.Notification(
+            title=titulo,
+            body=mensagem
+        ),
+        tokens=tokens
+    )
+
+    messaging.send_multicast(message)
