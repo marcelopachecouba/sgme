@@ -10,3 +10,19 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(function(payload) {
+
+  console.log("Push recebido:", payload);
+
+  const notificationTitle = payload.notification.title;
+
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: "/static/icon-192.png",
+    badge: "/static/icon-192.png"
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+
+});
