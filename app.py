@@ -30,6 +30,11 @@ def _is_same_origin(source_url: str) -> bool:
     target = urlparse(request.host_url)
     return source.scheme == target.scheme and source.netloc == target.netloc
 
+from flask import send_from_directory
+
+@app.route('/firebase-messaging-sw.js')
+def firebase_sw():
+    return send_from_directory('static', 'firebase-messaging-sw.js')
 
 @app.before_request
 def csrf_same_origin_protection():

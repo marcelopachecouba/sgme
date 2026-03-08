@@ -104,7 +104,10 @@
 <!-- Service Worker -->
 <script>
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/sw.js');
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then(function(registration) {
+        console.log("Firebase SW registrado:", registration);
+    });
 }
 </script>
 
