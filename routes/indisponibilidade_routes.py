@@ -63,7 +63,9 @@ def _conflito_data_com_fixa(modelo_fixo, ministro_id, data_ref, horario_ref):
         id_paroquia=current_user.id_paroquia,
         dia_semana=data_ref.weekday()
     ).all()
+
     semana = _semana_do_mes(data_ref)
+
     return any(
         _semana_conflita(semana, r.semana) and _horario_conflita(horario_ref, r.horario)
         for r in regras
@@ -76,6 +78,7 @@ def _conflito_fixa_com_fixa(modelo_fixo, ministro_id, semana, dia_semana, horari
         id_paroquia=current_user.id_paroquia,
         dia_semana=dia_semana
     ).all()
+
     return any(
         _semana_conflita(semana, r.semana) and _horario_conflita(horario, r.horario)
         for r in regras
@@ -85,6 +88,7 @@ def _conflito_fixa_com_fixa(modelo_fixo, ministro_id, semana, dia_semana, horari
 @indisp_bp.route("/indisponibilidade")
 @login_required
 def listar_indisponibilidade():
+
     indisponibilidades_fixas = IndisponibilidadeFixa.query.filter_by(
         id_paroquia=current_user.id_paroquia
     ).order_by(
@@ -132,31 +136,43 @@ def listar_indisponibilidade():
 @login_required
 @admin_required
 def nova_indisponibilidade():
+
     ministros = _listar_ministros_paroquia()
 
     if request.method == "POST":
+
         ministro_id, ministro = _get_ministro_do_form()
+
         if not ministro:
             abort(403)
 
         tipo_regra = (request.form.get("tipo_regra") or "fixa").strip()
+
         horario = (request.form.get("horario") or "").strip() or None
+
         if horario and not _horario_valido(horario):
             flash("Horario invalido. Use o formato HH:MM.")
             return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
 
         if tipo_regra == "pontual":
+
             data_str = (request.form.get("data_especifica") or "").strip()
+
             try:
                 data_ref = datetime.strptime(data_str, "%Y-%m-%d").date()
+
             except ValueError:
+
                 flash("Informe uma data especifica valida.")
+
                 return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
 
             if _conflito_data_com_data(Disponibilidade, ministro_id, data_ref, horario) or _conflito_data_com_fixa(
                 DisponibilidadeFixa, ministro_id, data_ref, horario
             ):
+
                 flash("Conflito: ja existe disponibilidade nesta data/semana para este ministro.")
+
                 return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
 
             regra = Indisponibilidade(
@@ -165,150 +181,103 @@ def nova_indisponibilidade():
                 data=data_ref,
                 horario=horario
             )
+
             db.session.add(regra)
+
             db.session.commit()
+
             flash("Indisponibilidade por data cadastrada com sucesso.")
+
             return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
 
-        semana = request.form.get("semana", type=int)
-        dia_semana = request.form.get("dia_semana", type=int)
-        if dia_semana is None or dia_semana < 0 or dia_semana > 6:
-            flash("Dia da semana invalido.")
+        dias = request.form.getlist("dias_semana[]")
+        semanas = request.form.getlist("semanas[]")
+
+        if not dias:
+
+            flash("Selecione pelo menos um dia da semana.")
+
             return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
 
-        if _conflito_fixa_com_fixa(DisponibilidadeFixa, ministro_id, semana, dia_semana, horario):
-            flash("Conflito: ja existe disponibilidade na mesma semana/dia/horario para este ministro.")
-            return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
+        dias = [int(d) for d in dias]
 
-        regra = IndisponibilidadeFixa(
-            id_ministro=ministro_id,
-            id_paroquia=current_user.id_paroquia,
-            semana=semana,
-            dia_semana=dia_semana,
-            horario=horario
-        )
-        db.session.add(regra)
+        if semanas:
+            semanas = [int(s) for s in semanas]
+        else:
+            semanas = [None]
+
+        for dia in dias:
+
+            for semana in semanas:
+
+                if _conflito_fixa_com_fixa(
+                        DisponibilidadeFixa,
+                        ministro_id,
+                        semana,
+                        dia,
+                        horario
+                ):
+                    continue
+
+                regra = IndisponibilidadeFixa(
+                    id_ministro=ministro_id,
+                    id_paroquia=current_user.id_paroquia,
+                    semana=semana,
+                    dia_semana=dia,
+                    horario=horario
+                )
+
+                db.session.add(regra)
+
         db.session.commit()
-        flash("Indisponibilidade fixa cadastrada com sucesso.")
+
+        flash("Indisponibilidades cadastradas com sucesso.")
+
         return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
 
     return render_template("nova_indisponibilidade.html", ministros=ministros)
 
-
-@indisp_bp.route("/disponibilidade/nova", methods=["GET", "POST"])
+@indisp_bp.route("/mapa_disponibilidade")
 @login_required
-@admin_required
-def nova_disponibilidade():
-    ministros = _listar_ministros_paroquia()
+def mapa_disponibilidade():
 
-    if request.method == "POST":
-        ministro_id, ministro = _get_ministro_do_form()
-        if not ministro:
-            abort(403)
+    ministros = Ministro.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).order_by(Ministro.nome).all()
 
-        tipo_regra = (request.form.get("tipo_regra") or "fixa").strip()
-        horario = (request.form.get("horario") or "").strip() or None
-        if horario and not _horario_valido(horario):
-            flash("Horario invalido. Use o formato HH:MM.")
-            return redirect(url_for("indisponibilidade.nova_disponibilidade"))
+    dias_semana = range(7)
 
-        if tipo_regra == "pontual":
-            data_str = (request.form.get("data_especifica") or "").strip()
-            try:
-                data_ref = datetime.strptime(data_str, "%Y-%m-%d").date()
-            except ValueError:
-                flash("Informe uma data especifica valida.")
-                return redirect(url_for("indisponibilidade.nova_disponibilidade"))
+    mapa = []
 
-            if _conflito_data_com_data(Indisponibilidade, ministro_id, data_ref, horario) or _conflito_data_com_fixa(
-                IndisponibilidadeFixa, ministro_id, data_ref, horario
-            ):
-                flash("Conflito: ja existe indisponibilidade nesta data/semana para este ministro.")
-                return redirect(url_for("indisponibilidade.nova_disponibilidade"))
+    for m in ministros:
 
-            regra = Disponibilidade(
-                id_ministro=ministro_id,
-                id_paroquia=current_user.id_paroquia,
-                data=data_ref,
-                horario=horario
-            )
-            db.session.add(regra)
-            db.session.commit()
-            flash("Disponibilidade por data cadastrada com sucesso.")
-            return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+        linha = []
 
-        semana = request.form.get("semana", type=int)
-        dia_semana = request.form.get("dia_semana", type=int)
-        if dia_semana is None or dia_semana < 0 or dia_semana > 6:
-            flash("Dia da semana invalido.")
-            return redirect(url_for("indisponibilidade.nova_disponibilidade"))
+        for d in dias_semana:
 
-        if _conflito_fixa_com_fixa(IndisponibilidadeFixa, ministro_id, semana, dia_semana, horario):
-            flash("Conflito: ja existe indisponibilidade na mesma semana/dia/horario para este ministro.")
-            return redirect(url_for("indisponibilidade.nova_disponibilidade"))
+            disp = DisponibilidadeFixa.query.filter_by(
+                id_ministro=m.id,
+                dia_semana=d
+            ).first()
 
-        regra = DisponibilidadeFixa(
-            id_ministro=ministro_id,
-            id_paroquia=current_user.id_paroquia,
-            semana=semana,
-            dia_semana=dia_semana,
-            horario=horario
-        )
-        db.session.add(regra)
-        db.session.commit()
-        flash("Disponibilidade fixa cadastrada com sucesso.")
-        return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+            indisp = IndisponibilidadeFixa.query.filter_by(
+                id_ministro=m.id,
+                dia_semana=d
+            ).first()
 
-    return render_template("nova_disponibilidade.html", ministros=ministros)
+            if indisp:
+                linha.append("❌")
+            elif disp:
+                linha.append("✔")
+            else:
+                linha.append("")
 
+        mapa.append({
+            "nome": m.nome,
+            "dias": linha
+        })
 
-@indisp_bp.route("/indisponibilidade/excluir/fixa/<int:id>", methods=["POST"])
-@login_required
-@admin_required
-def excluir_indisponibilidade_fixa(id):
-    regra = IndisponibilidadeFixa.query.get_or_404(id)
-    if regra.id_paroquia != current_user.id_paroquia:
-        abort(403)
-    db.session.delete(regra)
-    db.session.commit()
-    flash("Indisponibilidade fixa removida.")
-    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
-
-
-@indisp_bp.route("/indisponibilidade/excluir/data/<int:id>", methods=["POST"])
-@login_required
-@admin_required
-def excluir_indisponibilidade_data(id):
-    regra = Indisponibilidade.query.get_or_404(id)
-    if regra.id_paroquia != current_user.id_paroquia:
-        abort(403)
-    db.session.delete(regra)
-    db.session.commit()
-    flash("Indisponibilidade por data removida.")
-    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
-
-
-@indisp_bp.route("/disponibilidade/excluir/fixa/<int:id>", methods=["POST"])
-@login_required
-@admin_required
-def excluir_disponibilidade_fixa(id):
-    regra = DisponibilidadeFixa.query.get_or_404(id)
-    if regra.id_paroquia != current_user.id_paroquia:
-        abort(403)
-    db.session.delete(regra)
-    db.session.commit()
-    flash("Disponibilidade fixa removida.")
-    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
-
-
-@indisp_bp.route("/disponibilidade/excluir/data/<int:id>", methods=["POST"])
-@login_required
-@admin_required
-def excluir_disponibilidade_data(id):
-    regra = Disponibilidade.query.get_or_404(id)
-    if regra.id_paroquia != current_user.id_paroquia:
-        abort(403)
-    db.session.delete(regra)
-    db.session.commit()
-    flash("Disponibilidade por data removida.")
-    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+    return render_template(
+        "mapa_disponibilidade.html",
+        mapa=mapa
+    )
