@@ -13,7 +13,9 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
+
         <form method="POST" class="row g-3">
+
             <div class="col-md-6">
                 <label class="form-label">Ministro</label>
                 <select name="ministro" class="form-select" required>
@@ -32,7 +34,7 @@
             </div>
 
             <div class="col-md-3">
-                <label class="form-label">Horario (opcional)</label>
+                <label class="form-label">Horário (opcional)</label>
                 <input
                     type="text"
                     name="horario"
@@ -41,66 +43,140 @@
                     pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
                     title="Use o formato HH:MM"
                 >
-                <small class="text-muted">Deixe vazio para todos os horarios.</small>
+                <small class="text-muted">Deixe vazio para todos os horários.</small>
             </div>
+
+            <!-- BLOCO FIXA -->
 
             <div id="bloco_fixa" class="row g-3 m-0 p-0">
-                <div class="col-md-3">
-                    <label class="form-label">Semana</label>
-                    <select name="semana" class="form-select">
-                        <option value="">Todas</option>
-                        <option value="1">1a semana</option>
-                        <option value="2">2a semana</option>
-                        <option value="3">3a semana</option>
-                        <option value="4">4a semana</option>
-                        <option value="5">5a semana</option>
-                    </select>
+
+                <div class="col-md-6">
+
+                    <label class="form-label">Semanas</label>
+
+                    <div class="row">
+
+                        <div class="col-md-2">
+                            <input type="checkbox" name="semanas[]" value="1"> 1ª
+                        </div>
+
+                        <div class="col-md-2">
+                            <input type="checkbox" name="semanas[]" value="2"> 2ª
+                        </div>
+
+                        <div class="col-md-2">
+                            <input type="checkbox" name="semanas[]" value="3"> 3ª
+                        </div>
+
+                        <div class="col-md-2">
+                            <input type="checkbox" name="semanas[]" value="4"> 4ª
+                        </div>
+
+                        <div class="col-md-2">
+                            <input type="checkbox" name="semanas[]" value="5"> 5ª
+                        </div>
+
+                    </div>
+
                 </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">Dia da Semana</label>
-                    <select name="dia_semana" class="form-select">
-                        <option value="0">Segunda</option>
-                        <option value="1">Terca</option>
-                        <option value="2">Quarta</option>
-                        <option value="3">Quinta</option>
-                        <option value="4">Sexta</option>
-                        <option value="5">Sabado</option>
-                        <option value="6">Domingo</option>
-                    </select>
+                <div class="col-md-6">
+
+                    <label class="form-label">Dias da Semana</label>
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="0"> Segunda
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="1"> Terça
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="2"> Quarta
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="3"> Quinta
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="4"> Sexta
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="5"> Sábado
+                        </div>
+
+                        <div class="col-md-4">
+                            <input type="checkbox" name="dias_semana[]" value="6"> Domingo
+                        </div>
+
+                    </div>
+
                 </div>
+
             </div>
 
+            <!-- BLOCO DATA ESPECÍFICA -->
+
             <div id="bloco_pontual" class="row g-3 m-0 p-0" style="display:none;">
+
                 <div class="col-md-4">
-                    <label class="form-label">Data Especifica</label>
+
+                    <label class="form-label">Data Específica</label>
+
                     <input type="date" name="data_especifica" class="form-control">
+
                 </div>
+
             </div>
 
             <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Salvar</button>
-                <a href="{{ url_for('indisponibilidade.listar_indisponibilidade') }}" class="btn btn-secondary">Voltar</a>
+
+                <button type="submit" class="btn btn-primary">
+                    Salvar
+                </button>
+
+                <a href="{{ url_for('indisponibilidade.listar_indisponibilidade') }}" class="btn btn-secondary">
+                    Voltar
+                </a>
+
             </div>
+
         </form>
+
     </div>
 </div>
 
 <script>
+
 (() => {
+
     const tipo = document.getElementById("tipo_regra");
+
     const blocoFixa = document.getElementById("bloco_fixa");
+
     const blocoPontual = document.getElementById("bloco_pontual");
 
     const atualizar = () => {
+
         const pontual = tipo.value === "pontual";
+
         blocoFixa.style.display = pontual ? "none" : "";
+
         blocoPontual.style.display = pontual ? "" : "none";
+
     };
 
     tipo.addEventListener("change", atualizar);
+
     atualizar();
+
 })();
+
 </script>
 
 {% endblock %}
