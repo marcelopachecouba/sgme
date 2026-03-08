@@ -13,6 +13,7 @@ from utils.auth import admin_required
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
+
 def _escala_missa_da_paroquia(missa_id):
     missa = Missa.query.filter_by(
         id=missa_id,
