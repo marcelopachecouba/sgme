@@ -20,9 +20,24 @@ messaging.onBackgroundMessage(function(payload) {
   const notificationOptions = {
     body: payload.notification.body,
     icon: "/static/icon-192.png",
-    badge: "/static/icon-192.png"
+    badge: "/static/icon-192.png",
+    data: {
+      url: payload.data?.url || "/"
+    }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+
+});
+
+self.addEventListener('notificationclick', function(event) {
+
+  event.notification.close();
+
+  const url = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients.openWindow(url)
+  );
 
 });
