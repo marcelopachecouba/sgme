@@ -281,3 +281,51 @@ def mapa_disponibilidade():
         "mapa_disponibilidade.html",
         mapa=mapa
     )
+
+@indisp_bp.route("/disponibilidade/nova", methods=["GET", "POST"])
+@login_required
+@admin_required
+def nova_disponibilidade():
+
+    ministros = _listar_ministros_paroquia()
+
+    if request.method == "POST":
+
+        ministro_id, ministro = _get_ministro_do_form()
+
+        if not ministro:
+            abort(403)
+
+        horario = request.form.get("horario") or None
+
+        dias = request.form.getlist("dias_semana[]")
+        semanas = request.form.getlist("semanas[]")
+
+        dias = [int(d) for d in dias]
+
+        if semanas:
+            semanas = [int(s) for s in semanas]
+        else:
+            semanas = [None]
+
+        for dia in dias:
+
+            for semana in semanas:
+
+                regra = DisponibilidadeFixa(
+                    id_ministro=ministro_id,
+                    id_paroquia=current_user.id_paroquia,
+                    semana=semana,
+                    dia_semana=dia,
+                    horario=horario
+                )
+
+                db.session.add(regra)
+
+        db.session.commit()
+
+        flash("Disponibilidade cadastrada com sucesso.")
+
+        return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+
+    return render_template("nova_disponibilidade.html", ministros=ministros)
