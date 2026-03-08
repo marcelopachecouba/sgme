@@ -161,7 +161,7 @@ if (vapidKey) {
 
 }
 
-function ativarNotificacoes() {
+window.ativarNotificacoes = function() {
 
   Notification.requestPermission().then((permission) => {
 
@@ -171,6 +171,8 @@ function ativarNotificacoes() {
     }
 
     getToken(messaging, { vapidKey }).then((currentToken) => {
+
+      console.log("Token Firebase:", currentToken);
 
       if (!currentToken) {
         alert("Não foi possível gerar o token.");
