@@ -161,6 +161,38 @@ if (vapidKey) {
 
 }
 
+function ativarNotificacoes() {
+
+  Notification.requestPermission().then((permission) => {
+
+    if (permission !== "granted") {
+      alert("Permissão de notificação negada.");
+      return;
+    }
+
+    getToken(messaging, { vapidKey }).then((currentToken) => {
+
+      if (!currentToken) {
+        alert("Não foi possível gerar o token.");
+        return;
+      }
+
+      fetch("/salvar-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: currentToken })
+      });
+
+      localStorage.setItem("firebase_token", currentToken);
+
+      alert("Notificações ativadas com sucesso!");
+
+    });
+
+  });
+
+}
+
 onMessage(messaging, (payload) => {
   new Notification(
   payload.notification.title,
