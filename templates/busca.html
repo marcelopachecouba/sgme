@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3>Resultados para "{{ termo }}"</h3>
+
+<h4>Ministros</h4>
+
+<ul>
+{% for m in ministros %}
+<li>{{ m.nome_completo }}</li>
+{% else %}
+<li>Nenhum encontrado</li>
+{% endfor %}
+</ul>
+
+<h4>Missas</h4>
+
+<ul>
+{% for m in missas %}
+<li>{{ m.data }} - {{ m.comunidade }}</li>
+{% else %}
+<li>Nenhuma encontrada</li>
+{% endfor %}
+</ul>
+
+<h4>Avisos</h4>
+
+<ul>
+{% for a in avisos %}
+<li>{{ a.titulo }}</li>
+{% else %}
+<li>Nenhum aviso encontrado</li>
+{% endfor %}
+</ul>
+
+{% endblock %}
