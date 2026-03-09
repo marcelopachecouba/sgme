@@ -286,6 +286,7 @@ def mapa_disponibilidade():
             dias.append(simbolo)
 
         mapa.append({
+            "id": ministro.id,
             "nome": ministro.nome,
             "dias": dias
         })
@@ -294,7 +295,7 @@ def mapa_disponibilidade():
         "mapa_disponibilidade.html",
         mapa=mapa
     )
-
+    
 @indisp_bp.route("/disponibilidade/nova", methods=["GET", "POST"])
 @login_required
 @admin_required
