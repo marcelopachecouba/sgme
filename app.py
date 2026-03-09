@@ -99,11 +99,12 @@ def iniciar_scheduler():
 
     # lembretes existentes
     scheduler.add_job(
-        lambda: enviar_lembretes(app),
-        trigger="interval",
-        minutes=10
+        enviar_lembretes_missa,
+        "interval",
+        minutes=10,
+        args=[app]
     )
-
+    
     # 🔔 lembrete de missa
     scheduler.add_job(
         enviar_lembretes_missa,

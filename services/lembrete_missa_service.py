@@ -1,12 +1,11 @@
-from flask import current_app
+#from flask import current_app
 from datetime import datetime, timedelta
 from models import Missa, Escala
 from services.substituicao_automatica_service import verificar_substituicoes_automaticas
 
-def enviar_lembretes_missa():
+def enviar_lembretes_missa(app):
 
-    with current_app.app_context():
-
+    with app.app_context():
         # 🔥 verificar substituições automáticas
         verificar_substituicoes_automaticas()
 
