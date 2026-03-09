@@ -21,7 +21,7 @@ class Ministro(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    nome = db.Column(db.String(120)),
+    nome = db.Column(db.String(120))
     nome_completo = db.Column(db.String(120))
     telefone = db.Column(db.String(20))
     email = db.Column(db.String(120), nullable=True)
