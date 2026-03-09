@@ -60,7 +60,7 @@
                     <td class="text-end">
 
                     <form method="POST"
-                        action="{{ url_for('indisponibilidade.limpar_indisponibilidades_ministro', ministro_id=r.ministro.id) }}"
+                        action="{{ url_for('indisponibilidade.limpar_indisponibilidades_ministro', ministro_id=ministro.id) }}"
                         onsubmit="return confirm('Remover TODAS as indisponibilidades deste ministro?');">
 
                     <button class="btn btn-sm btn-danger">
