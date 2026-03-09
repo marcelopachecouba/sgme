@@ -101,13 +101,6 @@ def iniciar_scheduler():
         args=[app]
     )
 
-    # 🔔 lembrete de missa
-    scheduler.add_job(
-        enviar_lembretes_missa,
-        trigger="interval",
-        minutes=10
-    )
-
     scheduler.start()
     
 # Banco
