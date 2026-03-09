@@ -410,37 +410,6 @@ def limpar_indisponibilidades_ministro(ministro_id):
         id_paroquia=current_user.id_paroquia
     ).first_or_404()
 
-    # apagar indisponibilidade fixa
-    IndisponibilidadeFixa.query.filter_by(
-        id_ministro=ministro.id,
-        id_paroquia=current_user.id_paroquia
-    ).delete()
-
-    # apagar indisponibilidade por data
-    Indisponibilidade.query.filter_by(
-        id_ministro=ministro.id,
-        id_paroquia=current_user.id_paroquia
-    ).delete()
-
-    db.session.commit()
-
-    flash(f"Todas as indisponibilidades do ministro {ministro.nome} foram removidas.")
-
-    return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
-
-@indisp_bp.route("/indisponibilidade/ministro/limpar/<ministro_nome>", methods=["POST"])
-@login_required
-@admin_required
-def limpar_indisponibilidades_ministro(ministro_nome):
-
-    ministro = Ministro.query.filter_by(
-        nome=ministro_nome,
-        id_paroquia=current_user.id_paroquia
-    ).first()
-
-    if not ministro:
-        abort(404)
-
     IndisponibilidadeFixa.query.filter_by(
         id_ministro=ministro.id,
         id_paroquia=current_user.id_paroquia
