@@ -29,7 +29,14 @@
 <td class="text-start"><b>{{ m.nome }}</b></td>
 
 {% for d in m.dias %}
-<td style="font-size:20px">{{ d }}</td>
+<td
+    class="celula-mapa"
+    data-ministro="{{ m.id }}"
+    data-dia="{{ loop.index0 }}"
+    style="font-size:22px; cursor:pointer"
+>
+{{ d }}
+</td>
 {% endfor %}
 
 </tr>
@@ -41,3 +48,42 @@
 </table>
 
 {% endblock %}
+
+<script>
+
+document.querySelectorAll(".celula-mapa").forEach(celula => {
+
+    celula.addEventListener("click", function(){
+
+        const ministro_id = this.dataset.ministro
+        const dia_semana = this.dataset.dia
+
+        fetch("/api/toggle_indisponibilidade", {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                ministro_id:ministro_id,
+                dia_semana:dia_semana
+            })
+        })
+        .then(r=>r.json())
+        .then(resp=>{
+
+            if(this.innerText.trim()=="✔"){
+                this.innerText="X"
+                this.style.color="red"
+            }
+            else{
+                this.innerText="✔"
+                this.style.color="green"
+            }
+
+        })
+
+    })
+
+})
+
+</script>
