@@ -201,13 +201,13 @@ def nova_indisponibilidade():
 
         dias = [int(d) for d in dias]
         
-        semanas = request.form.getlist("semanas[]")
+       # semanas = request.form.getlist("semanas[]")
 
         if not semanas or "" in semanas:
             semanas = [None]
         else:
            semanas = [int(s) for s in semanas]
-           
+
         for dia in dias:
 
             for semana in semanas:
