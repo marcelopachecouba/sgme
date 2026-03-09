@@ -43,6 +43,22 @@
 <th>DOM</th>
 </tr>
 
+<tr style="background:#f3f4f6;font-size:12px">
+
+<td></td>
+
+{% for i in range(7) %}
+<td>
+
+{% for h in horarios[i] %}
+{{ h }}<br>
+{% endfor %}
+
+</td>
+{% endfor %}
+
+</tr>
+
 </thead>
 
 <tbody>
