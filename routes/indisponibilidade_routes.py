@@ -200,12 +200,14 @@ def nova_indisponibilidade():
             return redirect(url_for("indisponibilidade.nova_indisponibilidade"))
 
         dias = [int(d) for d in dias]
+        
+        semanas = request.form.getlist("semanas[]")
 
-        if semanas:
-            semanas = [int(s) for s in semanas]
-        else:
+        if not semanas or "" in semanas:
             semanas = [None]
-
+        else:
+           semanas = [int(s) for s in semanas]
+           
         for dia in dias:
 
             for semana in semanas:
@@ -303,10 +305,10 @@ def nova_disponibilidade():
 
         dias = [int(d) for d in dias]
 
-        if semanas:
-            semanas = [int(s) for s in semanas]
-        else:
+        if not semanas or "" in semanas:
             semanas = [None]
+        else:
+            semanas = [int(s) for s in semanas]
 
         for dia in dias:
 
