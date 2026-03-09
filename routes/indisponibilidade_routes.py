@@ -239,6 +239,9 @@ def nova_indisponibilidade():
 
     return render_template("nova_indisponibilidade.html", ministros=ministros)
 
+from collections import defaultdict
+from models import Missa
+
 @indisp_bp.route("/mapa_disponibilidade")
 @login_required
 def mapa_disponibilidade():
@@ -247,41 +250,37 @@ def mapa_disponibilidade():
         id_paroquia=current_user.id_paroquia
     ).order_by(Ministro.nome).all()
 
-    dias_semana = range(7)
+    # ---- Horários das missas por dia da semana ----
+    horarios = defaultdict(list)
 
+    missas = Missa.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    ).all()
+
+    for missa in missas:
+        dia = missa.data.weekday()   # 0=SEG ... 6=DOM
+        if missa.horario not in horarios[dia]:
+            horarios[dia].append(missa.horario)
+
+    for dia in horarios:
+        horarios[dia].sort()
+
+    # ---- Mapa de disponibilidade ----
     mapa = []
 
     for ministro in ministros:
 
         dias = []
 
-        for dia in dias_semana:
+        for dia in range(7):
 
-            # indisponibilidade fixa
-            indisponivel = IndisponibilidadeFixa.query.filter_by(
+            regra = IndisponibilidadeFixa.query.filter_by(
                 id_ministro=ministro.id,
                 dia_semana=dia,
                 id_paroquia=current_user.id_paroquia
-            ).all()
+            ).first()
 
-            # disponibilidade fixa
-            disponivel = DisponibilidadeFixa.query.filter_by(
-                id_ministro=ministro.id,
-                dia_semana=dia,
-                id_paroquia=current_user.id_paroquia
-            ).all()
-
-            if indisponivel and not disponivel:
-                simbolo = "X"
-
-            elif disponivel and not indisponivel:
-                simbolo = "✔"
-
-            elif disponivel and indisponivel:
-                simbolo = "✔ / X"
-
-            else:
-                simbolo = "✔"
+            simbolo = "X" if regra else "✔"
 
             dias.append(simbolo)
 
@@ -293,7 +292,8 @@ def mapa_disponibilidade():
 
     return render_template(
         "mapa_disponibilidade.html",
-        mapa=mapa
+        mapa=mapa,
+        horarios=horarios
     )
     
 @indisp_bp.route("/disponibilidade/nova", methods=["GET", "POST"])
