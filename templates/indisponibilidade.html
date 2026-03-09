@@ -54,8 +54,24 @@
                     {% for ministro, regras in indisponibilidades_fixas|groupby("ministro.nome") %}
 
                         <tr class="table-secondary">
-                            <td colspan="5"><b>{{ ministro }}</b></td>
-                        </tr>
+
+                    <td colspan="4"><b>{{ ministro }}</b></td>
+
+                    <td class="text-end">
+
+                    <form method="POST"
+                        action="{{ url_for('indisponibilidade.limpar_indisponibilidades_ministro', ministro_nome=ministro) }}"
+                        onsubmit="return confirm('Remover TODAS as indisponibilidades deste ministro?');">
+
+                    <button class="btn btn-sm btn-danger">
+                    Limpar todas
+                    </button>
+
+                    </form>
+
+                    </td>
+
+                    </tr>
 
                         {% for r in regras %}
 
