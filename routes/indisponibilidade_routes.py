@@ -425,3 +425,35 @@ def limpar_indisponibilidades_ministro(ministro_id):
     flash(f"Todas indisponibilidades de {ministro.nome} foram removidas.")
 
     return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+
+@indisp_bp.route("/api/toggle_indisponibilidade", methods=["POST"])
+@login_required
+@admin_required
+def toggle_indisponibilidade():
+
+    ministro_id = request.json.get("ministro_id")
+    dia_semana = request.json.get("dia_semana")
+
+    regra = IndisponibilidadeFixa.query.filter_by(
+        id_ministro=ministro_id,
+        dia_semana=dia_semana,
+        id_paroquia=current_user.id_paroquia
+    ).first()
+
+    if regra:
+        db.session.delete(regra)
+        status = "removido"
+    else:
+        nova = IndisponibilidadeFixa(
+            id_ministro=ministro_id,
+            dia_semana=dia_semana,
+            semana=None,
+            horario=None,
+            id_paroquia=current_user.id_paroquia
+        )
+        db.session.add(nova)
+        status = "criado"
+
+    db.session.commit()
+
+    return {"status": status}

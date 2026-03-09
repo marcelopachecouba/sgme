@@ -41,6 +41,7 @@ def novo_ministro():
     if request.method == "POST":
 
         nome = request.form.get("nome")
+        nome_completo = request.form.get("nome_completo")
         telefone = request.form.get("telefone")
         email = request.form.get("email")
         
@@ -54,6 +55,7 @@ def novo_ministro():
 
         novo = Ministro(
             nome=nome,
+            nome_completo=nome_completo
             telefone=telefone,
             email=email,
             data_nascimento=datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None,
@@ -170,6 +172,7 @@ def editar_ministro(id):
     if request.method == "POST":
 
         novo_nome = request.form["nome"].strip()
+        nome_completo = request.form["nome_completo"]
         telefone = request.form["telefone"]
         email = request.form["email"]
         data_nascimento = request.form["data_nascimento"]
@@ -188,6 +191,7 @@ def editar_ministro(id):
             return redirect(url_for("ministros.editar_ministro", id=id))
 
         ministro.nome = novo_nome
+        ministro.nome_completo = nome_completo
         ministro.telefone = telefone
         ministro.email = email
         ministro.data_nascimento = datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None
