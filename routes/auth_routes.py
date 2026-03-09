@@ -139,6 +139,7 @@ def nova_senha(token):
 def cadastro():
     if request.method == "POST":
         nome = request.form["nome"]
+        nome_completo = request.form["nome_completo"]
         email = request.form["email"]
         senha = request.form["senha"]
         cpf = request.form["cpf"]
@@ -169,6 +170,7 @@ def cadastro():
 
         novo = Ministro(
             nome=nome,
+            nome_completo=nome_completo,
             email=email,
             cpf=cpf,
             telefone=telefone,

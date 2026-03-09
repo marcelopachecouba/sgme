@@ -16,6 +16,7 @@
     <thead class="table-dark">
         <tr>
             <th>Nome</th>
+            <th>Nome Completo</th>
             <th>Telefone</th>
             <th>Email</th>
             <th>Nascimento</th>
@@ -32,6 +33,7 @@
         {% for ministro in ministros %}
         <tr>
             <td>{{ ministro.nome }}</td>
+            <td>{{ ministro.nome_completo }}</td>
             <td>{{ ministro.telefone }}</td>
             <td>{{ ministro.email }}</td>
             <td>{{ ministro.data_nascimento }}</td>
