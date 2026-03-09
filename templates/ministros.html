@@ -11,8 +11,8 @@
 {% endif %}
 
 
-
-<table class="table table-striped">
+<div class="table-responsive"></div>
+ <table class="table table-striped">
     <thead class="table-dark">
         <tr>
             <th>Nome</th>
@@ -24,7 +24,7 @@
             <th>Cadastro</th>
             <th>Cpf</th>
             <th>Comunidade</th>
-            <th style="width: 200px;">Ações</th>
+            <th class="text-center">Ações</th>
             <th>Acesso</th>
         </tr>
     </thead>
@@ -42,6 +42,7 @@
             <td>{{ ministro.cpf }}</td>
             <td>{{ ministro.comunidade }}</td>
             <td>
+                
                 {% if current_user.is_admin() %}
                  <a href="{{ url_for('ministros.editar_ministro', id=ministro.id) }}"
                     class="btn btn-sm btn-warning">
@@ -75,6 +76,7 @@
         </tr>
         {% endfor %}
     </tbody>
-</table>
+ </table>
+</div>
 
 {% endblock %}
