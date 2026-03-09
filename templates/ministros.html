@@ -3,7 +3,7 @@
 
 <h2 class="mb-4">Ministros</h2>
 
-{% if current_user.tipo == "admin" %}
+{{% if current_user.is_admin() %}
 <a href="{{ url_for('ministros.novo_ministro') }}" class="btn btn-success mb-3">
     Novo Ministro
 </a>
@@ -42,7 +42,7 @@
             <td>{{ ministro.cpf }}</td>
             <td>{{ ministro.comunidade }}</td>
             <td>
-                {% if current_user.tipo == "admin" %}
+                {{% if current_user.is_admin() %}
                  <a href="{{ url_for('ministros.editar_ministro', id=ministro.id) }}"
                     class="btn btn-sm btn-warning">
                     Editar
@@ -65,7 +65,7 @@
                     Liberado
                 {% else %}
                     Pendente
-                    {% if current_user.tipo == "admin" %}
+                    {% if current_user.is_admin() %}
                         <form method="POST" action="{{ url_for('ministros.ativar_usuario', id=ministro.id) }}" style="display:inline;">
                             <button type="submit" class="btn btn-sm btn-success">Liberar</button>
                         </form>

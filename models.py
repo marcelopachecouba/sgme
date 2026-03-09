@@ -60,6 +60,12 @@ class Ministro(UserMixin, db.Model):
     def gerar_token(self):
         self.token_publico = str(uuid.uuid4())
 
+    def is_admin(self):
+        return self.tipo and self.tipo.lower() == "admin"
+
+    def is_coordenador(self):
+       return self.tipo and self.tipo.lower() == "coordenador"
+
     __table_args__ = (
         db.UniqueConstraint('nome', 'id_paroquia', name='unique_ministro_paroquia'),
     )    
