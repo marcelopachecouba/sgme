@@ -257,22 +257,21 @@ def mapa_disponibilidade():
 
         for d in dias_semana:
 
-            disp = DisponibilidadeFixa.query.filter_by(
+            indisp_manha = IndisponibilidadeFixa.query.filter_by(
                 id_ministro=m.id,
-                dia_semana=d
+                dia_semana=d,
+                horario="07:00"
             ).first()
 
-            indisp = IndisponibilidadeFixa.query.filter_by(
+            indisp_noite = IndisponibilidadeFixa.query.filter_by(
                 id_ministro=m.id,
-                dia_semana=d
+                dia_semana=d,
+                horario="19:00"
             ).first()
 
-            if indisp:
-                linha.append("❌")
-            elif disp:
-                linha.append("✔")
-            else:
-                linha.append("")
+            simbolo = f"{'✔' if not indisp_manha else 'X'}/{'✔' if not indisp_noite else 'X'}"
+
+            linha.append(simbolo)
 
         mapa.append({
             "nome": m.nome,
