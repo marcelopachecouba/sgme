@@ -15,8 +15,20 @@ from routes.casais_routes import casais_bp
 from routes.presencas_routes import presencas_bp
 from services.lembrete_missa_service import enviar_lembretes_missa
 
-app = Flask(__name__)
-app.config.from_object(Config)
+#app = Flask(__name__)
+#app.config.from_object(Config)
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    db.init_app(app)
+    login_manager.init_app(app)
+
+    register_blueprints(app)
+
+    return app
 
 @app.route("/health")
 def health():
@@ -56,6 +68,7 @@ def salvar_token():
 
 @app.before_request
 def csrf_same_origin_protection():
+
     if request.method in SAFE_METHODS:
         return
     if request.endpoint == "health":
@@ -139,7 +152,8 @@ app.register_blueprint(casais_bp)
 app.register_blueprint(presencas_bp)
 app.register_blueprint(mural_bp)
 
-iniciar_scheduler()
+if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+    iniciar_scheduler()
 
 if __name__ == "__main__":
     app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
