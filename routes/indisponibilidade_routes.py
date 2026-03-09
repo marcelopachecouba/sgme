@@ -251,31 +251,43 @@ def mapa_disponibilidade():
 
     mapa = []
 
-    for m in ministros:
+    for ministro in ministros:
 
-        linha = []
+        dias = []
 
-        for d in dias_semana:
+        for dia in dias_semana:
 
-            indisp_manha = IndisponibilidadeFixa.query.filter_by(
-                id_ministro=m.id,
-                dia_semana=d,
-                horario="07:00"
-            ).first()
+            # indisponibilidade fixa
+            indisponivel = IndisponibilidadeFixa.query.filter_by(
+                id_ministro=ministro.id,
+                dia_semana=dia,
+                id_paroquia=current_user.id_paroquia
+            ).all()
 
-            indisp_noite = IndisponibilidadeFixa.query.filter_by(
-                id_ministro=m.id,
-                dia_semana=d,
-                horario="19:00"
-            ).first()
+            # disponibilidade fixa
+            disponivel = DisponibilidadeFixa.query.filter_by(
+                id_ministro=ministro.id,
+                dia_semana=dia,
+                id_paroquia=current_user.id_paroquia
+            ).all()
 
-            simbolo = f"{'✔' if not indisp_manha else 'X'}/{'✔' if not indisp_noite else 'X'}"
+            if indisponivel and not disponivel:
+                simbolo = "X"
 
-            linha.append(simbolo)
+            elif disponivel and not indisponivel:
+                simbolo = "✔"
+
+            elif disponivel and indisponivel:
+                simbolo = "✔ / X"
+
+            else:
+                simbolo = "✔"
+
+            dias.append(simbolo)
 
         mapa.append({
-            "nome": m.nome,
-            "dias": linha
+            "nome": ministro.nome,
+            "dias": dias
         })
 
     return render_template(
