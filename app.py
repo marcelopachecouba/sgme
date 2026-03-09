@@ -24,6 +24,7 @@ from routes.indisponibilidade_routes import indisp_bp
 from routes.casais_routes import casais_bp
 from routes.presencas_routes import presencas_bp
 from mural.mural_routes import mural_bp
+from routes.busca_routes import busca_bp
 
 
 # =============================
@@ -137,6 +138,7 @@ app.register_blueprint(indisp_bp)
 app.register_blueprint(casais_bp)
 app.register_blueprint(presencas_bp)
 app.register_blueprint(mural_bp)
+app.register_blueprint(busca_bp)
 
 
 # =============================

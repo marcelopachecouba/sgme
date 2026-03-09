@@ -93,9 +93,31 @@
 
         <!-- CONTEÚDO -->
         <div class="{% if current_user.is_authenticated %}col-md-10{% else %}col-12{% endif %} content-area">
-            {% block content %}{% endblock %}
-        </div>
 
+          {% if current_user.is_authenticated %}
+            <form action="/busca" method="GET" class="mb-3">
+
+            <div class="input-group">
+
+            <input type="text"
+                  name="q"
+                  class="form-control"
+                  placeholder="🔎 Buscar ministro, missa, aviso..."
+                  autocomplete="off">
+
+            <button class="btn btn-primary">
+            🔍 Buscar
+            </button>
+            
+            </div>
+
+            </form>
+          {% endif %}
+
+          {% block content %}{% endblock %}
+
+        </div>
+           
     </div>
 </div>
 
