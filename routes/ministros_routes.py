@@ -55,7 +55,7 @@ def novo_ministro():
 
         novo = Ministro(
             nome=nome,
-            nome_completo=nome_completo
+            nome_completo=nome_completo,
             telefone=telefone,
             email=email,
             data_nascimento=datetime.strptime(data_nascimento, "%Y-%m-%d") if data_nascimento else None,
