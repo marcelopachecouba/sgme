@@ -19,21 +19,13 @@ from services.lembrete_missa_service import enviar_lembretes_missa
 #app.config.from_object(Config)
 
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+from flask import Flask
 
-    db.init_app(app)
-    login_manager.init_app(app)
-
-    register_blueprints(app)
-
-    return app
+app = Flask(__name__)
 
 @app.route("/health")
 def health():
-    return {"status": "ok"}
-
+    return "ok"
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 
@@ -104,7 +96,7 @@ def iniciar_scheduler():
         minutes=10,
         args=[app]
     )
-    
+
     # 🔔 lembrete de missa
     scheduler.add_job(
         enviar_lembretes_missa,
