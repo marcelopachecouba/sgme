@@ -24,6 +24,12 @@ import os
 
 app = Flask(__name__)
 
+import os
+
+app = Flask(__name__)
+
+app.config["SECRET_KEY"] = os.getenv("y2dnh9XfXRHDlqNz6WzRmMF1orwuX7QZQtMyaI2_ZLgjvx9CqUyXS_hDGj6EjHZj5VwN2V6eHqjGGBFSc94IjQ", "dev-secret")
+
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
