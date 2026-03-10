@@ -5,6 +5,7 @@ from datetime import datetime
 
 minhas_escalas_bp = Blueprint("minhas_escalas", __name__)
 
+
 @minhas_escalas_bp.route("/minhas-escalas")
 @login_required
 def minhas_escalas():
@@ -13,7 +14,7 @@ def minhas_escalas():
 
     escalas = (
         db.session.query(Escala, Missa)
-        .join(Missa, Escala.missa_id == Missa.id)
+        .join(Missa, Escala.id_missa == Missa.id)
         .filter(Escala.ministro_id == current_user.id)
         .filter(Missa.data >= hoje)
         .order_by(Missa.data.asc())

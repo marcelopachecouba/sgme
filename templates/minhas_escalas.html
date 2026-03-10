@@ -32,11 +32,9 @@
 
 <div class="d-grid gap-2">
 
-<button class="btn btn-success">
-
-✔ Confirmar presença
-
-</button>
+{% if proxima %}
+<a href="/checkin/{{ proxima.id }}" class="btn btn-success w-100 mb-2">✔ Confirmar presença</a>
+{% endif %}
 
 <button class="btn btn-outline-primary">
 
