@@ -412,7 +412,7 @@ class Presenca(db.Model):
         nullable=False
     )
 
-    missa_id = db.Column(
+    id_missa = db.Column(
         db.Integer,
         db.ForeignKey("missa.id"),
         nullable=False
