@@ -34,7 +34,13 @@ from routes.busca_routes import busca_bp
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+
+database_url = os.getenv("DATABASE_URL")
+
+if not database_url:
+    raise RuntimeError("DATABASE_URL não configurada no ambiente")
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
@@ -85,7 +91,7 @@ def firebase_sw():
 @login_required
 def salvar_token():
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     token = data.get("token")
 
     if token:
@@ -101,9 +107,6 @@ def salvar_token():
 
 def iniciar_scheduler():
 
-    if os.environ.get("ENABLE_SCHEDULER", "1") != "1":
-        return
-
     scheduler = BackgroundScheduler()
 
     scheduler.add_job(
@@ -117,7 +120,9 @@ def iniciar_scheduler():
     scheduler.start()
 
 
-if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+# ⚠️ IMPORTANTE
+# Não iniciar scheduler no Render / Gunicorn
+if os.environ.get("RENDER") is None:
     iniciar_scheduler()
 
 
