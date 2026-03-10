@@ -1,37 +1,59 @@
-{% extends "base.html" %}
+from flask import Blueprint, render_template, request, jsonify
+from flask_login import login_required
+from sqlalchemy import or_
 
-{% block content %}
+from models import Ministro, Missa, Aviso, Escala, db
 
-<h3>Resultados para "{{ termo }}"</h3>
+busca_bp = Blueprint("busca", __name__)
 
-<h4>Ministros</h4>
 
-<ul>
-{% for m in ministros %}
-<li>{{ m.nome}}</li>
-{% else %}
-<li>Nenhum encontrado</li>
-{% endfor %}
-</ul>
+@busca_bp.route("/busca")
+@login_required
+def busca():
 
-<h4>Missas</h4>
+    termo = (request.args.get("q") or "").strip()
 
-<ul>
-{% for m in missas %}
-<li>{{ m.data }} - {{ m.comunidade }}</li>
-{% else %}
-<li>Nenhuma encontrada</li>
-{% endfor %}
-</ul>
+    ministros = []
+    missas = []
+    avisos = []
+    escalas = []
 
-<h4>Avisos</h4>
+    if termo:
 
-<ul>
-{% for a in avisos %}
-<li>{{ a.titulo }}</li>
-{% else %}
-<li>Nenhum aviso encontrado</li>
-{% endfor %}
-</ul>
+        # MINISTROS
+        ministros = Ministro.query.filter(
+            Ministro.nome.ilike(f"%{termo}%")
+        ).order_by(Ministro.nome.asc()).all()
 
-{% endblock %}
+        # MISSAS
+        missas = Missa.query.filter(
+            or_(
+                Missa.comunidade.ilike(f"%{termo}%"),
+                Missa.horario.ilike(f"%{termo}%"),
+                Missa.data.cast(db.String).ilike(f"%{termo}%")
+            )
+        ).order_by(Missa.data.desc()).all()
+
+        # AVISOS
+        avisos = Aviso.query.filter(
+            Aviso.titulo.ilike(f"%{termo}%")
+        ).order_by(Aviso.id.desc()).all()
+
+        # MISSAS ESCALADAS
+        escalas = db.session.query(Escala, Ministro, Missa)\
+            .join(Ministro)\
+            .join(Missa)\
+            .filter(
+                Ministro.nome.ilike(f"%{termo}%")
+            )\
+            .order_by(Missa.data.desc())\
+            .all()
+
+    return render_template(
+        "busca.html",
+        termo=termo,
+        ministros=ministros,
+        missas=missas,
+        avisos=avisos,
+        escalas=escalas
+    )
