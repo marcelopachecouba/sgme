@@ -24,44 +24,44 @@
 ⏰ {{ proxima.horario }}
 </p>
 
+{% if contagem %}
 <div class="alert alert-info mt-3">
-
 ⏳ Faltam <strong>{{ contagem }}</strong>
-
 </div>
-
-<div class="d-grid gap-2">
-
-{% if proxima %}
-<a href="/checkin/{{ proxima.id }}" class="btn btn-success w-100 mb-2">✔ Confirmar presença</a>
 {% endif %}
 
-<button class="btn btn-outline-primary">
+<div class="d-grid gap-2 mt-3">
 
+<a href="/checkin/{{ proxima.id }}" class="btn btn-success">
+✔ Confirmar presença
+</a>
+
+{% if proxima.latitude and proxima.longitude %}
+<a href="https://www.google.com/maps?q={{ proxima.latitude }},{{ proxima.longitude }}"
+target="_blank"
+class="btn btn-outline-primary">
 📍 Ver localização
-
-</button>
-
-</div>
+</a>
+{% endif %}
 
 </div>
 
+</div>
 </div>
 
 {% endif %}
+
 
 <h5 class="mt-4">📅 Próximas Missas</h5>
 
 <table class="table table-striped">
 
 <thead>
-
 <tr>
 <th>Data</th>
 <th>Horário</th>
 <th>Comunidade</th>
 </tr>
-
 </thead>
 
 <tbody>
@@ -71,7 +71,9 @@
 <tr>
 
 <td>{{ missa.data.strftime('%d/%m/%Y') }}</td>
+
 <td>{{ missa.horario }}</td>
+
 <td>{{ missa.comunidade }}</td>
 
 </tr>
