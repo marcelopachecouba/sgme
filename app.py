@@ -1,14 +1,12 @@
 import os
-from urllib.parse import urlparse
-
-from flask import Flask, abort, request, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_login import LoginManager, login_required, current_user
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from models import db, Ministro
+
 from services.firebase_service import iniciar_firebase
-from services.lembrete_service import enviar_lembretes
 from services.lembrete_missa_service import enviar_lembretes_missa
 
 from routes.auth_routes import auth_bp
@@ -23,12 +21,11 @@ from routes.avisos_routes import avisos_bp
 from routes.indisponibilidade_routes import indisp_bp
 from routes.casais_routes import casais_bp
 from routes.presencas_routes import presencas_bp
-from mural.mural_routes import mural_bp
 from routes.busca_routes import busca_bp
-
 from routes.superadmin_routes import superadmin_bp
-
 from routes.minhas_escalas_routes import minhas_escalas_bp
+
+from mural.mural_routes import mural_bp
 
 
 # =============================
@@ -37,12 +34,15 @@ from routes.minhas_escalas_routes import minhas_escalas_bp
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
+app.config["SECRET_KEY"] = os.getenv(
+    "SECRET_KEY",
+    os.urandom(24)
+)
 
 database_url = os.getenv("DATABASE_URL")
 
 if not database_url:
-    raise RuntimeError("DATABASE_URL não configurada no ambiente")
+    raise RuntimeError("DATABASE_URL não configurada")
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -53,6 +53,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # =============================
 
 db.init_app(app)
+
 migrate = Migrate(app, db)
 
 
@@ -61,13 +62,16 @@ migrate = Migrate(app, db)
 # =============================
 
 login_manager = LoginManager()
+
 login_manager.init_app(app)
+
 login_manager.login_view = "auth.login"
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    return Ministro.query.get(int(user_id))
+
+    return db.session.get(Ministro, int(user_id))
 
 
 # =============================
@@ -78,7 +82,7 @@ iniciar_firebase()
 
 
 # =============================
-# ROUTES
+# ROTAS INTERNAS
 # =============================
 
 @app.route("/health")
@@ -86,9 +90,12 @@ def health():
     return "ok"
 
 
-@app.route('/firebase-messaging-sw.js')
+@app.route("/firebase-messaging-sw.js")
 def firebase_sw():
-    return send_from_directory('static', 'firebase-messaging-sw.js')
+    return send_from_directory(
+        "static",
+        "firebase-messaging-sw.js"
+    )
 
 
 @app.route("/salvar-token", methods=["POST"])
@@ -96,10 +103,13 @@ def firebase_sw():
 def salvar_token():
 
     data = request.get_json(silent=True) or {}
+
     token = data.get("token")
 
     if token:
+
         current_user.firebase_token = token
+
         db.session.commit()
 
     return jsonify({"status": "ok"})
@@ -109,24 +119,25 @@ def salvar_token():
 # SCHEDULER
 # =============================
 
-def iniciar_scheduler():
+scheduler = BackgroundScheduler()
 
-    scheduler = BackgroundScheduler()
+
+def iniciar_scheduler():
 
     scheduler.add_job(
         enviar_lembretes_missa,
         trigger="interval",
         minutes=10,
         args=[app],
-        max_instances=1
+        max_instances=1,
+        replace_existing=True
     )
 
     scheduler.start()
 
 
-# ⚠️ IMPORTANTE
-# Não iniciar scheduler no Render / Gunicorn
-if os.environ.get("RENDER") is None:
+# iniciar scheduler apenas local
+if os.getenv("FLASK_ENV") == "development":
     iniciar_scheduler()
 
 
@@ -150,6 +161,7 @@ app.register_blueprint(mural_bp)
 app.register_blueprint(busca_bp)
 app.register_blueprint(superadmin_bp)
 app.register_blueprint(minhas_escalas_bp)
+
 
 # =============================
 # RUN LOCAL
