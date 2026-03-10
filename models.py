@@ -1,21 +1,29 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+
 import uuid
 from datetime import date
+from datetime import datetime
 
 db = SQLAlchemy()
 
 
 class Paroquia(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False)
-    
-    ministros = db.relationship("Ministro", backref="paroquia")
-    missas = db.relationship("Missa", backref="paroquia")
-    
 
-from werkzeug.security import generate_password_hash, check_password_hash
+    __tablename__ = "paroquia"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    nome = db.Column(db.String(150), nullable=False)
+
+    cidade = db.Column(db.String(100))
+
+    estado = db.Column(db.String(2))
+
+    ativo = db.Column(db.Boolean, default=True)
+
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Ministro(UserMixin, db.Model):
 

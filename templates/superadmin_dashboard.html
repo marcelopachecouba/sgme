@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Painel Super Admin</h2>
+
+<h4>Nova Paróquia</h4>
+
+<form method="POST" action="/superadmin/nova_paroquia">
+
+<div class="row">
+
+<div class="col">
+<input class="form-control" name="nome" placeholder="Nome da paróquia">
+</div>
+
+<div class="col">
+<input class="form-control" name="cidade" placeholder="Cidade">
+</div>
+
+<div class="col">
+<input class="form-control" name="estado" placeholder="Estado">
+</div>
+
+<div class="col">
+<button class="btn btn-primary">Criar</button>
+</div>
+
+</div>
+
+</form>
+
+<hr>
+
+<h4>Igrejas cadastradas</h4>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Paróquia</th>
+<th>Cidade</th>
+<th>Ministros</th>
+<th>Missas</th>
+<th>Escalas</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for d in dados %}
+
+<tr>
+
+<td>{{ d.paroquia.nome }}</td>
+
+<td>{{ d.paroquia.cidade }}</td>
+
+<td>{{ d.ministros }}</td>
+
+<td>{{ d.missas }}</td>
+
+<td>{{ d.escalas }}</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}
