@@ -7,9 +7,6 @@
 <a href="{{ url_for('estatisticas.estatisticas') }}">Estatisticas</a>
 <a href="{{ url_for('estatisticas.confiabilidade') }}">Confiabilidade</a>
 <a href="/minhas-escalas">📅 Minhas Escalas</a>
-#{% if proxima %}
-#<a href="/checkin/{{ proxima.id }}" class="btn btn-success w-100 mb-2">✔ Confirmar presença</a>
-#{% endif %}
 
 <a href="https://www.google.com/maps?q={{ proxima.latitude }},{{ proxima.longitude }}"
 target="_blank"
