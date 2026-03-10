@@ -1,11 +1,3 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container">
-
-<h3 class="mb-4">📱 Minhas Escalas</h3>
-
 {% if proxima %}
 
 <div class="card shadow-lg border-success mb-4">
@@ -50,40 +42,3 @@ class="btn btn-outline-primary">
 </div>
 
 {% endif %}
-
-
-<h5 class="mt-4">📅 Próximas Missas</h5>
-
-<table class="table table-striped">
-
-<thead>
-<tr>
-<th>Data</th>
-<th>Horário</th>
-<th>Comunidade</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for escala, missa in escalas %}
-
-<tr>
-
-<td>{{ missa.data.strftime('%d/%m/%Y') }}</td>
-
-<td>{{ missa.horario }}</td>
-
-<td>{{ missa.comunidade }}</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-</div>
-
-{% endblock %}

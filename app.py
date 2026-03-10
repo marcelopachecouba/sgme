@@ -97,6 +97,9 @@ def firebase_sw():
         "firebase-messaging-sw.js"
     )
 
+@app.context_processor
+def variaveis_globais():
+    return dict(proxima=None)
 
 @app.route("/salvar-token", methods=["POST"])
 @login_required
