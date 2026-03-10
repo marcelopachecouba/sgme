@@ -1,49 +1,57 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
-    <meta charset="UTF-8">
-    <title>SGME</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- PWA -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#1f2937">
+<meta charset="UTF-8">
+<title>SGME</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="/static/icon-192.png">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body {
-            overflow-x: hidden;
-            background-color: #f3f4f6;
-        }
+<!-- PWA -->
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#1f2937">
 
-        .sidebar {
-            min-height: 100vh;
-            background-color: #1f2937;
-        }
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        .sidebar a {
-            color: white;
-            display: block;
-            padding: 12px 20px;
-            text-decoration: none;
-        }
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/static/icon-192.png">
 
-        .sidebar a:hover {
-            background-color: #374151;
-        }
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
-        .content-area {
-            padding: 20px;
-        }
+<style>
 
-        .navbar-brand {
-            font-weight: bold;
-        }
-    </style>
+body{
+overflow-x:hidden;
+background:#f3f4f6;
+}
+
+.sidebar{
+min-height:100vh;
+background:#1f2937;
+}
+
+.sidebar a{
+color:white;
+display:block;
+padding:12px 20px;
+text-decoration:none;
+}
+
+.sidebar a:hover{
+background:#374151;
+}
+
+.content-area{
+padding:20px;
+}
+
+.navbar-brand{
+font-weight:bold;
+}
+
+</style>
+
 </head>
 
 <body>
@@ -52,184 +60,289 @@
 
 <!-- NAVBAR MOBILE -->
 <nav class="navbar navbar-dark bg-dark d-md-none">
-    <div class="container-fluid">
-        <button class="btn btn-outline-light" type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#sidebarMenu">
-            ☰ Menu
-        </button>
-        <span class="navbar-brand mb-0 h1">SGME</span>
-    </div>
+
+<div class="container-fluid">
+
+<button class="btn btn-outline-light"
+type="button"
+data-bs-toggle="offcanvas"
+data-bs-target="#sidebarMenu">
+
+☰ Menu
+
+</button>
+
+<span class="navbar-brand mb-0 h1">SGME</span>
+
+</div>
+
 </nav>
 
-<!-- SIDEBAR OFFCANVAS MOBILE -->
+<!-- SIDEBAR MOBILE -->
 <div class="offcanvas offcanvas-start bg-dark text-white"
-     tabindex="-1"
-     id="sidebarMenu">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title">SGME</h5>
-        <button type="button"
-                class="btn-close btn-close-white"
-                data-bs-dismiss="offcanvas">
-        </button>
-    </div>
-    <div class="offcanvas-body sidebar">
-        {% include "menu.html" %}
-    </div>
+tabindex="-1"
+id="sidebarMenu">
+
+<div class="offcanvas-header">
+
+<h5 class="offcanvas-title">SGME</h5>
+
+<button
+type="button"
+class="btn-close btn-close-white"
+data-bs-dismiss="offcanvas">
+</button>
+
+</div>
+
+<div class="offcanvas-body sidebar">
+
+{% include "menu.html" %}
+
+</div>
+
 </div>
 
 {% endif %}
 
 <div class="container-fluid">
-    <div class="row">
 
-        {% if current_user.is_authenticated %}
-        <!-- SIDEBAR DESKTOP -->
-        <div class="col-md-2 d-none d-md-block sidebar">
-            <h5 class="text-white text-center mt-3 mb-4">SGME</h5>
-            {% include "menu.html" %}
-        </div>
-        {% endif %}
+<div class="row">
 
-        <!-- CONTEÚDO -->
-        <div class="{% if current_user.is_authenticated %}col-md-10{% else %}col-12{% endif %} content-area">
+{% if current_user.is_authenticated %}
 
-          {% if current_user.is_authenticated %}
-            <form action="/busca" method="GET" class="mb-3">
+<!-- SIDEBAR DESKTOP -->
 
-            <div class="input-group">
+<div class="col-md-2 d-none d-md-block sidebar">
 
-            <input type="text"
-                  name="q"
-                  class="form-control"
-                  placeholder="🔎 Buscar ministro, missa, aviso..."
-                  autocomplete="off">
+<h5 class="text-white text-center mt-3 mb-4">SGME</h5>
 
-            <button class="btn btn-primary">
-            🔍 Buscar
-            </button>
-            
-            </div>
+{% include "menu.html" %}
 
-            </form>
-          {% endif %}
-
-          {% block content %}{% endblock %}
-
-        </div>
-           
-    </div>
 </div>
 
-<!-- Bootstrap -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Service Worker -->
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    .then(function(registration) {
-        console.log("Firebase SW registrado:", registration);
-    });
-}
-</script>
-
-<!-- Firebase Push Notifications -->
-{% if current_user.is_authenticated %}
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAdzJ3cJ7riBLGw9X89tPntQ6Q4MPbUewY",
-  authDomain: "sgme-a4d52.firebaseapp.com",
-  projectId: "sgme-a4d52",
-  messagingSenderId: "929642581311",
-  appId: "1:929642581311:web:d93240da819f2cef58d78a"
-};
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
-const vapidKey = "{{ config.get('FIREBASE_VAPID_KEY', '') }}";
-
-if (vapidKey) {
-
-  Notification.requestPermission().then((permission) => {
-
-    if (permission !== "granted") return;
-
-    getToken(messaging, { vapidKey }).then((currentToken) => {
-
-      if (!currentToken) return;
-
-      const tokenSalvo = localStorage.getItem("firebase_token");
-
-      if (tokenSalvo !== currentToken) {
-
-        fetch("/salvar-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: currentToken })
-        });
-
-        localStorage.setItem("firebase_token", currentToken);
-
-      }
-
-    });
-
-  });
-
-}
-
-window.ativarNotificacoes = function() {
-
-  Notification.requestPermission().then((permission) => {
-
-    if (permission !== "granted") {
-      alert("Permissão de notificação negada.");
-      return;
-    }
-
-    getToken(messaging, { vapidKey }).then((currentToken) => {
-
-      console.log("Token Firebase:", currentToken);
-
-      if (!currentToken) {
-        alert("Não foi possível gerar o token.");
-        return;
-      }
-
-      fetch("/salvar-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: currentToken })
-      });
-
-      localStorage.setItem("firebase_token", currentToken);
-
-      alert("Notificações ativadas com sucesso!");
-
-    });
-
-  });
-
-}
-
-onMessage(messaging, (payload) => {
-  new Notification(
-  payload.notification.title,
-  { body: payload.notification.body }
-);
-});
-
-</script>
 {% endif %}
 
+<!-- CONTEÚDO -->
+
+<div class="{% if current_user.is_authenticated %}col-md-10{% else %}col-12{% endif %} content-area">
+
+{% if current_user.is_authenticated %}
+
+<!-- BUSCA GLOBAL -->
+
+<form action="/busca"
+method="GET"
+class="mb-3 position-relative">
+
+<div class="input-group">
+
+<input
+id="campo-busca"
+type="text"
+name="q"
+class="form-control"
+placeholder="🔎 Buscar ministro, missa, aviso..."
+autocomplete="off">
+
+<button class="btn btn-primary">
+
+🔍 Buscar
+
+</button>
+
+</div>
+
+<div
+id="resultado-busca"
+class="list-group position-absolute w-100"
+style="z-index:1000">
+</div>
+
+</form>
+
+{% endif %}
+
+{% block content %}{% endblock %}
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- BOOTSTRAP -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<!-- SERVICE WORKER -->
+
+<script>
+
+if('serviceWorker' in navigator){
+
+navigator.serviceWorker.register('/firebase-messaging-sw.js')
+
+.then(function(registration){
+
+console.log("Firebase SW registrado:",registration)
+
+})
+
+}
+
+</script>
+
+
+<!-- FIREBASE PUSH -->
+
+{% if current_user.is_authenticated %}
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"
+
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js"
+
+const firebaseConfig = {
+
+apiKey:"AIzaSyAdzJ3cJ7riBLGw9X89tPntQ6Q4MPbUewY",
+
+authDomain:"sgme-a4d52.firebaseapp.com",
+
+projectId:"sgme-a4d52",
+
+messagingSenderId:"929642581311",
+
+appId:"1:929642581311:web:d93240da819f2cef58d78a"
+
+}
+
+const app = initializeApp(firebaseConfig)
+
+const messaging = getMessaging(app)
+
+const vapidKey = "{{ config.get('FIREBASE_VAPID_KEY', '') }}"
+
+if(vapidKey){
+
+Notification.requestPermission().then(permission=>{
+
+if(permission!=="granted") return
+
+getToken(messaging,{vapidKey}).then(currentToken=>{
+
+if(!currentToken) return
+
+const tokenSalvo = localStorage.getItem("firebase_token")
+
+if(tokenSalvo!==currentToken){
+
+fetch("/salvar-token",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json" },
+
+body:JSON.stringify({ token:currentToken })
+
+})
+
+localStorage.setItem("firebase_token",currentToken)
+
+}
+
+})
+
+})
+
+}
+
+onMessage(messaging,(payload)=>{
+
+new Notification(
+
+payload.notification.title,
+
+{ body:payload.notification.body }
+
+)
+
+})
+
+</script>
+
+{% endif %}
+
+
+<!-- JQUERY + DATATABLE -->
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
+
+<!-- AUTOCOMPLETE BUSCA -->
+
+<script>
+
+const campoBusca = document.getElementById("campo-busca")
+
+const resultadoBusca = document.getElementById("resultado-busca")
+
+if(campoBusca){
+
+campoBusca.addEventListener("keyup",function(){
+
+const termo = this.value
+
+if(termo.length<2){
+
+resultadoBusca.innerHTML=""
+
+return
+
+}
+
+fetch("/api/busca?q="+termo)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+resultadoBusca.innerHTML=""
+
+data.resultados.forEach(item=>{
+
+let icone=""
+
+if(item.tipo=="ministro"){ icone="👤" }
+
+if(item.tipo=="missa"){ icone="⛪" }
+
+if(item.tipo=="aviso"){ icone="📢" }
+
+const linha=document.createElement("a")
+
+linha.className="list-group-item list-group-item-action"
+
+linha.innerHTML=icone+" "+item.texto
+
+resultadoBusca.appendChild(linha)
+
+})
+
+})
+
+})
+
+}
+
+</script>
+
+
 </body>
+
 </html>
