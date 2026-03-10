@@ -28,7 +28,7 @@ from routes.busca_routes import busca_bp
 
 from routes.superadmin_routes import superadmin_bp
 
-
+from routes.minhas_escalas_routes import minhas_escalas_bp
 
 
 # =============================
@@ -149,7 +149,7 @@ app.register_blueprint(presencas_bp)
 app.register_blueprint(mural_bp)
 app.register_blueprint(busca_bp)
 app.register_blueprint(superadmin_bp)
-
+app.register_blueprint(minhas_escalas_bp)
 
 # =============================
 # RUN LOCAL
