@@ -165,6 +165,18 @@ style="z-index:1000">
 
 {% block content %}{% endblock %}
 
+<!-- BOTÃO INSTALAR APP -->
+
+<button id="btnInstalar"
+onclick="instalarApp()"
+class="btn btn-success"
+style="display:none; position:fixed; bottom:20px; right:20px; z-index:999;">
+
+📱 Instalar App
+
+</button>
+
+
 </div>
 
 </div>
@@ -342,7 +354,37 @@ resultadoBusca.appendChild(linha)
 
 </script>
 
+<script>
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+
+    e.preventDefault();
+
+    deferredPrompt = e;
+
+    const botao = document.getElementById("btnInstalar");
+
+    if(botao){
+        botao.style.display = "block";
+    }
+
+});
+
+function instalarApp(){
+
+    if(deferredPrompt){
+
+        deferredPrompt.prompt();
+
+    }
+
+}
+
+</script>
 
 </body>
 
 </html>
+

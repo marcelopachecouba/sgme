@@ -26,6 +26,10 @@ from routes.presencas_routes import presencas_bp
 from mural.mural_routes import mural_bp
 from routes.busca_routes import busca_bp
 
+from routes.superadmin_routes import superadmin_bp
+
+from routes.api_routes import api_bp
+
 
 # =============================
 # APP
@@ -144,7 +148,8 @@ app.register_blueprint(casais_bp)
 app.register_blueprint(presencas_bp)
 app.register_blueprint(mural_bp)
 app.register_blueprint(busca_bp)
-
+app.register_blueprint(superadmin_bp)
+app.register_blueprint(api_bp)
 
 # =============================
 # RUN LOCAL
