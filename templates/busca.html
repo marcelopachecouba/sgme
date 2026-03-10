@@ -1,59 +1,112 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
-from sqlalchemy import or_
+{% extends "base.html" %}
 
-from models import Ministro, Missa, Aviso, Escala, db
+{% block content %}
 
-busca_bp = Blueprint("busca", __name__)
+<h2 class="mb-4">Resultado da Busca</h2>
+
+{% if termo %}
+<p>Buscando por: <b>{{ termo }}</b></p>
+{% endif %}
+
+<hr>
+
+<!-- MINISTROS -->
+
+{% if ministros %}
+<h4>👤 Ministros</h4>
+
+<ul class="list-group mb-4">
+
+{% for ministro in ministros %}
+
+<li class="list-group-item">
+{{ ministro.nome }}
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endif %}
 
 
-@busca_bp.route("/busca")
-@login_required
-def busca():
 
-    termo = (request.args.get("q") or "").strip()
+<!-- MISSAS -->
 
-    ministros = []
-    missas = []
-    avisos = []
-    escalas = []
+{% if missas %}
+<h4>⛪ Missas</h4>
 
-    if termo:
+<ul class="list-group mb-4">
 
-        # MINISTROS
-        ministros = Ministro.query.filter(
-            Ministro.nome.ilike(f"%{termo}%")
-        ).order_by(Ministro.nome.asc()).all()
+{% for missa in missas %}
 
-        # MISSAS
-        missas = Missa.query.filter(
-            or_(
-                Missa.comunidade.ilike(f"%{termo}%"),
-                Missa.horario.ilike(f"%{termo}%"),
-                Missa.data.cast(db.String).ilike(f"%{termo}%")
-            )
-        ).order_by(Missa.data.desc()).all()
+<li class="list-group-item">
 
-        # AVISOS
-        avisos = Aviso.query.filter(
-            Aviso.titulo.ilike(f"%{termo}%")
-        ).order_by(Aviso.id.desc()).all()
+{{ missa.data.strftime('%d/%m/%Y') }}
+- {{ missa.horario }}
+- {{ missa.comunidade }}
 
-        # MISSAS ESCALADAS
-        escalas = db.session.query(Escala, Ministro, Missa)\
-            .join(Ministro)\
-            .join(Missa)\
-            .filter(
-                Ministro.nome.ilike(f"%{termo}%")
-            )\
-            .order_by(Missa.data.desc())\
-            .all()
+</li>
 
-    return render_template(
-        "busca.html",
-        termo=termo,
-        ministros=ministros,
-        missas=missas,
-        avisos=avisos,
-        escalas=escalas
-    )
+{% endfor %}
+
+</ul>
+
+{% endif %}
+
+
+
+<!-- ESCALAS -->
+
+{% if escalas %}
+<h4>📅 Missas Escaladas</h4>
+
+{% for escala, ministro, missa in escalas %}
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+<b>{{ ministro.nome }}</b><br>
+
+{{ missa.data.strftime('%d/%m/%Y') }}
+- {{ missa.horario }}
+- {{ missa.comunidade }}
+
+</div>
+
+</div>
+
+{% endfor %}
+
+{% endif %}
+
+
+
+<!-- AVISOS -->
+
+{% if avisos %}
+<h4>📢 Avisos</h4>
+
+<ul class="list-group mb-4">
+
+{% for aviso in avisos %}
+
+<li class="list-group-item">
+{{ aviso.titulo }}
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endif %}
+
+
+{% if not ministros and not missas and not avisos and not escalas %}
+<div class="alert alert-warning">
+Nenhum resultado encontrado.
+</div>
+{% endif %}
+
+{% endblock %}
