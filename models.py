@@ -86,7 +86,9 @@ class Missa(db.Model):
     periodo = db.Column(db.String(20), nullable=True)
     comunidade = db.Column(db.String(100))
     qtd_ministros = db.Column(db.Integer)
-    id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))    
+    id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))  
+    latitude = db.Column(db.String(50))
+    longitude = db.Column(db.String(50))  
 
 class EscalaFixa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -397,3 +399,41 @@ class PedidoSubstituicao(db.Model):
     escala = db.relationship("Escala", foreign_keys=[id_escala])
     solicitante = db.relationship("Ministro", foreign_keys=[id_ministro_solicitante])
     aceite = db.relationship("Ministro", foreign_keys=[id_ministro_aceite])
+
+class Presenca(db.Model):
+
+    __tablename__ = "presencas"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    ministro_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+
+    missa_id = db.Column(
+        db.Integer,
+        db.ForeignKey("missa.id"),
+        nullable=False
+    )
+
+    presente = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    data_registro = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    ministro = db.relationship(
+        "Ministro",
+        backref="presencas"
+    )
+
+    missa = db.relationship(
+        "Missa",
+        backref="presencas"
+    )

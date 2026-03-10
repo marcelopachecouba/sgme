@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3>📊 Histórico de Presenças</h3>
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Data</th>
+<th>Comunidade</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for p in presencas %}
+
+<tr>
+
+<td>{{ p.missa.data.strftime('%d/%m/%Y') }}</td>
+<td>{{ p.missa.comunidade }}</td>
+
+<td>
+
+{% if p.presente %}
+✔ Presente
+{% else %}
+❌ Faltou
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}
