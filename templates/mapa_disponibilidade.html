@@ -88,7 +88,36 @@
 }
 </style>
 
-<p class="mapa-subtitulo">Cabeçalho e coluna de ministros ficam fixos durante a rolagem. Cada missa do dia aparece como uma coluna.</p>
+<form method="GET" class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+        <label for="dia_semana" class="form-label">Dia da semana</label>
+        <select id="dia_semana" name="dia_semana" class="form-select">
+            <option value="">Todos</option>
+            {% for dia, label in dias_semana.items() %}
+            <option value="{{ dia }}" {% if dia_filtro == dia %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-12 col-md-5">
+        <label for="ministro" class="form-label">Ministro</label>
+        <input
+            id="ministro"
+            name="ministro"
+            type="text"
+            class="form-control"
+            placeholder="Filtrar por nome"
+            value="{{ busca_ministro }}"
+        >
+    </div>
+
+    <div class="col-12 col-md-3 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">Filtrar</button>
+        <a href="{{ url_for('indisponibilidade.mapa_disponibilidade') }}" class="btn btn-outline-secondary">Limpar</a>
+    </div>
+</form>
+
+<p class="mapa-subtitulo">Cabeçalho e coluna de ministros ficam fixos durante a rolagem. O mapa usa colunas únicas por dia, horário e comunidade.</p>
 
 <div class="mapa-wrap">
     <table class="table table-bordered text-center align-middle mapa-tabela">
@@ -101,9 +130,6 @@
                     <small>{{ coluna.horario }}</small>
                     {% if coluna.comunidade %}
                     <br><small>{{ coluna.comunidade }}</small>
-                    {% endif %}
-                    {% if coluna.sequencia > 1 %}
-                    <br><small>#{{ coluna.sequencia }}</small>
                     {% endif %}
                 </th>
                 {% endfor %}
@@ -134,6 +160,12 @@
         </tbody>
     </table>
 </div>
+
+{% if not colunas %}
+<div class="alert alert-light border mt-3">
+    Nenhuma coluna encontrada para o filtro selecionado.
+</div>
+{% endif %}
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {

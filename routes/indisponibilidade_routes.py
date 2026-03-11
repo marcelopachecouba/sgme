@@ -248,30 +248,50 @@ def nova_indisponibilidade():
 @indisp_bp.route("/mapa_disponibilidade")
 @login_required
 def mapa_disponibilidade():
-    ministros = Ministro.query.filter_by(
-        id_paroquia=current_user.id_paroquia
-    ).order_by(Ministro.nome.asc()).all()
+    dia_filtro = request.args.get("dia_semana", type=int)
+    busca_ministro = (request.args.get("ministro") or "").strip()
 
-    missas = Missa.query.filter_by(
+    ministros_query = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
-    ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.comunidade.asc(), Missa.id.asc()).all()
+    )
+    if busca_ministro:
+        ministros_query = ministros_query.filter(Ministro.nome.ilike(f"%{busca_ministro}%"))
+    ministros = ministros_query.order_by(Ministro.nome.asc()).all()
+
+    missas_query = Missa.query.filter_by(
+        id_paroquia=current_user.id_paroquia
+    )
+    missas = missas_query.order_by(
+        Missa.data.asc(),
+        Missa.horario.asc(),
+        Missa.comunidade.asc(),
+        Missa.id.asc()
+    ).all()
 
     colunas = []
-    contagem_por_slot = defaultdict(int)
+    slots_vistos = set()
     for missa in missas:
         if not missa.horario:
             continue
 
         dia_semana = missa.data.weekday()
-        slot = (dia_semana, missa.horario)
-        contagem_por_slot[slot] += 1
+        if dia_filtro is not None and dia_semana != dia_filtro:
+            continue
+
+        slot = (
+            dia_semana,
+            (missa.horario or "").strip(),
+            (missa.comunidade or "").strip(),
+        )
+        if slot in slots_vistos:
+            continue
+        slots_vistos.add(slot)
 
         colunas.append({
             "dia_semana": dia_semana,
             "dia_label": DIAS_SEMANA_LABEL[dia_semana],
             "horario": missa.horario,
             "comunidade": missa.comunidade,
-            "sequencia": contagem_por_slot[slot],
         })
 
     mapa = []
@@ -299,7 +319,10 @@ def mapa_disponibilidade():
     return render_template(
         "mapa_disponibilidade.html",
         mapa=mapa,
-        colunas=colunas
+        colunas=colunas,
+        dia_filtro=dia_filtro,
+        busca_ministro=busca_ministro,
+        dias_semana=DIAS_SEMANA_LABEL,
     )
 
 
