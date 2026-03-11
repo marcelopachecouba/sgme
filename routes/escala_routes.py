@@ -504,7 +504,14 @@ def gerar_mensal_inteligente():
 from sqlalchemy import extract
 
 
-def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriores):
+def _ordenar_missas_para_geracao(missas, ordem_geracao):
+    if ordem_geracao == "semana_primeiro":
+        return sorted(missas, key=lambda m: (m.data.weekday() in {5, 6}, m.data, m.horario or "", m.id))
+    if ordem_geracao == "fim_semana_primeiro":
+        return sorted(missas, key=lambda m: (m.data.weekday() not in {5, 6}, m.data, m.horario or "", m.id))
+    return sorted(missas, key=lambda m: (m.data.weekday() != 6, m.data, m.horario or "", m.id))
+
+def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriores, ordem_geracao):
     from services.escala_inteligente_service import selecionar_ministros
 
     missas_mes_subquery = db.session.query(Missa.id).filter(
@@ -524,16 +531,13 @@ def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriore
         extract("year", Missa.data) == ano
     ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
 
-    # Regra de geracao: primeiro todos os domingos, depois missas dos demais dias.
-    missas_domingo = [m for m in missas_mes if m.data.weekday() == 6]
-    missas_semana = [m for m in missas_mes if m.data.weekday() != 6]
-
-    for missa in missas_domingo + missas_semana:
+    for missa in _ordenar_missas_para_geracao(missas_mes, ordem_geracao):
         ministros = selecionar_ministros(
             missa.qtd_ministros,
             current_user.id_paroquia,
             missa,
-            considerar_periodos_anteriores=considerar_periodos_anteriores
+            considerar_periodos_anteriores=considerar_periodos_anteriores,
+            modo_ordenacao=ordem_geracao
         )
 
         for ministro in ministros:
@@ -615,11 +619,13 @@ def gerar_escala_inteligente():
         enviar_escala_ministros = bool(
             request.form.get("enviar_escala_ministros")
         )
+        ordem_geracao = (request.form.get("ordem_geracao") or "equilibrada").strip()
 
         _executar_geracao_escala_inteligente(
             mes=mes,
             ano=ano,
-            considerar_periodos_anteriores=considerar_periodos_anteriores
+            considerar_periodos_anteriores=considerar_periodos_anteriores,
+            ordem_geracao=ordem_geracao
         )
 
         if enviar_escala_ministros:
@@ -918,6 +924,13 @@ def dashboard_ministro_detalhe(ministro_id):
         inicio=inicio_str,
         fim=fim_str,
     )
+
+
+
+
+
+
+
 
 
 

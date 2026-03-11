@@ -4,12 +4,12 @@
 <h2 class="mb-4">Mapa de Disponibilidade</h2>
 
 <style>
-
 .celula-mapa{
     font-weight:bold;
     font-size:20px;
     cursor:pointer;
     transition:0.2s;
+    min-width:90px;
 }
 
 .disponivel{
@@ -23,127 +23,72 @@
 }
 
 .celula-mapa:hover{
-    transform:scale(1.1);
+    transform:scale(1.05);
 }
-
 </style>
 
-<table class="table table-bordered text-center">
-
+<div class="table-responsive">
+<table class="table table-bordered text-center align-middle">
 <thead class="table-dark">
-
 <tr>
 <th>Ministro</th>
-<th>SEG</th>
-<th>TER</th>
-<th>QUA</th>
-<th>QUI</th>
-<th>SEX</th>
-<th>SAB</th>
-<th>DOM</th>
-</tr>
-
-<tr style="background:#f3f4f6;font-size:12px">
-
-<td></td>
-
-{% for i in range(7) %}
-<td>
-
-{% for h in horarios[i] %}
-{{ h }}<br>
+{% for coluna in colunas %}
+<th>{{ coluna.dia_label }}<br><small>{{ coluna.horario }}</small></th>
 {% endfor %}
-
-</td>
-{% endfor %}
-
 </tr>
-
 </thead>
-
 <tbody>
-
 {% for m in mapa %}
-
 <tr>
-
 <td class="text-start"><b>{{ m.nome }}</b></td>
-
-{% for d in m.dias %}
+{% for celula in m.celulas %}
 <td
-class="celula-mapa {% if d == 'X' %}indisponivel{% else %}disponivel{% endif %}"
+class="celula-mapa {% if celula.simbolo == 'X' %}indisponivel{% else %}disponivel{% endif %}"
 data-ministro="{{ m.id }}"
-data-dia="{{ loop.index0 }}"
+data-dia="{{ celula.dia_semana }}"
+data-horario="{{ celula.horario }}"
 >
-{{ d }}
+{{ celula.simbolo }}
 </td>
 {% endfor %}
-
 </tr>
-
 {% endfor %}
-
 </tbody>
-
 </table>
-
+</div>
 
 <script>
-
-document.addEventListener("DOMContentLoaded", function(){
-
-document.querySelectorAll(".celula-mapa").forEach(celula => {
-
-    celula.addEventListener("click", function(){
-
-        const ministro_id = this.dataset.ministro
-        const dia_semana = this.dataset.dia
-
-        fetch("/api/toggle_indisponibilidade", {
-
-            method:"POST",
-
-            headers:{
-                "Content-Type":"application/json"
-            },
-
-            body: JSON.stringify({
-                ministro_id:ministro_id,
-                dia_semana:dia_semana
-            })
-
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".celula-mapa").forEach((celula) => {
+    celula.addEventListener("click", function () {
+      fetch("/api/toggle_indisponibilidade", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ministro_id: this.dataset.ministro,
+          dia_semana: Number(this.dataset.dia),
+          horario: this.dataset.horario
         })
-
-        .then(r=>r.json())
-
-        .then(resp=>{
-
-            if(this.innerText.trim()=="✔"){
-
-                this.innerText="X"
-
-                this.classList.remove("disponivel")
-                this.classList.add("indisponivel")
-
-            }
-
-            else{
-
-                this.innerText="✔"
-
-                this.classList.remove("indisponivel")
-                this.classList.add("disponivel")
-
-            }
-
-        })
-
-    })
-
-})
-
-})
-
+      })
+      .then((r) => r.json())
+      .then(() => {
+        if (this.innerText.trim() === "O") {
+          this.innerText = "X";
+          this.classList.remove("disponivel");
+          this.classList.add("indisponivel");
+        } else {
+          this.innerText = "O";
+          this.classList.remove("indisponivel");
+          this.classList.add("disponivel");
+        }
+      });
+    });
+  });
+});
 </script>
 
 {% endblock %}
+
+
