@@ -504,15 +504,41 @@ def gerar_mensal_inteligente():
 from sqlalchemy import extract
 
 
-def _ordenar_missas_para_geracao(missas, ordem_geracao):
-    if ordem_geracao == "semana_primeiro":
+def _normalizar_opcoes_geracao(opcoes):
+    if isinstance(opcoes, str):
+        opcoes = [opcoes]
+
+    permitidas = {
+        "equilibrada",
+        "casais_fim_semana",
+        "casais_semana",
+        "minimo_missas",
+        "semana_primeiro",
+        "fim_semana_primeiro",
+    }
+    normalizadas = []
+
+    for opcao in opcoes or []:
+        valor = (opcao or "").strip()
+        if valor and valor in permitidas and valor not in normalizadas:
+            normalizadas.append(valor)
+
+    return normalizadas or ["equilibrada"]
+
+
+def _ordenar_missas_para_geracao(missas, opcoes_geracao):
+    opcoes_geracao = _normalizar_opcoes_geracao(opcoes_geracao)
+
+    if "semana_primeiro" in opcoes_geracao:
         return sorted(missas, key=lambda m: (m.data.weekday() in {5, 6}, m.data, m.horario or "", m.id))
-    if ordem_geracao == "fim_semana_primeiro":
+    if "fim_semana_primeiro" in opcoes_geracao:
         return sorted(missas, key=lambda m: (m.data.weekday() not in {5, 6}, m.data, m.horario or "", m.id))
     return sorted(missas, key=lambda m: (m.data.weekday() != 6, m.data, m.horario or "", m.id))
 
-def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriores, ordem_geracao):
+def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriores, opcoes_geracao):
     from services.escala_inteligente_service import selecionar_ministros
+
+    opcoes_geracao = _normalizar_opcoes_geracao(opcoes_geracao)
 
     missas_mes_subquery = db.session.query(Missa.id).filter(
         Missa.id_paroquia == current_user.id_paroquia,
@@ -531,13 +557,13 @@ def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriore
         extract("year", Missa.data) == ano
     ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
 
-    for missa in _ordenar_missas_para_geracao(missas_mes, ordem_geracao):
+    for missa in _ordenar_missas_para_geracao(missas_mes, opcoes_geracao):
         ministros = selecionar_ministros(
             missa.qtd_ministros,
             current_user.id_paroquia,
             missa,
             considerar_periodos_anteriores=considerar_periodos_anteriores,
-            modo_ordenacao=ordem_geracao
+            modo_ordenacao=opcoes_geracao
         )
 
         for ministro in ministros:
@@ -619,13 +645,15 @@ def gerar_escala_inteligente():
         enviar_escala_ministros = bool(
             request.form.get("enviar_escala_ministros")
         )
-        ordem_geracao = (request.form.get("ordem_geracao") or "equilibrada").strip()
+        opcoes_geracao = _normalizar_opcoes_geracao(
+            request.form.getlist("ordem_geracao")
+        )
 
         _executar_geracao_escala_inteligente(
             mes=mes,
             ano=ano,
             considerar_periodos_anteriores=considerar_periodos_anteriores,
-            ordem_geracao=ordem_geracao
+            opcoes_geracao=opcoes_geracao
         )
 
         if enviar_escala_ministros:

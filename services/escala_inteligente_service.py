@@ -122,7 +122,20 @@ def _meta_mensal_por_ministro():
     return max(1, int(_cfg("ESCALA_META_MENSAL_POR_MINISTRO", 2)))
 
 
+def _normalizar_modos(modo_ordenacao):
+    if isinstance(modo_ordenacao, str):
+        modos = [modo_ordenacao]
+    else:
+        modos = list(modo_ordenacao or [])
+
+    return {str(modo).strip() for modo in modos if str(modo).strip()}
+
+
 def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores=True, modo_ordenacao="equilibrada"):
+    modos = _normalizar_modos(modo_ordenacao)
+    if not modos:
+        modos = {"equilibrada"}
+
     ministros = Ministro.query.filter_by(id_paroquia=id_paroquia).all()
     if not ministros or qtd <= 0:
         return []
@@ -311,7 +324,7 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
     # 1) disponibilidade declarada
     # 2) equilibrio mensal
     # 3) score inteligente
-    if modo_ordenacao == "minimo_missas":
+    if "minimo_missas" in modos:
         priorizados.sort(key=lambda x: (-x["disponivel_preferencial"], x["escalas_mes"], x["escalas_7_dias"], -x["score"]))
         restritos.sort(key=lambda x: (-x["disponivel_preferencial"], x["escalas_mes"], x["escalas_7_dias"], -x["score"]))
     else:
@@ -471,8 +484,8 @@ def selecionar_ministros(qtd, id_paroquia, missa, considerar_periodos_anteriores
     meta_slots_casal = int(round(qtd * fracao_casal))
     meta_pares_base = min(len(par_entries), meta_slots_casal // 2)
     priorizar_casal = (
-        (modo_ordenacao == "casais_fim_semana" and domingo)
-        or (modo_ordenacao == "casais_semana" and not domingo)
+        ("casais_fim_semana" in modos and domingo)
+        or ("casais_semana" in modos and not domingo)
     )
     if priorizar_casal:
         meta_pares_base = min(len(par_entries), qtd // 2)
