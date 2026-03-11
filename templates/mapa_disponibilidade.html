@@ -4,84 +4,156 @@
 <h2 class="mb-4">Mapa de Disponibilidade</h2>
 
 <style>
-.celula-mapa{
-    font-weight:bold;
-    font-size:22px;
-    cursor:pointer;
-    transition:0.2s;
-    min-width:90px;
+.mapa-wrap {
+    border: 1px solid #dbe2ea;
+    border-radius: 18px;
+    background: #fff;
+    overflow: auto;
+    max-height: calc(100vh - 220px);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
-.disponivel{
-    background:#dcfce7;
-    color:#166534;
+.mapa-tabela {
+    margin-bottom: 0;
+    min-width: max-content;
 }
 
-.indisponivel{
-    background:#f3f4f6;
-    color:#9ca3af;
+.mapa-tabela thead th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #1f2937;
+    color: #fff;
+    vertical-align: middle;
+    min-width: 110px;
 }
 
-.celula-mapa:hover{
-    transform:scale(1.05);
+.mapa-tabela .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    background: #fff;
+    min-width: 220px;
+    max-width: 220px;
+}
+
+.mapa-tabela thead .sticky-col {
+    z-index: 25;
+    background: #111827;
+    color: #fff;
+}
+
+.celula-mapa {
+    font-weight: bold;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    min-width: 90px;
+    user-select: none;
+}
+
+.disponivel {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.indisponivel {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+.celula-mapa:hover {
+    transform: scale(1.04);
+}
+
+.mapa-subtitulo {
+    color: #64748b;
+    margin-top: -0.5rem;
+}
+
+@media (max-width: 768px) {
+    .mapa-wrap {
+        max-height: calc(100vh - 180px);
+    }
+
+    .mapa-tabela .sticky-col {
+        min-width: 160px;
+        max-width: 160px;
+    }
+
+    .mapa-tabela thead th {
+        min-width: 96px;
+        font-size: 0.85rem;
+    }
 }
 </style>
 
-<div class="table-responsive">
-<table class="table table-bordered text-center align-middle">
+<p class="mapa-subtitulo">Cabeçalho e coluna de ministros ficam fixos durante a rolagem. Cada missa do dia aparece como uma coluna.</p>
 
-<thead class="table-dark">
-<tr>
-<th>Ministro</th>
+<div class="mapa-wrap">
+    <table class="table table-bordered text-center align-middle mapa-tabela">
+        <thead>
+            <tr>
+                <th class="sticky-col text-start">Ministro</th>
+                {% for coluna in colunas %}
+                <th>
+                    {{ coluna.dia_label }}<br>
+                    <small>{{ coluna.horario }}</small>
+                    {% if coluna.comunidade %}
+                    <br><small>{{ coluna.comunidade }}</small>
+                    {% endif %}
+                    {% if coluna.sequencia > 1 %}
+                    <br><small>#{{ coluna.sequencia }}</small>
+                    {% endif %}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
 
-{% for coluna in colunas %}
-<th>
-{{ coluna.dia_label }}<br>
-<small>{{ coluna.horario }}</small>
-</th>
-{% endfor %}
+        <tbody>
+            {% for m in mapa %}
+            <tr>
+                <td class="sticky-col text-start"><b>{{ m.nome }}</b></td>
 
-</tr>
-</thead>
-
-<tbody>
-
-{% for m in mapa %}
-<tr>
-
-<td class="text-start"><b>{{ m.nome }}</b></td>
-
-{% for celula in m.celulas %}
-
-<td
-class="celula-mapa {% if celula.simbolo == 'X' %}indisponivel{% else %}disponivel{% endif %}"
-data-ministro="{{ m.id }}"
-data-dia="{{ celula.dia_semana }}"
-data-horario="{{ celula.horario }}"
->
-
-{% if celula.simbolo == 'X' %}
-&nbsp;
-{% else %}
-✔
-{% endif %}
-
-</td>
-
-{% endfor %}
-</tr>
-{% endfor %}
-
-</tbody>
-</table>
+                {% for celula in m.celulas %}
+                <td
+                    class="celula-mapa {% if celula.simbolo == 'X' %}indisponivel{% else %}disponivel{% endif %}"
+                    data-ministro="{{ m.id }}"
+                    data-dia="{{ celula.dia_semana }}"
+                    data-horario="{{ celula.horario }}"
+                >
+                    {% if celula.simbolo == 'X' %}
+                    &nbsp;
+                    {% else %}
+                    ✔
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  function aplicarEstado(ministroId, dia, horario, disponivel) {
+    document
+      .querySelectorAll(
+        '.celula-mapa[data-ministro="' + ministroId + '"][data-dia="' + dia + '"][data-horario="' + horario + '"]'
+      )
+      .forEach((celula) => {
+        celula.innerHTML = disponivel ? "✔" : "&nbsp;";
+        celula.classList.toggle("disponivel", disponivel);
+        celula.classList.toggle("indisponivel", !disponivel);
+      });
+  }
 
   document.querySelectorAll(".celula-mapa").forEach((celula) => {
-
     celula.addEventListener("click", function () {
+      const ministroId = this.dataset.ministro;
+      const dia = Number(this.dataset.dia);
+      const horario = this.dataset.horario;
 
       fetch("/api/toggle_indisponibilidade", {
         method: "POST",
@@ -89,34 +161,18 @@ document.addEventListener("DOMContentLoaded", function () {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          ministro_id: this.dataset.ministro,
-          dia_semana: Number(this.dataset.dia),
-          horario: this.dataset.horario
+          ministro_id: ministroId,
+          dia_semana: dia,
+          horario: horario
         })
       })
       .then((r) => r.json())
       .then(() => {
-
-        if (this.innerText.trim() === "✔") {
-
-          this.innerText = "";
-          this.classList.remove("disponivel");
-          this.classList.add("indisponivel");
-
-        } else {
-
-          this.innerText = "✔";
-          this.classList.remove("indisponivel");
-          this.classList.add("disponivel");
-
-        }
-
+        const estaDisponivel = this.textContent.trim() !== "✔";
+        aplicarEstado(ministroId, dia, horario, estaDisponivel);
       });
-
     });
-
   });
-
 });
 </script>
 

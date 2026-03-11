@@ -250,25 +250,29 @@ def nova_indisponibilidade():
 def mapa_disponibilidade():
     ministros = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
-    ).order_by(Ministro.nome).all()
+    ).order_by(Ministro.nome.asc()).all()
 
     missas = Missa.query.filter_by(
         id_paroquia=current_user.id_paroquia
-    ).all()
-
-    colunas_por_dia = defaultdict(set)
-    for missa in missas:
-        if missa.horario:
-            colunas_por_dia[missa.data.weekday()].add(missa.horario)
+    ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.comunidade.asc(), Missa.id.asc()).all()
 
     colunas = []
-    for dia in range(7):
-        for horario in sorted(colunas_por_dia.get(dia, [])):
-            colunas.append({
-                "dia_semana": dia,
-                "dia_label": DIAS_SEMANA_LABEL[dia],
-                "horario": horario,
-            })
+    contagem_por_slot = defaultdict(int)
+    for missa in missas:
+        if not missa.horario:
+            continue
+
+        dia_semana = missa.data.weekday()
+        slot = (dia_semana, missa.horario)
+        contagem_por_slot[slot] += 1
+
+        colunas.append({
+            "dia_semana": dia_semana,
+            "dia_label": DIAS_SEMANA_LABEL[dia_semana],
+            "horario": missa.horario,
+            "comunidade": missa.comunidade,
+            "sequencia": contagem_por_slot[slot],
+        })
 
     mapa = []
     for ministro in ministros:
@@ -283,6 +287,7 @@ def mapa_disponibilidade():
                 "simbolo": "X" if regra else "O",
                 "dia_semana": coluna["dia_semana"],
                 "horario": coluna["horario"],
+                "comunidade": coluna["comunidade"],
             })
 
         mapa.append({
