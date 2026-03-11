@@ -1,6 +1,6 @@
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
-    .register("/firebase-messaging-sw.js")
+    .register("/firebase-messaging-sw.js?v=20260311-1")
     .catch((error) => console.error("Falha ao registrar service worker:", error));
 }
 
