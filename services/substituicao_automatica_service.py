@@ -46,4 +46,5 @@ def verificar_substituicoes_automaticas():
                 f"{escala.missa.data.strftime('%d/%m')} às {escala.missa.horario}"
             )
 
+        escala.missa.escala_ref = escala
         notificar_escala_criada(substituto, escala.missa)

@@ -24,6 +24,7 @@
             <th>Cadastro</th>
             <th>Cpf</th>
             <th>Comunidade</th>
+            <th>Comunidade/Bairro</th>
             <th class="text-center">Ações</th>
             <th>Acesso</th>
         </tr>
@@ -41,6 +42,7 @@
             <td>{{ ministro.data_cadastro }}</td>
             <td>{{ ministro.cpf }}</td>
             <td>{{ ministro.comunidade }}</td>
+            <td>{{ ministro.comunidade_bairro or '' }}</td>
             <td>
                 
                 {% if current_user.is_admin() %}

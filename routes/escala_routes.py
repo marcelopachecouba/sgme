@@ -59,7 +59,7 @@ def gerar_escala(missa_id):
                 token=str(uuid.uuid4())
             )
             db.session.add(nova)
-            # 🔔 envia notificação
+            missa.escala_ref = nova
             notificar_escala_criada(ministro, missa)
 
         db.session.commit()
@@ -205,8 +205,7 @@ def gerar_escala_auto(missa_id):
         )
 
         db.session.add(nova)
-
-        # envia notificação
+        missa.escala_ref = nova
         notificar_escala_criada(ministro, missa)
 
     db.session.commit()
@@ -244,6 +243,7 @@ def gerar_escala_auto_inteligente(missa_id):
             token=str(uuid.uuid4())
         )
         db.session.add(nova)
+        missa.escala_ref = nova
         notificar_escala_criada(ministro, missa)
 
     db.session.commit()
@@ -574,6 +574,7 @@ def _executar_geracao_escala_inteligente(mes, ano, considerar_periodos_anteriore
                 token=str(uuid.uuid4())
             )
             db.session.add(nova)
+            missa.escala_ref = nova
             notificar_escala_criada(ministro, missa)
 
     db.session.commit()
@@ -620,6 +621,7 @@ def _enviar_escala_mes_ministros(id_paroquia, mes, ano):
                     f"Voce possui {len(pendentes)} escala(s) pendente(s) em {mes}/{ano}. "
                     f"Acesse para confirmar ou recusar: {link}"
                 ),
+                url=link,
             )
             enviados += 1
         else:
@@ -771,7 +773,7 @@ def adicionar_ministro_escala(missa_id):
             token=str(uuid.uuid4())
         )
         db.session.add(nova)
-        
+        missa.escala_ref = nova
         notificar_escala_criada(ministro, missa)
 
         db.session.commit()
@@ -875,15 +877,24 @@ def escala_publica(token):
 
             missa = escala.missa
             paroquia_id = escala.id_paroquia
+            recusada = Escala(
+                id=escala.id,
+                id_missa=escala.id_missa,
+                id_ministro=escala.id_ministro,
+                id_paroquia=escala.id_paroquia,
+                token=escala.token,
+            )
+            recusada.missa = missa
 
-            # remove da escala
             db.session.delete(escala)
             db.session.commit()
 
-            # chama substituto automático
-            substituir_ministro(escala)
+            substituido = substituir_ministro(recusada)
 
-            flash("Você foi removido da escala. Um substituto será chamado.")
+            if substituido:
+                flash("Voce foi removido da escala. Um substituto foi acionado e notificado.")
+            else:
+                flash("Voce foi removido da escala, mas nao foi encontrado substituto automatico.")
 
             return redirect(url_for("publico.calendario_paroquia", id=paroquia_id))
 
@@ -952,6 +963,7 @@ def dashboard_ministro_detalhe(ministro_id):
         inicio=inicio_str,
         fim=fim_str,
     )
+
 
 
 

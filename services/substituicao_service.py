@@ -84,7 +84,8 @@ def substituir_ministro(escala):
     db.session.add(nova)
     db.session.commit()
 
-    # envia notificação
+    missa.escala_ref = nova
     notificar_escala_criada(escolhido, missa)
 
     return True
+
