@@ -117,6 +117,7 @@ def criar_pedido_substituicao(escala):
                 f"Escala em {escala.missa.data.strftime('%d/%m/%Y')} as {escala.missa.horario} "
                 f"na {escala.missa.comunidade}. Clique para aceitar: {link}"
             ),
+            url=link,
         )
         enviados += 1
 
@@ -174,5 +175,7 @@ def aceitar_substituicao(pedido_token, ministro_token_publico):
         db.session.rollback()
         return False, "Falha ao aceitar substituicao."
 
+    escala.missa.escala_ref = escala
     notificar_escala_criada(ministro, escala.missa)
     return True, "Substituicao aceita com sucesso."
+

@@ -8,11 +8,21 @@ logger = logging.getLogger(__name__)
 
 
 def notificar_escala_criada(ministro, missa):
+    escala = getattr(missa, "escala_ref", None)
+    url = None
+    if escala and getattr(escala, "token", None):
+        from flask import url_for
+        url = url_for("escala.escala_publica", token=escala.token, _external=True)
+
     if ministro.firebase_token:
         enviar_push(
             ministro.firebase_token,
             "Nova Escala",
-            f"Voce foi escalado para {missa.data.strftime('%d/%m')} as {missa.horario}",
+            (
+                f"Voce foi escalado para {missa.data.strftime('%d/%m')} as {missa.horario} "
+                f"na {missa.comunidade}. Toque para confirmar, pedir substituicao ou recusar."
+            ),
+            url=url,
         )
 
     return gerar_link_whatsapp(ministro, missa)

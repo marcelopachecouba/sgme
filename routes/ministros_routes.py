@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def ministros():
     lista = Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
-    ).all()
+    ).order_by(Ministro.nome.asc()).all()
     return render_template("ministros.html", ministros=lista)
 
 
@@ -52,6 +52,7 @@ def novo_ministro():
         tempo_ministerio = request.form.get("tempo_ministerio")
         cpf = request.form.get("cpf")
         comunidade = request.form.get("comunidade")
+        comunidade_bairro = request.form.get("comunidade_bairro")
 
         novo = Ministro(
             nome=nome,
@@ -62,6 +63,7 @@ def novo_ministro():
             tempo_ministerio=int(tempo_ministerio) if tempo_ministerio else 0,
             cpf=cpf,
             comunidade=comunidade,
+            comunidade_bairro=comunidade_bairro,
             id_paroquia=current_user.id_paroquia
         )
 
@@ -179,6 +181,7 @@ def editar_ministro(id):
         tempo_ministerio = request.form["tempo_ministerio"]
         cpf = request.form["cpf"]
         comunidade = request.form["comunidade"]
+        comunidade_bairro = request.form.get("comunidade_bairro")
 
         existe = Ministro.query.filter(
             Ministro.nome == novo_nome,
@@ -198,6 +201,7 @@ def editar_ministro(id):
         ministro.tempo_ministerio = int(tempo_ministerio) if tempo_ministerio else 0
         ministro.cpf = cpf
         ministro.comunidade = comunidade
+        ministro.comunidade_bairro = comunidade_bairro
 
         db.session.commit()
         return redirect(url_for("ministros.ministros"))

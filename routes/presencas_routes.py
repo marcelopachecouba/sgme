@@ -12,6 +12,7 @@ from models import (
     ReuniaoFormacao,
     Presenca,
     Missa,
+    Escala,
     db
 )
 
@@ -69,6 +70,12 @@ def checkin_missa(missa_id):
         id_paroquia=current_user.id_paroquia
     ).first_or_404()
 
+    escala = Escala.query.filter_by(
+        id_missa=missa_id,
+        id_ministro=current_user.id,
+        id_paroquia=current_user.id_paroquia
+    ).first()
+
     presenca = Presenca.query.filter_by(
         ministro_id=current_user.id,
         id_missa=missa_id
@@ -87,6 +94,10 @@ def checkin_missa(missa_id):
     else:
 
         presenca.presente = True
+
+    if escala:
+        escala.confirmado = True
+        escala.presente = True
 
     db.session.commit()
 

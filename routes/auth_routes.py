@@ -145,6 +145,7 @@ def cadastro():
         cpf = request.form["cpf"]
         telefone = request.form["telefone"]
         comunidade = request.form["comunidade"]
+        comunidade_bairro = (request.form.get("comunidade_bairro") or "").strip() or None
 
         cpf = cpf.replace(".", "").replace("-", "")
         telefone = (
@@ -175,6 +176,7 @@ def cadastro():
             cpf=cpf,
             telefone=telefone,
             comunidade=comunidade,
+            comunidade_bairro=comunidade_bairro,
             tipo="ministro",
             pode_logar=False,
             primeiro_acesso=False,
@@ -208,5 +210,6 @@ def salvar_token():
         return {"status": "erro", "mensagem": "token ausente"}, 400
 
     current_user.firebase_token = token
+    current_user.notificacoes_ativas = True
     db.session.commit()
     return {"status": "ok"}
