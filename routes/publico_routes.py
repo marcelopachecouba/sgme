@@ -15,7 +15,9 @@ def ministro_publico(token):
     ministro = Ministro.query.filter_by(token_publico=token).first_or_404()
 
     escalas = Escala.query.join(Missa).filter(
-        Escala.id_ministro == ministro.id
+        Escala.id_ministro == ministro.id,
+        Escala.id_paroquia == ministro.id_paroquia,
+        Missa.id_paroquia == ministro.id_paroquia,
     ).order_by(Missa.data).all()
 
     return render_template(
@@ -51,7 +53,10 @@ def calendario_publico(token):
         if dia not in estrutura:
             estrutura[dia] = []
 
-        escalas = Escala.query.filter_by(id_missa=missa.id).all()
+        escalas = Escala.query.filter_by(
+            id_missa=missa.id,
+            id_paroquia=ministro.id_paroquia
+        ).all()
 
         ministros = []
         for e in escalas:
@@ -128,7 +133,10 @@ def calendario_paroquia(id):
         if dia not in estrutura:
             estrutura[dia] = []
 
-        escalas = Escala.query.filter_by(id_missa=missa.id).all()
+        escalas = Escala.query.filter_by(
+            id_missa=missa.id,
+            id_paroquia=id
+        ).all()
 
         nomes = []
         for e in escalas:
@@ -147,4 +155,3 @@ def calendario_paroquia(id):
         estrutura=estrutura,
         paroquia=paroquia
     )
-

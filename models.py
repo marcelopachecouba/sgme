@@ -1,12 +1,10 @@
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 import uuid
 from datetime import date
 from datetime import datetime
-
-db = SQLAlchemy()
+from extensions import db
 
 
 class Paroquia(db.Model):

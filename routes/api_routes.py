@@ -10,7 +10,9 @@ api_bp = Blueprint("api", __name__)
 def minhas_escalas():
 
     escalas = Escala.query.join(Missa).filter(
-        Escala.id_ministro == current_user.id
+        Escala.id_ministro == current_user.id,
+        Escala.id_paroquia == current_user.id_paroquia,
+        Missa.id_paroquia == current_user.id_paroquia,
     ).order_by(Missa.data).all()
 
     dados = []
