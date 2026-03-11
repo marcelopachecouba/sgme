@@ -15,7 +15,7 @@ def minhas_escalas():
     escalas = (
         db.session.query(Escala, Missa)
         .join(Missa, Escala.id_missa == Missa.id)
-        .filter(Escala.ministro_id == current_user.id)
+        .filter(Escala.id_ministro == current_user.id)
         .filter(Missa.data >= hoje)
         .order_by(Missa.data.asc())
         .all()
