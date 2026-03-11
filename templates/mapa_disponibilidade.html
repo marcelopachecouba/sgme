@@ -6,7 +6,7 @@
 <style>
 .celula-mapa{
     font-weight:bold;
-    font-size:20px;
+    font-size:22px;
     cursor:pointer;
     transition:0.2s;
     min-width:90px;
@@ -18,8 +18,8 @@
 }
 
 .indisponivel{
-    background:#fee2e2;
-    color:#991b1b;
+    background:#f3f4f6;
+    color:#9ca3af;
 }
 
 .celula-mapa:hover{
@@ -29,38 +29,60 @@
 
 <div class="table-responsive">
 <table class="table table-bordered text-center align-middle">
+
 <thead class="table-dark">
 <tr>
 <th>Ministro</th>
+
 {% for coluna in colunas %}
-<th>{{ coluna.dia_label }}<br><small>{{ coluna.horario }}</small></th>
+<th>
+{{ coluna.dia_label }}<br>
+<small>{{ coluna.horario }}</small>
+</th>
 {% endfor %}
+
 </tr>
 </thead>
+
 <tbody>
+
 {% for m in mapa %}
 <tr>
+
 <td class="text-start"><b>{{ m.nome }}</b></td>
+
 {% for celula in m.celulas %}
+
 <td
 class="celula-mapa {% if celula.simbolo == 'X' %}indisponivel{% else %}disponivel{% endif %}"
 data-ministro="{{ m.id }}"
 data-dia="{{ celula.dia_semana }}"
 data-horario="{{ celula.horario }}"
 >
-{{ celula.simbolo }}
+
+{% if celula.simbolo == 'X' %}
+&nbsp;
+{% else %}
+✔
+{% endif %}
+
 </td>
+
 {% endfor %}
 </tr>
 {% endfor %}
+
 </tbody>
 </table>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+
   document.querySelectorAll(".celula-mapa").forEach((celula) => {
+
     celula.addEventListener("click", function () {
+
       fetch("/api/toggle_indisponibilidade", {
         method: "POST",
         headers: {
@@ -74,21 +96,28 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .then((r) => r.json())
       .then(() => {
-        if (this.innerText.trim() === "O") {
-          this.innerText = "X";
+
+        if (this.innerText.trim() === "✔") {
+
+          this.innerText = "";
           this.classList.remove("disponivel");
           this.classList.add("indisponivel");
+
         } else {
-          this.innerText = "O";
+
+          this.innerText = "✔";
           this.classList.remove("indisponivel");
           this.classList.add("disponivel");
+
         }
+
       });
+
     });
+
   });
+
 });
 </script>
 
 {% endblock %}
-
-
