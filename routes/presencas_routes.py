@@ -71,14 +71,14 @@ def checkin_missa(missa_id):
 
     presenca = Presenca.query.filter_by(
         ministro_id=current_user.id,
-        missa_id=missa_id
+        id_missa=missa_id
     ).first()
 
     if not presenca:
 
         presenca = Presenca(
             ministro_id=current_user.id,
-            missa_id=missa_id,
+            id_missa=missa_id,
             presente=True
         )
 

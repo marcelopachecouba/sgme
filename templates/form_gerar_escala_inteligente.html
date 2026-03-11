@@ -16,6 +16,18 @@
 
     <br><br>
 
+    <label>Estrategia de geracao</label>
+    <select name="ordem_geracao" class="form-select" style="max-width:420px">
+        <option value="equilibrada">Equilibrada</option>
+        <option value="casais_fim_semana">Casais juntos no fim de semana</option>
+        <option value="casais_semana">Casais juntos na semana</option>
+        <option value="minimo_missas">Menor quantidade de missas primeiro</option>
+        <option value="semana_primeiro">Comecar pela semana</option>
+        <option value="fim_semana_primeiro">Comecar pelo fim de semana</option>
+    </select>
+
+    <br><br>
+
     <div class="form-check">
         <input class="form-check-input" type="checkbox" name="considerar_periodos_anteriores" id="considerar_periodos_anteriores">
         <label class="form-check-label" for="considerar_periodos_anteriores">
