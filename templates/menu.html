@@ -11,7 +11,8 @@
 
 <hr class="text-white">
 
-<a href="{{ url_for('avisos.avisos') }}">Mural</a>
+<a href="{{ url_for('mural.mural') }}">Mural</a>
+<a href="{{ url_for('avisos.avisos') }}">Avisos</a>
 <a href="{{ url_for('avisos.avisos_categoria', categoria='avisos') }}">- Avisos</a>
 <a href="{{ url_for('avisos.avisos_categoria', categoria='formacoes') }}">- Formacoes</a>
 <a href="{{ url_for('avisos.avisos_categoria', categoria='fotos') }}">- Fotos</a>
@@ -25,7 +26,6 @@
 <a href="{{ url_for('escala.visao_escala_fixa') }}">Visao Organizada</a>
 <a href="{{ url_for('escala.gerar_escala_inteligente') }}">Gerar Escala Inteligente</a>
 <a href="{{ url_for('presencas.listar_presencas') }}">Controle de Presencas</a>
-<button class="btn btn-primary" onclick="ativarNotificacoes()">🔔 Ativar notificações no celular</button>
 <a href="{{ url_for('escala.dashboard_ministros') }}">Dashboard de Ministros</a>
 
 

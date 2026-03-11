@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask import Blueprint, render_template, request, jsonify, url_for
+from flask_login import current_user, login_required
 from sqlalchemy import or_
 
 from models import Ministro, Missa, Aviso, Escala, db
@@ -23,11 +23,13 @@ def busca():
 
         # MINISTROS
         ministros = Ministro.query.filter(
+            Ministro.id_paroquia == current_user.id_paroquia,
             Ministro.nome.ilike(f"%{termo}%")
         ).order_by(Ministro.nome.asc()).all()
 
         # MISSAS
         missas = Missa.query.filter(
+            Missa.id_paroquia == current_user.id_paroquia,
             or_(
                 Missa.comunidade.ilike(f"%{termo}%"),
                 Missa.horario.ilike(f"%{termo}%"),
@@ -45,6 +47,9 @@ def busca():
             .join(Ministro, Escala.id_ministro == Ministro.id)\
             .join(Missa, Escala.id_missa == Missa.id)\
             .filter(
+                Escala.id_paroquia == current_user.id_paroquia,
+                Ministro.id_paroquia == current_user.id_paroquia,
+                Missa.id_paroquia == current_user.id_paroquia,
                 Ministro.nome.ilike(f"%{termo}%")
             )\
             .order_by(Missa.data.desc())\
@@ -72,16 +77,19 @@ def api_busca():
     if termo:
 
         ministros = Ministro.query.filter(
+            Ministro.id_paroquia == current_user.id_paroquia,
             Ministro.nome.ilike(f"%{termo}%")
         ).limit(5).all()
 
         for m in ministros:
             resultados.append({
                 "tipo": "ministro",
-                "texto": m.nome
+                "texto": m.nome,
+                "url": url_for("ministros.ministros"),
             })
 
         missas = Missa.query.filter(
+            Missa.id_paroquia == current_user.id_paroquia,
             or_(
                 Missa.comunidade.ilike(f"%{termo}%"),
                 Missa.horario.ilike(f"%{termo}%")
@@ -91,7 +99,8 @@ def api_busca():
         for missa in missas:
             resultados.append({
                 "tipo": "missa",
-                "texto": f"{missa.data.strftime('%d/%m')} {missa.horario} {missa.comunidade}"
+                "texto": f"{missa.data.strftime('%d/%m')} {missa.horario} {missa.comunidade}",
+                "url": url_for("escala.visualizar_escala", missa_id=missa.id),
             })
 
         avisos = Aviso.query.filter(
@@ -101,7 +110,8 @@ def api_busca():
         for aviso in avisos:
             resultados.append({
                 "tipo": "aviso",
-                "texto": aviso.titulo
+                "texto": aviso.titulo,
+                "url": url_for("avisos.avisos"),
             })
 
     return jsonify({"resultados": resultados})

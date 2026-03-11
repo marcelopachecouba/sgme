@@ -62,8 +62,6 @@ font-weight:bold;
 
 {% if current_user.is_authenticated %}
 
-<!-- NAVBAR MOBILE -->
-
 <nav class="navbar navbar-dark bg-dark d-md-none">
 
 <div class="container-fluid">
@@ -73,7 +71,7 @@ type="button"
 data-bs-toggle="offcanvas"
 data-bs-target="#sidebarMenu">
 
-☰ Menu
+Menu
 
 </button>
 
@@ -82,8 +80,6 @@ data-bs-target="#sidebarMenu">
 </div>
 
 </nav>
-
-<!-- SIDEBAR MOBILE -->
 
 <div class="offcanvas offcanvas-start bg-dark text-white"
 tabindex="-1"
@@ -127,13 +123,9 @@ data-bs-dismiss="offcanvas">
 
 {% endif %}
 
-<!-- CONTEÚDO -->
-
 <div class="{% if current_user.is_authenticated %}col-md-10{% else %}col-12{% endif %} content-area">
 
 {% if current_user.is_authenticated %}
-
-<!-- BUSCA GLOBAL -->
 
 <form action="/busca"
 method="GET"
@@ -146,12 +138,12 @@ id="campo-busca"
 type="text"
 name="q"
 class="form-control"
-placeholder="🔎 Buscar ministro, missa, aviso..."
+placeholder="Buscar ministro, missa, aviso..."
 autocomplete="off">
 
 <button class="btn btn-primary">
 
-🔍 Buscar
+Buscar
 
 </button>
 
@@ -169,14 +161,12 @@ style="z-index:1000">
 
 {% block content %}{% endblock %}
 
-<!-- BOTÃO INSTALAR APP -->
-
 <button id="btnInstalar"
 onclick="instalarApp()"
 class="btn btn-success"
 style="display:none; position:fixed; bottom:20px; right:20px; z-index:999;">
 
-📱 Instalar App
+Instalar App
 
 </button>
 
@@ -186,212 +176,25 @@ style="display:none; position:fixed; bottom:20px; right:20px; z-index:999;">
 
 </div>
 
-<!-- BOOTSTRAP -->
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- SERVICE WORKER -->
-
-<script>
-
-if('serviceWorker' in navigator){
-
-navigator.serviceWorker.register('/firebase-messaging-sw.js')
-
-.then(function(registration){
-
-console.log("Service Worker registrado:",registration)
-
-})
-
-}
-
-</script>
-
-<!-- FIREBASE PUSH -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
 
 {% if current_user.is_authenticated %}
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"
-
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js"
-
-const firebaseConfig = {
-
+<script>
+window.sgmeFirebaseConfig = {
 apiKey:"AIzaSyAdzJ3cJ7riBLGw9X89tPntQ6Q4MPbUewY",
 authDomain:"sgme-a4d52.firebaseapp.com",
 projectId:"sgme-a4d52",
 messagingSenderId:"929642581311",
-appId:"1:929642581311:web:d93240da819f2cef58d78a"
-
-}
-
-const app = initializeApp(firebaseConfig)
-
-const messaging = getMessaging(app)
-
-const vapidKey = "{{ config.get('FIREBASE_VAPID_KEY', '') }}"
-
-if(vapidKey){
-
-Notification.requestPermission().then(permission=>{
-
-if(permission!=="granted") return
-
-getToken(messaging,{vapidKey}).then(currentToken=>{
-
-if(!currentToken) return
-
-const tokenSalvo = localStorage.getItem("firebase_token")
-
-if(tokenSalvo!==currentToken){
-
-fetch("/salvar-token",{
-
-method:"POST",
-headers:{ "Content-Type":"application/json" },
-body:JSON.stringify({ token:currentToken })
-
-})
-
-localStorage.setItem("firebase_token",currentToken)
-
-}
-
-})
-
-})
-
-}
-
-onMessage(messaging,(payload)=>{
-
-const url = payload?.data?.url || "/"
-
-const notificacao = new Notification(
-
-payload.notification.title,
-
-{
-body:payload.notification.body,
-data:{ url:url }
-}
-
-)
-
-notificacao.onclick=function(){
-window.location.href=url
-}
-
-})
-
+appId:"1:929642581311:web:d93240da819f2cef58d78a",
+vapidKey:"{{ config.get('FIREBASE_VAPID_KEY', '') }}"
+};
 </script>
-
+<script type="module" src="{{ url_for('static', filename='js/firebase-init.js') }}"></script>
 {% endif %}
-
-<!-- JQUERY + DATATABLE -->
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
-<!-- AUTOCOMPLETE BUSCA -->
-
-<script>
-
-const campoBusca = document.getElementById("campo-busca")
-
-const resultadoBusca = document.getElementById("resultado-busca")
-
-if(campoBusca){
-
-campoBusca.addEventListener("keyup",function(){
-
-const termo = this.value
-
-if(termo.length<2){
-
-resultadoBusca.innerHTML=""
-
-return
-
-}
-
-fetch("/api/busca?q="+termo)
-
-.then(r=>r.json())
-
-.then(data=>{
-
-resultadoBusca.innerHTML=""
-
-data.resultados.forEach(item=>{
-
-let icone=""
-
-if(item.tipo=="ministro"){ icone="👤" }
-if(item.tipo=="missa"){ icone="⛪" }
-if(item.tipo=="aviso"){ icone="📢" }
-
-const linha=document.createElement("a")
-
-linha.className="list-group-item list-group-item-action"
-
-linha.innerHTML=icone+" "+item.texto
-
-linha.href=item.url
-
-resultadoBusca.appendChild(linha)
-
-})
-
-})
-
-})
-
-}
-
-</script>
-
-<!-- INSTALAR APP -->
-
-<script>
-
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e)=>{
-
-e.preventDefault()
-
-deferredPrompt = e
-
-const botao = document.getElementById("btnInstalar")
-
-if(botao){
-botao.style.display="block"
-}
-
-})
-
-function instalarApp(){
-
-if(!deferredPrompt) return
-
-deferredPrompt.prompt()
-
-deferredPrompt.userChoice.then(()=>{
-
-deferredPrompt=null
-
-document.getElementById("btnInstalar").style.display="none"
-
-})
-
-}
-
-</script>
 
 </body>
 </html>

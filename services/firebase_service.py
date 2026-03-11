@@ -71,8 +71,8 @@ def enviar_notificacao_ministros(titulo, mensagem, ministros_ids):
     ministros = Ministro.query.filter(Ministro.id.in_(ministros_ids)).all()
 
     for m in ministros:
-        if m.token:
-            tokens.append(m.token)
+        if m.firebase_token:
+            tokens.append(m.firebase_token)
 
     if not tokens:
         return

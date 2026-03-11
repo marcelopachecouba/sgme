@@ -1,21 +1,14 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from flask_login import login_required, current_user
+from flask_login import login_required
 from models import db, Paroquia, Ministro, Missa, Escala
-from utils.auth import admin_required
+from utils.auth import superadmin_required
 
 superadmin_bp = Blueprint("superadmin", __name__)
 
-
-def super_admin_required():
-    return current_user.tipo == "superadmin"
-
-
 @superadmin_bp.route("/superadmin")
 @login_required
+@superadmin_required
 def painel_superadmin():
-
-    if not super_admin_required():
-        return "Acesso negado", 403
 
     paroquias = Paroquia.query.all()
 
@@ -44,10 +37,8 @@ def painel_superadmin():
 
 @superadmin_bp.route("/superadmin/nova_paroquia", methods=["POST"])
 @login_required
+@superadmin_required
 def nova_paroquia():
-
-    if not super_admin_required():
-        return "Acesso negado", 403
 
     nome = request.form["nome"]
     cidade = request.form["cidade"]

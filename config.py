@@ -40,8 +40,11 @@ class Config:
     ESCALA_JANELA_14_DIAS = int(os.environ.get("ESCALA_JANELA_14_DIAS", "14"))
     ESCALA_CASAL_PARES = os.environ.get("ESCALA_CASAL_PARES", "")
 
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "connect_args": {
-            "sslmode": "require"
+    SQLALCHEMY_ENGINE_OPTIONS = {}
+
+    if SQLALCHEMY_DATABASE_URI.startswith("postgresql://"):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {
+                "sslmode": os.environ.get("DATABASE_SSLMODE", "require")
+            }
         }
-    }

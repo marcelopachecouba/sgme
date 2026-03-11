@@ -60,7 +60,6 @@
                         >
                             Visualizar/Imprimir
                         </a>
-                        <a href="{{ url_for('presencas.editar_presenca', reuniao_id=r.id) }}" class="btn btn-sm btn-secondary">Editar</a>
                         <form method="POST" action="{{ url_for('presencas.excluir_presenca', reuniao_id=r.id) }}" style="display:inline;" onsubmit="return confirm('Excluir este registro?');">
                             <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
                         </form>
