@@ -10,15 +10,31 @@
 <div class="container py-5">
     <div class="card shadow-sm">
         <div class="card-body" id="resposta-card">
-            <h4 class="mb-3">Convite de Substituicao</h4>
+            <h4 class="mb-3">Convite de {{ "Troca" if substituicao.tipo == "troca" else "Substituicao" }}</h4>
             <p>
+                {% if substituicao.tipo == "troca" %}
+                Ola {{ substituicao.ministro_substituto.nome }}. Voce pode trocar a sua missa de
+                <strong>{{ substituicao.missa_troca.data.strftime('%d/%m/%Y') }}</strong>
+                as <strong>{{ substituicao.missa_troca.horario }}</strong>
+                com o ministro <strong>{{ substituicao.ministro_original.nome }}</strong>,
+                que esta na missa de
+                <strong>{{ substituicao.missa.data.strftime('%d/%m/%Y') }}</strong>
+                as <strong>{{ substituicao.missa.horario }}</strong>?
+                {% else %}
                 Ola {{ substituicao.ministro_substituto.nome }}. Voce pode substituir
                 <strong>{{ substituicao.ministro_original.nome }}</strong>
                 na missa de
                 <strong>{{ substituicao.missa.data.strftime('%d/%m/%Y') }}</strong>
                 as <strong>{{ substituicao.missa.horario }}</strong>?
+                {% endif %}
             </p>
-            <p class="text-muted">Comunidade: {{ substituicao.missa.comunidade }}</p>
+            <p class="text-muted">
+                Comunidade:
+                {{ substituicao.missa.comunidade }}
+                {% if substituicao.tipo == "troca" and substituicao.missa_troca %}
+                | Sua missa atual: {{ substituicao.missa_troca.comunidade }}
+                {% endif %}
+            </p>
             <div class="alert d-none" id="resposta-feedback"></div>
             <div class="d-flex gap-2" id="resposta-acoes">
                 <button type="button" class="btn btn-success" data-acao="confirmar">Confirmar</button>

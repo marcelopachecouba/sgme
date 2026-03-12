@@ -424,11 +424,19 @@ class Substituicao(db.Model):
         nullable=False,
         index=True,
     )
+    tipo = db.Column(db.String(20), nullable=False, default="substituicao", index=True)
+    missa_troca_id = db.Column(
+        db.Integer,
+        db.ForeignKey("missa.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     status = db.Column(db.String(20), nullable=False, default="pendente", index=True)
     data_solicitacao = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     data_resposta = db.Column(db.DateTime, nullable=True)
 
     missa = db.relationship("Missa", lazy="joined")
+    missa_troca = db.relationship("Missa", foreign_keys=[missa_troca_id], lazy="joined")
     ministro_original = db.relationship("Ministro", foreign_keys=[ministro_original_id], lazy="joined")
     ministro_substituto = db.relationship("Ministro", foreign_keys=[ministro_substituto_id], lazy="joined")
 
