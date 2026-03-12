@@ -1,7 +1,8 @@
+import math
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import extract
 from werkzeug.utils import secure_filename
@@ -55,6 +56,21 @@ def _salvar_upload(campo_arquivo):
     arquivo.stream.seek(0)
 
     return upload_arquivo(arquivo)
+
+
+def _distancia_metros(lat1, lon1, lat2, lon2):
+    raio_terra = 6371000
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    a = (
+        math.sin(delta_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return raio_terra * c
 
 
 # ---------------------------------------------------------
@@ -150,6 +166,25 @@ def listar_presencas():
     return render_template(
         "presencas.html",
         reunioes=reunioes
+    )
+
+
+@presencas_bp.route("/presencas/links/<int:reuniao_id>")
+@login_required
+@admin_required
+def links_confirmacao_reuniao(reuniao_id):
+
+    reuniao = ReuniaoFormacao.query.filter_by(
+        id=reuniao_id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    ministros = _listar_ministros_paroquia()
+
+    return render_template(
+        "presencas_links.html",
+        reuniao=reuniao,
+        ministros=ministros
     )
 
 
@@ -271,6 +306,8 @@ def nova_presenca():
         tipo = (request.form.get("tipo") or "reuniao").strip()
         observacao = (request.form.get("observacao") or "").strip() or None
         video_url = (request.form.get("video_url") or "").strip() or None
+        latitude = (request.form.get("latitude") or "").strip() or None
+        longitude = (request.form.get("longitude") or "").strip() or None
 
         presentes_ids = {
             int(x)
@@ -294,6 +331,8 @@ def nova_presenca():
             tipo=tipo if tipo in {"reuniao", "formacao"} else "reuniao",
             observacao=observacao,
             video_url=video_url,
+            latitude=latitude,
+            longitude=longitude,
             id_paroquia=current_user.id_paroquia
         )
 
@@ -338,6 +377,94 @@ def nova_presenca():
         "presenca_form.html",
         ministros=ministros,
         reuniao=None
+    )
+
+
+@presencas_bp.route("/presencas/checkin/<int:reuniao_id>/<token_publico>", methods=["GET", "POST"])
+def checkin_reuniao_publico_localizacao(reuniao_id, token_publico):
+
+    reuniao = ReuniaoFormacao.query.filter_by(id=reuniao_id).first_or_404()
+    ministro = Ministro.query.filter_by(
+        token_publico=token_publico,
+        id_paroquia=reuniao.id_paroquia
+    ).first_or_404()
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or request.form
+        latitude = payload.get("latitude")
+        longitude = payload.get("longitude")
+
+        if reuniao.data != date.today():
+            return jsonify(
+                ok=False,
+                mensagem=(
+                    f"Este link so pode confirmar presenca na data da reuniao "
+                    f"({reuniao.data.strftime('%d/%m/%Y')})."
+                )
+            ), 400
+
+        if not reuniao.latitude or not reuniao.longitude:
+            return jsonify(
+                ok=False,
+                mensagem="Esta reuniao nao possui localizacao cadastrada."
+            ), 400
+
+        try:
+            lat_usuario = float(latitude)
+            lon_usuario = float(longitude)
+            lat_reuniao = float(reuniao.latitude)
+            lon_reuniao = float(reuniao.longitude)
+        except (TypeError, ValueError):
+            return jsonify(ok=False, mensagem="Localizacao invalida."), 400
+
+        distancia = _distancia_metros(
+            lat_usuario,
+            lon_usuario,
+            lat_reuniao,
+            lon_reuniao
+        )
+        raio_maximo = 300
+
+        if distancia > raio_maximo:
+            return jsonify(
+                ok=False,
+                mensagem=(
+                    f"Voce esta a {int(distancia)}m da reuniao. "
+                    f"Aproximacao maxima: {raio_maximo}m."
+                )
+            ), 400
+
+        presenca = PresencaReuniao.query.filter_by(
+            id_reuniao=reuniao.id,
+            id_ministro=ministro.id,
+            id_paroquia=reuniao.id_paroquia
+        ).first()
+
+        if not presenca:
+            presenca = PresencaReuniao(
+                id_reuniao=reuniao.id,
+                id_ministro=ministro.id,
+                id_paroquia=reuniao.id_paroquia,
+                presente=True
+            )
+            db.session.add(presenca)
+        else:
+            presenca.presente = True
+
+        db.session.commit()
+
+        return jsonify(
+            ok=True,
+            mensagem=(
+                f"Presenca confirmada para {ministro.nome} em "
+                f"{reuniao.data.strftime('%d/%m/%Y')}."
+            )
+        )
+
+    return render_template(
+        "checkin_reuniao_publico.html",
+        reuniao=reuniao,
+        ministro=ministro
     )
 
 
