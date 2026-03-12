@@ -30,12 +30,30 @@ def _normalizar_periodo(periodo, horario=None):
 @missas_bp.route("/missas")
 @login_required
 def missas():
-    lista = Missa.query.filter_by(
-        id_paroquia=current_user.id_paroquia
-    ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
+    hoje = date.today()
+    periodo_filtro = (request.args.get("periodo") or "").strip().lower()
+    comunidade_filtro = (request.args.get("comunidade") or "").strip()
+
+    query = Missa.query.filter(
+        Missa.id_paroquia == current_user.id_paroquia,
+        Missa.data >= hoje,
+    )
+
+    if periodo_filtro in {"manha", "tarde", "noite"}:
+        query = query.filter(Missa.periodo == periodo_filtro)
+
+    if comunidade_filtro:
+        query = query.filter(Missa.comunidade.ilike(f"%{comunidade_filtro}%"))
+
+    lista = query.order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
     for missa in lista:
         missa.periodo_exibicao = _normalizar_periodo(missa.periodo, missa.horario) or "-"
-    return render_template("missas.html", missas=lista)
+    return render_template(
+        "missas.html",
+        missas=lista,
+        periodo_filtro=periodo_filtro,
+        comunidade_filtro=comunidade_filtro,
+    )
 
 
 @missas_bp.route("/missas/calendario")

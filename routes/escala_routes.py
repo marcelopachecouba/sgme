@@ -1,9 +1,10 @@
 import random
+import math
 from collections import defaultdict
 from datetime import datetime
 from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
 from flask_login import login_required, current_user
-from models import db, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa
+from models import db, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa, Presenca
 from datetime import date, timedelta
 import calendar, uuid, urllib.parse, base64, io
 from utils.auth import admin_required
@@ -215,7 +216,7 @@ def gerar_escala_auto(missa_id):
     return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
 
 
-@escala_bp.route("/escala/auto_inteligente/<int:missa_id>", methods=["POST"])
+@escala_bp.route("/escala/auto_inteligente/<int:missa_id>", methods=["GET", "POST"])
 @login_required
 @admin_required
 def gerar_escala_auto_inteligente(missa_id):
@@ -223,16 +224,27 @@ def gerar_escala_auto_inteligente(missa_id):
 
     missa = get_missa_or_404(missa_id, current_user.id_paroquia)
 
+    if request.method == "GET":
+        return render_template("form_escala_auto_inteligente_missa.html", missa=missa)
+
     Escala.query.filter_by(
         id_missa=missa.id,
         id_paroquia=current_user.id_paroquia
     ).delete(synchronize_session=False)
 
+    considerar_periodos_anteriores = bool(
+        request.form.get("considerar_periodos_anteriores")
+    )
+    opcoes_geracao = _normalizar_opcoes_geracao(
+        request.form.getlist("ordem_geracao")
+    )
+
     selecionados = selecionar_ministros(
         missa.qtd_ministros,
         current_user.id_paroquia,
         missa,
-        considerar_periodos_anteriores=True
+        considerar_periodos_anteriores=considerar_periodos_anteriores,
+        modo_ordenacao=opcoes_geracao
     )
 
     for ministro in selecionados:
@@ -634,6 +646,21 @@ def _enviar_escala_mes_ministros(id_paroquia, mes, ano):
     }
 
 
+def _distancia_metros(lat1, lon1, lat2, lon2):
+    raio_terra = 6371000
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    a = (
+        math.sin(delta_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return raio_terra * c
+
+
 @escala_bp.route("/gerar_escala_inteligente", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -911,6 +938,66 @@ def escala_publica(token):
         escala=escala,
         missa=escala.missa,
         ministro=escala.ministro
+    )
+
+
+@escala_bp.route("/checkin/publico/<token>", methods=["GET", "POST"])
+def checkin_publico_localizacao(token):
+    escala = Escala.query.filter_by(token=token).first_or_404()
+    missa = escala.missa
+    ministro = escala.ministro
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or request.form
+        latitude = payload.get("latitude")
+        longitude = payload.get("longitude")
+
+        if not missa.latitude or not missa.longitude:
+            return {"ok": False, "mensagem": "Esta missa nao possui localizacao cadastrada."}, 400
+
+        try:
+            lat_usuario = float(latitude)
+            lon_usuario = float(longitude)
+            lat_missa = float(missa.latitude)
+            lon_missa = float(missa.longitude)
+        except (TypeError, ValueError):
+            return {"ok": False, "mensagem": "Localizacao invalida."}, 400
+
+        distancia = _distancia_metros(lat_usuario, lon_usuario, lat_missa, lon_missa)
+        raio_maximo = 300
+
+        if distancia > raio_maximo:
+            return {
+                "ok": False,
+                "mensagem": f"Voce esta a {int(distancia)}m da missa. Aproximacao maxima: {raio_maximo}m.",
+            }, 400
+
+        presenca = Presenca.query.filter_by(
+            ministro_id=escala.id_ministro,
+            id_missa=escala.id_missa
+        ).first()
+
+        if not presenca:
+            presenca = Presenca(
+                ministro_id=escala.id_ministro,
+                id_missa=escala.id_missa,
+                presente=True,
+            )
+            db.session.add(presenca)
+        else:
+            presenca.presente = True
+
+        escala.confirmado = True
+        escala.presente = True
+        db.session.commit()
+
+        return {"ok": True, "mensagem": "Presenca confirmada com sucesso."}
+
+    return render_template(
+        "checkin_publico.html",
+        escala=escala,
+        missa=missa,
+        ministro=ministro,
     )
 
 @escala_bp.route("/dashboard_ministros")

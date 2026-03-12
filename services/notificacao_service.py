@@ -12,7 +12,7 @@ def notificar_escala_criada(ministro, missa):
     url = None
     if escala and getattr(escala, "token", None):
         from flask import url_for
-        url = url_for("escala.escala_publica", token=escala.token, _external=True)
+        url = url_for("escala.checkin_publico_localizacao", token=escala.token, _external=True)
 
     if ministro.firebase_token:
         enviar_push(

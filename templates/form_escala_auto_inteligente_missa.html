@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container px-0" style="max-width: 760px;">
+    <h2 class="mb-2">Auto Inteligente da Missa</h2>
+    <p class="text-muted mb-4">
+        {{ missa.data.strftime('%d/%m/%Y') }} às {{ missa.horario }} - {{ missa.comunidade }}
+    </p>
+
+    <form method="POST" class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="mt-2">
+                <label class="form-label d-block mb-3">Estrategias de geracao</label>
+                <div class="row g-2">
+                    <div class="col-12 col-md-6">
+                        <div class="form-check border rounded p-3 h-100">
+                            <input class="form-check-input" type="checkbox" name="ordem_geracao" value="equilibrada" id="ordem_equilibrada" checked>
+                            <label class="form-check-label" for="ordem_equilibrada">Equilibrada</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="form-check border rounded p-3 h-100">
+                            <input class="form-check-input" type="checkbox" name="ordem_geracao" value="casais_fim_semana" id="ordem_casais_fim_semana">
+                            <label class="form-check-label" for="ordem_casais_fim_semana">Casais juntos no fim de semana</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="form-check border rounded p-3 h-100">
+                            <input class="form-check-input" type="checkbox" name="ordem_geracao" value="casais_semana" id="ordem_casais_semana">
+                            <label class="form-check-label" for="ordem_casais_semana">Casais juntos na semana</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="form-check border rounded p-3 h-100">
+                            <input class="form-check-input" type="checkbox" name="ordem_geracao" value="minimo_missas" id="ordem_minimo_missas">
+                            <label class="form-check-label" for="ordem_minimo_missas">Menor quantidade de missas primeiro</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" name="considerar_periodos_anteriores" id="considerar_periodos_anteriores" checked>
+                <label class="form-check-label" for="considerar_periodos_anteriores">
+                    Considerar periodos anteriores no historico
+                </label>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-success">Gerar Escala</button>
+                <a href="{{ url_for('missas.missas') }}" class="btn btn-outline-secondary">Voltar</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
