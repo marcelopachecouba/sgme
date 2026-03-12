@@ -43,9 +43,15 @@
     color: #fff;
 }
 
+.mapa-tabela thead tr:nth-child(2) th {
+    top: 58px;
+    background: #374151;
+    z-index: 22;
+}
+
 .celula-mapa {
     font-weight: bold;
-    font-size: 22px;
+    font-size: 20px;
     cursor: pointer;
     transition: transform 0.2s ease, background-color 0.2s ease;
     min-width: 90px;
@@ -58,8 +64,13 @@
 }
 
 .indisponivel {
-    background: #f3f4f6;
-    color: #9ca3af;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.neutro {
+    background: #f8fafc;
+    color: #94a3b8;
 }
 
 .celula-mapa:hover {
@@ -117,16 +128,24 @@
     </div>
 </form>
 
-<p class="mapa-subtitulo">Cabeçalho e coluna de ministros ficam fixos durante a rolagem. O mapa usa colunas únicas por dia, horário e comunidade.</p>
+<p class="mapa-subtitulo">O mapa considera apenas missas futuras. O status respeita semana do mês, horário e regras pontuais.</p>
 
 <div class="mapa-wrap">
     <table class="table table-bordered text-center align-middle mapa-tabela">
         <thead>
             <tr>
                 <th class="sticky-col text-start">Ministro</th>
+                {% for grupo in grupos_cabecalho %}
+                <th colspan="{{ grupo.colspan }}">
+                    {{ grupo.dia_label }}<br>
+                    <small>{{ grupo.data_label }}</small>
+                </th>
+                {% endfor %}
+            </tr>
+            <tr>
+                <th class="sticky-col text-start">Horario / Comunidade</th>
                 {% for coluna in colunas %}
                 <th>
-                    {{ coluna.dia_label }}<br>
                     <small>{{ coluna.horario }}</small>
                     {% if coluna.comunidade %}
                     <br><small>{{ coluna.comunidade }}</small>
@@ -143,16 +162,14 @@
 
                 {% for celula in m.celulas %}
                 <td
-                    class="celula-mapa {% if celula.simbolo == 'X' %}indisponivel{% else %}disponivel{% endif %}"
+                    class="celula-mapa {{ celula.classe }}"
                     data-ministro="{{ m.id }}"
+                    data-semana="{{ celula.semana }}"
                     data-dia="{{ celula.dia_semana }}"
                     data-horario="{{ celula.horario }}"
+                    title="{{ celula.data }} - {{ celula.horario }} - {{ celula.comunidade or '' }}"
                 >
-                    {% if celula.simbolo == 'X' %}
-                    &nbsp;
-                    {% else %}
-                    ✔
-                    {% endif %}
+                    {{ celula.simbolo }}
                 </td>
                 {% endfor %}
             </tr>
@@ -169,21 +186,29 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  function aplicarEstado(ministroId, dia, horario, disponivel) {
+  function aplicarEstado(ministroId, semana, dia, horario, status) {
+    const mapaStatus = {
+      disponivel: { texto: "✔", add: "disponivel", remove: ["indisponivel", "neutro"] },
+      indisponivel: { texto: "X", add: "indisponivel", remove: ["disponivel", "neutro"] },
+      neutro: { texto: "•", add: "neutro", remove: ["disponivel", "indisponivel"] }
+    };
+    const estado = mapaStatus[status] || mapaStatus.neutro;
+
     document
       .querySelectorAll(
-        '.celula-mapa[data-ministro="' + ministroId + '"][data-dia="' + dia + '"][data-horario="' + horario + '"]'
+        '.celula-mapa[data-ministro="' + ministroId + '"][data-semana="' + semana + '"][data-dia="' + dia + '"][data-horario="' + horario + '"]'
       )
       .forEach((celula) => {
-        celula.innerHTML = disponivel ? "✔" : "&nbsp;";
-        celula.classList.toggle("disponivel", disponivel);
-        celula.classList.toggle("indisponivel", !disponivel);
+        celula.textContent = estado.texto;
+        celula.classList.add(estado.add);
+        estado.remove.forEach((classe) => celula.classList.remove(classe));
       });
   }
 
   document.querySelectorAll(".celula-mapa").forEach((celula) => {
     celula.addEventListener("click", function () {
       const ministroId = this.dataset.ministro;
+      const semana = Number(this.dataset.semana);
       const dia = Number(this.dataset.dia);
       const horario = this.dataset.horario;
 
@@ -194,14 +219,15 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         body: JSON.stringify({
           ministro_id: ministroId,
+          semana: semana,
           dia_semana: dia,
           horario: horario
         })
       })
       .then((r) => r.json())
-      .then(() => {
-        const estaDisponivel = this.textContent.trim() !== "✔";
-        aplicarEstado(ministroId, dia, horario, estaDisponivel);
+      .then((resposta) => {
+        const novoStatus = resposta.status === "criado" ? "indisponivel" : "neutro";
+        aplicarEstado(ministroId, semana, dia, horario, novoStatus);
       });
     });
   });

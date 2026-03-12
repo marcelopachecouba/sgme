@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -110,6 +110,85 @@ def _regra_indisponibilidade_fixa(ministro_id, dia_semana, horario):
             return regra
 
     return None
+
+
+def _score_regra_fixa(regra, semana_ref, horario_ref):
+    if regra.dia_semana is None:
+        return -1
+    if regra.semana is not None and regra.semana != semana_ref:
+        return -1
+    if regra.horario is not None and regra.horario != horario_ref:
+        return -1
+
+    score = 10
+    if regra.semana is not None:
+        score += 4
+    if regra.horario is not None:
+        score += 2
+    return score
+
+
+def _score_regra_data(regra, horario_ref):
+    if regra.horario is not None and regra.horario != horario_ref:
+        return -1
+    return 100 if regra.horario is not None else 90
+
+
+def _resolver_status_missa(
+    ministro_id,
+    missa,
+    indisponibilidades_fixas_map,
+    disponibilidades_fixas_map,
+    indisponibilidades_data_map,
+    disponibilidades_data_map,
+):
+    semana_ref = _semana_do_mes(missa.data)
+    chave_fixa = (ministro_id, missa.data.weekday())
+    chave_data = (ministro_id, missa.data)
+
+    melhor_indisponivel = max(
+        (_score_regra_fixa(regra, semana_ref, missa.horario) for regra in indisponibilidades_fixas_map.get(chave_fixa, [])),
+        default=-1,
+    )
+    melhor_disponivel = max(
+        (_score_regra_fixa(regra, semana_ref, missa.horario) for regra in disponibilidades_fixas_map.get(chave_fixa, [])),
+        default=-1,
+    )
+
+    melhor_indisponivel = max(
+        melhor_indisponivel,
+        max(
+            (_score_regra_data(regra, missa.horario) for regra in indisponibilidades_data_map.get(chave_data, [])),
+            default=-1,
+        ),
+    )
+    melhor_disponivel = max(
+        melhor_disponivel,
+        max(
+            (_score_regra_data(regra, missa.horario) for regra in disponibilidades_data_map.get(chave_data, [])),
+            default=-1,
+        ),
+    )
+
+    if melhor_indisponivel >= melhor_disponivel and melhor_indisponivel >= 0:
+        return {
+            "status": "indisponivel",
+            "simbolo": "X",
+            "classe": "indisponivel",
+        }
+
+    if melhor_disponivel > melhor_indisponivel and melhor_disponivel >= 0:
+        return {
+            "status": "disponivel",
+            "simbolo": "✔",
+            "classe": "disponivel",
+        }
+
+    return {
+        "status": "neutro",
+        "simbolo": "•",
+        "classe": "neutro",
+    }
 
 
 @indisp_bp.route("/indisponibilidade")
@@ -258,8 +337,10 @@ def mapa_disponibilidade():
         ministros_query = ministros_query.filter(Ministro.nome.ilike(f"%{busca_ministro}%"))
     ministros = ministros_query.order_by(Ministro.nome.asc()).all()
 
-    missas_query = Missa.query.filter_by(
-        id_paroquia=current_user.id_paroquia
+    hoje = date.today()
+    missas_query = Missa.query.filter(
+        Missa.id_paroquia == current_user.id_paroquia,
+        Missa.data >= hoje,
     )
     missas = missas_query.order_by(
         Missa.data.asc(),
@@ -269,6 +350,8 @@ def mapa_disponibilidade():
     ).all()
 
     colunas = []
+    grupos_cabecalho = []
+    grupos_index = {}
     slots_vistos = set()
     for missa in missas:
         if not missa.horario:
@@ -279,7 +362,7 @@ def mapa_disponibilidade():
             continue
 
         slot = (
-            dia_semana,
+            missa.data,
             (missa.horario or "").strip(),
             (missa.comunidade or "").strip(),
         )
@@ -287,24 +370,86 @@ def mapa_disponibilidade():
             continue
         slots_vistos.add(slot)
 
+        chave_grupo = missa.data
+        if chave_grupo not in grupos_index:
+            grupos_index[chave_grupo] = len(grupos_cabecalho)
+            grupos_cabecalho.append({
+                "data": missa.data,
+                "dia_label": DIAS_SEMANA_LABEL[dia_semana],
+                "data_label": missa.data.strftime("%d/%m/%Y"),
+                "colspan": 0,
+            })
+        grupos_cabecalho[grupos_index[chave_grupo]]["colspan"] += 1
+
         colunas.append({
+            "missa_id": missa.id,
+            "data": missa.data,
+            "data_label": missa.data.strftime("%d/%m/%Y"),
+            "semana": _semana_do_mes(missa.data),
             "dia_semana": dia_semana,
             "dia_label": DIAS_SEMANA_LABEL[dia_semana],
             "horario": missa.horario,
             "comunidade": missa.comunidade,
         })
 
+    ministro_ids = [m.id for m in ministros]
+    indisponibilidades_fixas = IndisponibilidadeFixa.query.filter(
+        IndisponibilidadeFixa.id_paroquia == current_user.id_paroquia,
+        IndisponibilidadeFixa.id_ministro.in_(ministro_ids),
+    ).all() if ministro_ids else []
+    disponibilidades_fixas = DisponibilidadeFixa.query.filter(
+        DisponibilidadeFixa.id_paroquia == current_user.id_paroquia,
+        DisponibilidadeFixa.id_ministro.in_(ministro_ids),
+    ).all() if ministro_ids else []
+    indisponibilidades_data = Indisponibilidade.query.filter(
+        Indisponibilidade.id_paroquia == current_user.id_paroquia,
+        Indisponibilidade.id_ministro.in_(ministro_ids),
+        Indisponibilidade.data >= hoje,
+    ).all() if ministro_ids else []
+    disponibilidades_data = Disponibilidade.query.filter(
+        Disponibilidade.id_paroquia == current_user.id_paroquia,
+        Disponibilidade.id_ministro.in_(ministro_ids),
+        Disponibilidade.data >= hoje,
+    ).all() if ministro_ids else []
+
+    indisponibilidades_fixas_map = defaultdict(list)
+    disponibilidades_fixas_map = defaultdict(list)
+    indisponibilidades_data_map = defaultdict(list)
+    disponibilidades_data_map = defaultdict(list)
+
+    for regra in indisponibilidades_fixas:
+        indisponibilidades_fixas_map[(regra.id_ministro, regra.dia_semana)].append(regra)
+    for regra in disponibilidades_fixas:
+        disponibilidades_fixas_map[(regra.id_ministro, regra.dia_semana)].append(regra)
+    for regra in indisponibilidades_data:
+        indisponibilidades_data_map[(regra.id_ministro, regra.data)].append(regra)
+    for regra in disponibilidades_data:
+        disponibilidades_data_map[(regra.id_ministro, regra.data)].append(regra)
+
     mapa = []
     for ministro in ministros:
         celulas = []
         for coluna in colunas:
-            regra = _regra_indisponibilidade_fixa(
+            status = _resolver_status_missa(
                 ministro.id,
-                coluna["dia_semana"],
-                coluna["horario"]
+                Missa(
+                    id=coluna["missa_id"],
+                    data=coluna["data"],
+                    horario=coluna["horario"],
+                    comunidade=coluna["comunidade"],
+                ),
+                indisponibilidades_fixas_map,
+                disponibilidades_fixas_map,
+                indisponibilidades_data_map,
+                disponibilidades_data_map,
             )
             celulas.append({
-                "simbolo": "X" if regra else "O",
+                "simbolo": status["simbolo"],
+                "status": status["status"],
+                "classe": status["classe"],
+                "missa_id": coluna["missa_id"],
+                "data": coluna["data_label"],
+                "semana": coluna["semana"],
                 "dia_semana": coluna["dia_semana"],
                 "horario": coluna["horario"],
                 "comunidade": coluna["comunidade"],
@@ -320,6 +465,7 @@ def mapa_disponibilidade():
         "mapa_disponibilidade.html",
         mapa=mapa,
         colunas=colunas,
+        grupos_cabecalho=grupos_cabecalho,
         dia_filtro=dia_filtro,
         busca_ministro=busca_ministro,
         dias_semana=DIAS_SEMANA_LABEL,
@@ -461,10 +607,12 @@ def limpar_indisponibilidades_ministro(ministro_id):
 def toggle_indisponibilidade():
     ministro_id = request.json.get("ministro_id")
     dia_semana = request.json.get("dia_semana")
+    semana = request.json.get("semana")
     horario = request.json.get("horario") or None
 
     regra_exata = IndisponibilidadeFixa.query.filter_by(
         id_ministro=ministro_id,
+        semana=semana,
         dia_semana=dia_semana,
         horario=horario,
         id_paroquia=current_user.id_paroquia
@@ -474,6 +622,7 @@ def toggle_indisponibilidade():
     if not regra_exata:
         regra_ampla = IndisponibilidadeFixa.query.filter_by(
             id_ministro=ministro_id,
+            semana=semana,
             dia_semana=dia_semana,
             horario=None,
             id_paroquia=current_user.id_paroquia
@@ -490,7 +639,7 @@ def toggle_indisponibilidade():
             IndisponibilidadeFixa(
                 id_ministro=ministro_id,
                 dia_semana=dia_semana,
-                semana=None,
+                semana=semana,
                 horario=horario,
                 id_paroquia=current_user.id_paroquia
             )
