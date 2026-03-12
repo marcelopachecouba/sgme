@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
 from flask_login import login_required, current_user
-from models import db, Ministro, Missa, Escala, Indisponibilidade, EscalaFixa, Presenca
+from models import db, Ministro, Missa, Escala, EscalaFixa, Presenca
 from datetime import date, timedelta
 import calendar, uuid, urllib.parse, base64, io
 from utils.auth import admin_required
@@ -12,6 +12,7 @@ from services.notificacao_service import (
     notificar_escala_criada,
     notificar_escala_removida
 )
+from services.disponibilidade_service import esta_indisponivel
 from services.participacao_service import (
     obter_estatisticas_participacao,
     obter_missas_ministro_periodo,
@@ -45,6 +46,7 @@ def gerar_escala(missa_id):
     if request.method == "POST":
         selecionados = request.form.getlist("ministros")
         Escala.query.filter_by(id_missa=missa.id).delete()
+        ministros_indisponiveis = []
 
         for ministro_id in selecionados:
             ministro = Ministro.query.filter_by(
@@ -52,6 +54,9 @@ def gerar_escala(missa_id):
                 id_paroquia=current_user.id_paroquia
             ).first()
             if not ministro:
+                continue
+            if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
+                ministros_indisponiveis.append(ministro.nome)
                 continue
             nova = Escala(
                 id_missa=missa.id,
@@ -64,6 +69,11 @@ def gerar_escala(missa_id):
             notificar_escala_criada(ministro, missa)
 
         db.session.commit()
+        if ministros_indisponiveis:
+            flash(
+                "Nao foi possivel escalar manualmente os ministros indisponiveis: "
+                + ", ".join(sorted(ministros_indisponiveis))
+            )
 
         return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
 
@@ -124,16 +134,7 @@ def gerar_escala_auto(missa_id):
         if conflito_dia:
             continue
 
-        # indisponibilidade
-        indisponivel = Indisponibilidade.query.filter(
-            Indisponibilidade.id_ministro == ministro.id,
-            Indisponibilidade.data == missa.data,
-            Indisponibilidade.id_paroquia == current_user.id_paroquia,
-            (Indisponibilidade.horario == None)
-            | (Indisponibilidade.horario == missa.horario)
-        ).first()
-
-        if indisponivel:
+        if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
             continue
 
         if ministro not in selecionados:
@@ -174,16 +175,7 @@ def gerar_escala_auto(missa_id):
             if conflito:
                 continue
 
-            # indisponibilidade
-            indisponivel = Indisponibilidade.query.filter(
-                Indisponibilidade.id_ministro == ministro.id,
-                Indisponibilidade.data == missa.data,
-                Indisponibilidade.id_paroquia == current_user.id_paroquia,
-                (Indisponibilidade.horario == None)
-                | (Indisponibilidade.horario == missa.horario)
-            ).first()
-
-            if indisponivel:
+            if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
                 continue
 
             selecionados.append(ministro)
@@ -792,6 +784,10 @@ def adicionar_ministro_escala(missa_id):
         flash("Este ministro ja esta escalado em outra missa no mesmo dia.")
         return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
 
+    if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
+        flash("Nao e permitido cadastrar ministro indisponivel nesta missa.")
+        return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
+
     if not existe:
         nova = Escala(
             id_missa=missa_id,
@@ -861,7 +857,11 @@ def salvar_mensal():
                     id_ministro=regra.id_ministro
                 ).first()
 
-                if not escala_existente:
+                if not escala_existente and not esta_indisponivel(
+                    regra.id_ministro,
+                    missa,
+                    current_user.id_paroquia
+                ):
                     nova = Escala(
                         id_missa=missa.id,
                         id_ministro=regra.id_ministro,

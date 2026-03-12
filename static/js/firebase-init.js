@@ -10,6 +10,11 @@ async function solicitarPermissaoPushInterna() {
     return false;
   }
 
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+    console.warn("Push web nao suportado neste navegador.");
+    return false;
+  }
+
   const app = getApps().length
     ? getApp()
     : initializeApp({
@@ -21,12 +26,16 @@ async function solicitarPermissaoPushInterna() {
       });
 
   const messaging = getMessaging(app);
+  const registration = await navigator.serviceWorker.ready;
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
     return false;
   }
 
-  const currentToken = await getToken(messaging, { vapidKey: config.vapidKey });
+  const currentToken = await getToken(messaging, {
+    vapidKey: config.vapidKey,
+    serviceWorkerRegistration: registration,
+  });
   if (!currentToken) {
     return false;
   }
