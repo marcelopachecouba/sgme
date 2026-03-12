@@ -1,7 +1,7 @@
 """add comunidade_bairro to ministro
 
 Revision ID: f1c2d3e4b5a6
-Revises: b7d2c4e8a1f0
+Revises: d6634527d3df
 Create Date: 2026-03-11 19:30:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "f1c2d3e4b5a6"
-down_revision = "b7d2c4e8a1f0"
+down_revision = "d6634527d3df"
 branch_labels = None
 depends_on = None
 
