@@ -370,7 +370,7 @@ class PedidoSubstituicao(db.Model):
 
     id_escala = db.Column(
         db.Integer,
-        db.ForeignKey("escala.id"),
+        db.ForeignKey("escala.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
