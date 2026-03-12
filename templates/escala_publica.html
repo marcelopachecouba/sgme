@@ -78,9 +78,14 @@
 
     <form method="post" class="d-grid gap-3">
 
+        <a href="{{ url_for('escala.checkin_publico_localizacao', token=escala.token) }}"
+           class="btn btn-success btn-lg">
+            Check-in por Localizacao
+        </a>
+
         <button name="acao"
                 value="confirmar"
-                class="btn btn-success btn-lg">
+                class="btn btn-outline-success btn-lg">
             ✅ Confirmar Presença
         </button>
 

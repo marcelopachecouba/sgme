@@ -11,6 +11,28 @@
     <a href="{{ url_for('missas.calendario_missas') }}" class="btn btn-success">Calendario</a>
 </div>
 
+<form method="GET" class="row g-3 mb-3">
+    <div class="col-12 col-md-3">
+        <label for="periodo" class="form-label">Periodo</label>
+        <select id="periodo" name="periodo" class="form-select">
+            <option value="">Todos</option>
+            <option value="manha" {% if periodo_filtro == "manha" %}selected{% endif %}>Manha</option>
+            <option value="tarde" {% if periodo_filtro == "tarde" %}selected{% endif %}>Tarde</option>
+            <option value="noite" {% if periodo_filtro == "noite" %}selected{% endif %}>Noite</option>
+        </select>
+    </div>
+
+    <div class="col-12 col-md-5">
+        <label for="comunidade" class="form-label">Comunidade</label>
+        <input id="comunidade" name="comunidade" type="text" class="form-control" value="{{ comunidade_filtro or '' }}">
+    </div>
+
+    <div class="col-12 col-md-4 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">Filtrar</button>
+        <a href="{{ url_for('missas.missas') }}" class="btn btn-outline-secondary">Limpar</a>
+    </div>
+</form>
+
 <table class="table table-striped table-bordered align-middle">
     <thead class="table-dark">
         <tr>
@@ -45,9 +67,7 @@
                 <form method="POST" action="{{ url_for('escala.gerar_escala_auto', missa_id=m.id) }}" style="display:inline;">
                     <button type="submit" class="btn btn-sm btn-danger">Auto</button>
                 </form>
-                <form method="POST" action="{{ url_for('escala.gerar_escala_auto_inteligente', missa_id=m.id) }}" style="display:inline;">
-                    <button type="submit" class="btn btn-sm btn-primary">Auto Inteligente</button>
-                </form>
+                <a href="{{ url_for('escala.gerar_escala_auto_inteligente', missa_id=m.id) }}" class="btn btn-sm btn-primary">Auto Inteligente</a>
                 <a href="{{ url_for('missas.editar_missa', id=m.id) }}" class="btn btn-sm btn-secondary">Editar</a>
                 <form method="POST" action="{{ url_for('missas.excluir_missa', id=m.id) }}" onsubmit="return confirm('Tem certeza que deseja excluir esta missa?')" style="display:inline;">
                     <button type="submit" class="btn btn-sm btn-dark">Excluir</button>
