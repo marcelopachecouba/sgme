@@ -1,4 +1,3 @@
-import urllib.parse
 from collections import defaultdict
 
 from sqlalchemy.orm import joinedload
@@ -40,33 +39,21 @@ def construir_dashboard(id_paroquia, inicio, fim):
         escalas = escalas_por_missa.get(missa.id, [])
 
         ministros = []
-        telefones = []
-
         for escala in escalas:
             if not escala.ministro:
                 continue
-            ministros.append(escala.ministro.nome)
+            ministros.append({
+                "escala_id": escala.id,
+                "ministro_id": escala.ministro.id,
+                "nome": escala.ministro.nome,
+                "comunidade": escala.ministro.comunidade or "-",
+            })
             ranking[escala.ministro.nome] = ranking.get(escala.ministro.nome, 0) + 1
-            if escala.ministro.telefone:
-                telefones.append(f"55{escala.ministro.telefone}")
-
-        mensagem = urllib.parse.quote(
-            f"Lembrete de Escala - Ministério da Eucaristia\n\n"
-            f"Data: {missa.data.strftime('%d/%m/%Y')}\n"
-            f"Horário: {missa.horario}\n"
-            f"Comunidade: {missa.comunidade}\n\n"
-            f"Deus abençoe seu ministério."
-        )
-
-        link_whatsapp = None
-        if telefones:
-            link_whatsapp = f"https://wa.me/{telefones[0]}?text={mensagem}"
 
         estrutura_missas.append({
             "missa": missa,
             "missa_id": missa.id,
             "ministros": ministros,
-            "whatsapp": link_whatsapp,
         })
 
     mais_escalado = max(ranking, key=ranking.get) if ranking else "-"
