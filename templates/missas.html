@@ -13,21 +13,21 @@
 
 <form method="GET" class="row g-3 mb-3">
     <div class="col-12 col-md-3">
-        <label for="periodo" class="form-label">Periodo</label>
-        <select id="periodo" name="periodo" class="form-select">
-            <option value="">Todos</option>
-            <option value="manha" {% if periodo_filtro == "manha" %}selected{% endif %}>Manha</option>
-            <option value="tarde" {% if periodo_filtro == "tarde" %}selected{% endif %}>Tarde</option>
-            <option value="noite" {% if periodo_filtro == "noite" %}selected{% endif %}>Noite</option>
-        </select>
+        <label for="data_inicial" class="form-label">Data inicial</label>
+        <input id="data_inicial" name="data_inicial" type="date" class="form-control" value="{{ data_inicial }}">
     </div>
 
-    <div class="col-12 col-md-5">
+    <div class="col-12 col-md-3">
+        <label for="data_final" class="form-label">Data final</label>
+        <input id="data_final" name="data_final" type="date" class="form-control" value="{{ data_final or '' }}">
+    </div>
+
+    <div class="col-12 col-md-4">
         <label for="comunidade" class="form-label">Comunidade</label>
         <input id="comunidade" name="comunidade" type="text" class="form-control" value="{{ comunidade_filtro or '' }}">
     </div>
 
-    <div class="col-12 col-md-4 d-flex align-items-end gap-2">
+    <div class="col-12 col-md-2 d-flex align-items-end gap-2">
         <button type="submit" class="btn btn-primary flex-fill">Filtrar</button>
         <a href="{{ url_for('missas.missas') }}" class="btn btn-outline-secondary">Limpar</a>
     </div>

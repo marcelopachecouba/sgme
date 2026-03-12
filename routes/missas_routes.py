@@ -31,16 +31,29 @@ def _normalizar_periodo(periodo, horario=None):
 @login_required
 def missas():
     hoje = date.today()
-    periodo_filtro = (request.args.get("periodo") or "").strip().lower()
+    data_inicial_str = (request.args.get("data_inicial") or "").strip()
+    data_final_str = (request.args.get("data_final") or "").strip()
     comunidade_filtro = (request.args.get("comunidade") or "").strip()
+
+    try:
+        data_inicial = datetime.strptime(data_inicial_str, "%Y-%m-%d").date() if data_inicial_str else hoje
+    except ValueError:
+        data_inicial = hoje
+        data_inicial_str = hoje.strftime("%Y-%m-%d")
+
+    try:
+        data_final = datetime.strptime(data_final_str, "%Y-%m-%d").date() if data_final_str else None
+    except ValueError:
+        data_final = None
+        data_final_str = ""
 
     query = Missa.query.filter(
         Missa.id_paroquia == current_user.id_paroquia,
-        Missa.data >= hoje,
+        Missa.data >= data_inicial,
     )
 
-    if periodo_filtro in {"manha", "tarde", "noite"}:
-        query = query.filter(Missa.periodo == periodo_filtro)
+    if data_final:
+        query = query.filter(Missa.data <= data_final)
 
     if comunidade_filtro:
         query = query.filter(Missa.comunidade.ilike(f"%{comunidade_filtro}%"))
@@ -51,7 +64,8 @@ def missas():
     return render_template(
         "missas.html",
         missas=lista,
-        periodo_filtro=periodo_filtro,
+        data_inicial=data_inicial_str or hoje.strftime("%Y-%m-%d"),
+        data_final=data_final_str,
         comunidade_filtro=comunidade_filtro,
     )
 
