@@ -17,6 +17,13 @@ from services.notificacao_service import notificar_escala_criada
 from services.whatsapp_service import gerar_link_whatsapp_telefone, montar_mensagem_substituicao
 
 
+def excluir_pedidos_substituicao_da_escala(escala_id, id_paroquia):
+    PedidoSubstituicao.query.filter_by(
+        id_escala=escala_id,
+        id_paroquia=id_paroquia,
+    ).delete()
+
+
 def _tem_conflito(ministro_id, missa, id_paroquia, ignorar_escala_id=None):
     query = db.session.query(Escala).join(Missa).filter(
         Escala.id_ministro == ministro_id,

@@ -38,6 +38,7 @@ from services.firebase_service import enviar_push
 from services.pedido_substituicao_service import (
     aceitar_substituicao,
     criar_pedido_substituicao,
+    excluir_pedidos_substituicao_da_escala,
 )
 from services.paroquia_scope_service import (
     get_escala_fixa_or_404,
@@ -761,6 +762,7 @@ def remover_ministro_escala(escala_id):
     missa = escala.missa
     missa_id = escala.id_missa
 
+    excluir_pedidos_substituicao_da_escala(escala.id, current_user.id_paroquia)
     db.session.delete(escala)
     db.session.commit()
 
@@ -928,6 +930,7 @@ def escala_publica(token):
             )
             recusada.missa = missa
 
+            excluir_pedidos_substituicao_da_escala(escala.id, escala.id_paroquia)
             db.session.delete(escala)
             db.session.commit()
 

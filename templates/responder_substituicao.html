@@ -9,7 +9,7 @@
 <body class="bg-light">
 <div class="container py-5">
     <div class="card shadow-sm">
-        <div class="card-body">
+        <div class="card-body" id="resposta-card">
             <h4 class="mb-3">Convite de Substituicao</h4>
             <p>
                 Ola {{ current_user.nome }}. Voce pode substituir
@@ -19,14 +19,48 @@
                 as <strong>{{ substituicao.missa.horario }}</strong>?
             </p>
             <p class="text-muted">Comunidade: {{ substituicao.missa.comunidade }}</p>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('dashboard.responder_substituicao', substituicao_id=substituicao.id, acao='confirmar') }}"
-                   class="btn btn-success">Confirmar</a>
-                <a href="{{ url_for('dashboard.responder_substituicao', substituicao_id=substituicao.id, acao='recusar') }}"
-                   class="btn btn-danger">Recusar</a>
+            <div class="alert d-none" id="resposta-feedback"></div>
+            <div class="d-flex gap-2" id="resposta-acoes">
+                <button type="button" class="btn btn-success" data-acao="confirmar">Confirmar</button>
+                <button type="button" class="btn btn-danger" data-acao="recusar">Recusar</button>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+const substituicaoId = {{ substituicao.id }};
+const acaoSugerida = "{{ acao_sugerida or '' }}";
+
+async function responderSubstituicao(acao) {
+    const feedback = document.getElementById("resposta-feedback");
+    const acoes = document.getElementById("resposta-acoes");
+
+    const response = await fetch("{{ url_for('dashboard.responder_substituicao') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            substituicao_id: substituicaoId,
+            acao,
+        }),
+    });
+
+    const data = await response.json();
+    feedback.className = `alert ${data.ok ? 'alert-success' : 'alert-warning'}`;
+    feedback.textContent = data.mensagem;
+    feedback.classList.remove("d-none");
+    acoes.classList.add("d-none");
+}
+
+document.querySelectorAll("[data-acao]").forEach((button) => {
+    button.addEventListener("click", () => responderSubstituicao(button.dataset.acao));
+});
+
+if (acaoSugerida) {
+    responderSubstituicao(acaoSugerida);
+}
+</script>
 </body>
 </html>
