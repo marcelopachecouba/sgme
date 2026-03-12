@@ -1,26 +1,71 @@
 import urllib.parse
+from flask import url_for
 
 
-def montar_mensagem_escala(ministro, missa):
-    return (
-        f"Ola {ministro.nome},\n\n"
-        "Voce foi escalado para servir na Eucaristia.\n\n"
-        f"Data: {missa.data.strftime('%d/%m/%Y')}\n"
-        f"Horario: {missa.horario}\n"
-        f"Comunidade: {missa.comunidade}\n\n"
-        "Deus abencoe seu ministerio."
-    )
+MESES_PT = {
+    1: "Janeiro",
+    2: "Fevereiro",
+    3: "Março",
+    4: "Abril",
+    5: "Maio",
+    6: "Junho",
+    7: "Julho",
+    8: "Agosto",
+    9: "Setembro",
+    10: "Outubro",
+    11: "Novembro",
+    12: "Dezembro",
+}
 
 
-def montar_mensagem_lembrete(ministro, missa):
-    return (
-        f"Ola {ministro.nome},\n\n"
-        "Lembrete de escala no SGME.\n\n"
-        f"Data: {missa.data.strftime('%d/%m/%Y')}\n"
-        f"Horario: {missa.horario}\n"
-        f"Comunidade: {missa.comunidade}\n\n"
-        "Confirme sua participacao no aplicativo."
-    )
+def _data_extenso(data):
+    return f"{data.day} de {MESES_PT[data.month]} de {data.year}"
+
+
+def _link_escala_publica(escala):
+    if not escala or not getattr(escala, "token", None):
+        return None
+    return url_for("escala.escala_publica", token=escala.token, _external=True)
+
+
+def _link_calendario_publico(ministro):
+    if not ministro or not getattr(ministro, "token_publico", None):
+        return None
+    return url_for("publico.calendario_publico", token=ministro.token_publico, _external=True)
+
+
+def montar_mensagem_lembrete(ministro, missa, escala=None):
+    linhas = [
+        f"Olá {ministro.nome.upper()},",
+        "",
+        "Esse é um lembrete para sua próxima escala do grupo Ministério da Eucaristia.",
+        "",
+        f"Data: {_data_extenso(missa.data)}",
+        f"Horário: {missa.horario}",
+        f"Comunidade: {missa.comunidade}",
+        "",
+    ]
+
+    link_escala = _link_escala_publica(escala)
+    if link_escala:
+        linhas.extend([
+            "🔗 Acessar escala:",
+            link_escala,
+            "",
+        ])
+
+    link_calendario = _link_calendario_publico(ministro)
+    if link_calendario:
+        linhas.extend([
+            "📅 Ver meu calendário completo:",
+            link_calendario,
+        ])
+
+    return "\n".join(linhas)
+
+
+def montar_mensagem_escala(ministro, missa, escala=None):
+    return montar_mensagem_lembrete(ministro, missa, escala=escala)
 
 
 def montar_mensagem_substituicao(destinatario, missa, solicitante_nome, link_confirmacao):

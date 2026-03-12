@@ -62,7 +62,7 @@ def avisar_missa(missa_id):
                 nomes_sem_token.append(ministro.nome)
             continue
 
-        mensagem = montar_mensagem_lembrete(ministro, missa)
+        mensagem = montar_mensagem_lembrete(ministro, missa, escala=escala)
 
         enviar_push(
             ministro.firebase_token,
@@ -99,7 +99,7 @@ def sem_token_missa(missa_id):
         if not ministro.firebase_token:
             link_wpp = None
             if ministro.telefone:
-                mensagem = montar_mensagem_lembrete(ministro, missa)
+                mensagem = montar_mensagem_lembrete(ministro, missa, escala=escala)
                 link_wpp = gerar_link_whatsapp_telefone(ministro.telefone, mensagem)
 
             sem_token.append({
@@ -132,7 +132,7 @@ def whatsapp_sem_token_missa(missa_id):
         if not ministro.telefone:
             continue
 
-        mensagem = montar_mensagem_lembrete(ministro, missa)
+        mensagem = montar_mensagem_lembrete(ministro, missa, escala=escala)
         links.append({
             "nome": ministro.nome,
             "link": gerar_link_whatsapp_telefone(ministro.telefone, mensagem)
