@@ -2,7 +2,16 @@
 
 {% block content %}
 
-<h3 class="mb-4">Enviar WhatsApp</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">{{ titulo or "Enviar WhatsApp" }}</h3>
+    {% if voltar_url %}
+    <a href="{{ voltar_url }}" class="btn btn-secondary">Voltar</a>
+    {% endif %}
+</div>
+
+{% if mensagem_topo %}
+<div class="alert alert-info">{{ mensagem_topo }}</div>
+{% endif %}
 
 <table class="table table-bordered">
     <thead class="table-dark">
@@ -19,6 +28,7 @@
             <td>
                 <a href="{{ item.link }}"
                    target="_blank"
+                   rel="noopener"
                    class="btn btn-success link-wpp">
                    Enviar WhatsApp
                 </a>
@@ -34,18 +44,37 @@
 </button>
 
 <script>
+function marcarComoEnviado(link) {
+    link.dataset.enviado = "1";
+    link.classList.remove("btn-success");
+    link.classList.add("btn-outline-success");
+    link.textContent = "WhatsApp aberto";
+}
+
+document.querySelectorAll(".link-wpp").forEach((link) => {
+    link.addEventListener("click", () => {
+        marcarComoEnviado(link);
+    });
+});
+
 function enviarTodos(){
+    const links = Array.from(document.querySelectorAll(".link-wpp"));
+    const hrefs = new Set();
+    const unicos = links.filter((link) => {
+        if (!link.href || hrefs.has(link.href)) {
+            return false;
+        }
+        hrefs.add(link.href);
+        return link.dataset.enviado !== "1";
+    });
 
-    const links = document.querySelectorAll(".link-wpp")
-
-    links.forEach((link, i) => {
+    unicos.forEach((link, i) => {
+        marcarComoEnviado(link);
 
         setTimeout(() => {
             window.open(link.href, "_blank")
         }, i * 1000)
-
-    })
-
+    });
 }
 </script>
 

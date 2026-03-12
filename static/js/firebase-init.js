@@ -2,10 +2,11 @@ import { getApp, getApps, initializeApp } from "https://www.gstatic.com/firebase
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const config = window.sgmeFirebaseConfig || {};
+const vapidKey = config.vapidKey || "BHI9GSKmwrXgTvOHwknqyr6Y2DM5RGT0N9CfOysUsCf3th_9k3zLtpr8NQRRrw9uVULE_A-usEoeZFnDLNiRQYY";
 let pushListenerRegistrado = false;
 
 async function solicitarPermissaoPushInterna() {
-  if (!config.vapidKey) {
+  if (!vapidKey) {
     console.warn("Firebase sem VAPID configurada.");
     return false;
   }
@@ -26,6 +27,7 @@ async function solicitarPermissaoPushInterna() {
       });
 
   const messaging = getMessaging(app);
+  await navigator.serviceWorker.register("/firebase-messaging-sw.js?v=20260312-1");
   const registration = await navigator.serviceWorker.ready;
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
@@ -33,7 +35,7 @@ async function solicitarPermissaoPushInterna() {
   }
 
   const currentToken = await getToken(messaging, {
-    vapidKey: config.vapidKey,
+    vapidKey,
     serviceWorkerRegistration: registration,
   });
   if (!currentToken) {
@@ -83,7 +85,7 @@ window.solicitarPermissaoPush = function solicitarPermissaoPush() {
     });
 };
 
-if (!config.vapidKey) {
+if (!vapidKey) {
   // Firebase sem VAPID configurada: desativa apenas o push web.
 } else {
   solicitarPermissaoPushInterna().catch((error) => {

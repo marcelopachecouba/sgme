@@ -1,5 +1,4 @@
 from datetime import date, timedelta
-import urllib.parse
 
 from flask import Blueprint, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
@@ -7,6 +6,7 @@ from flask_login import current_user, login_required
 from models import Escala, Missa
 from services.firebase_service import enviar_push
 from services.dashboard_service import construir_dashboard
+from services.whatsapp_service import gerar_link_whatsapp_telefone, montar_mensagem_lembrete
 from utils.auth import admin_required
 
 
@@ -48,22 +48,26 @@ def avisar_missa(missa_id):
     sem_token = 0
     nomes_enviados = []
     nomes_sem_token = []
+    ids = set()
 
     for escala in escalas:
         ministro = escala.ministro
+        if not ministro or ministro.id in ids:
+            continue
+        ids.add(ministro.id)
+
         if not ministro or not ministro.firebase_token:
             sem_token += 1
             if ministro:
                 nomes_sem_token.append(ministro.nome)
             continue
 
+        mensagem = montar_mensagem_lembrete(ministro, missa)
+
         enviar_push(
             ministro.firebase_token,
             "Lembrete de Escala",
-            (
-                f"Voce esta escalado para {missa.data.strftime('%d/%m/%Y')} "
-                f"as {missa.horario} na comunidade {missa.comunidade}."
-            )
+            mensagem
         )
         enviados += 1
         nomes_enviados.append(ministro.nome)
@@ -95,14 +99,8 @@ def sem_token_missa(missa_id):
         if not ministro.firebase_token:
             link_wpp = None
             if ministro.telefone:
-                mensagem = (
-                    f"Ola {ministro.nome},\n\n"
-                    "Ative as notificacoes no app/site para receber avisos de escala.\n"
-                    f"Voce esta escalado para {missa.data.strftime('%d/%m/%Y')} as {missa.horario} "
-                    f"na comunidade {missa.comunidade}.\n\n"
-                    "Abra o sistema e permita notificacoes no navegador."
-                )
-                link_wpp = f"https://wa.me/55{ministro.telefone}?text={urllib.parse.quote(mensagem)}"
+                mensagem = montar_mensagem_lembrete(ministro, missa)
+                link_wpp = gerar_link_whatsapp_telefone(ministro.telefone, mensagem)
 
             sem_token.append({
                 "nome": ministro.nome,
@@ -134,16 +132,10 @@ def whatsapp_sem_token_missa(missa_id):
         if not ministro.telefone:
             continue
 
-        mensagem = (
-            f"Ola {ministro.nome},\n\n"
-            "Ative as notificacoes no app/site para receber avisos de escala.\n"
-            f"Voce esta escalado para {missa.data.strftime('%d/%m/%Y')} as {missa.horario} "
-            f"na comunidade {missa.comunidade}.\n\n"
-            "Abra o sistema e permita notificacoes no navegador."
-        )
+        mensagem = montar_mensagem_lembrete(ministro, missa)
         links.append({
             "nome": ministro.nome,
-            "link": f"https://wa.me/55{ministro.telefone}?text={urllib.parse.quote(mensagem)}"
+            "link": gerar_link_whatsapp_telefone(ministro.telefone, mensagem)
         })
 
     if not links:

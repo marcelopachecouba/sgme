@@ -14,6 +14,7 @@ from models import (
 from services.disponibilidade_service import esta_indisponivel
 from services.firebase_service import enviar_push
 from services.notificacao_service import notificar_escala_criada
+from services.whatsapp_service import gerar_link_whatsapp_telefone, montar_mensagem_substituicao
 
 
 def _tem_conflito(ministro_id, missa, id_paroquia, ignorar_escala_id=None):
@@ -71,7 +72,7 @@ def criar_pedido_substituicao(escala):
         status="aberto",
     ).first()
     if pedido_aberto:
-        return pedido_aberto, 0
+        return pedido_aberto, 0, []
 
     pedido = PedidoSubstituicao(
         token=str(uuid.uuid4()),
@@ -85,9 +86,12 @@ def criar_pedido_substituicao(escala):
 
     elegiveis = _elegiveis_para_substituicao(escala)
     enviados = 0
+    links_whatsapp = []
+    ids_whatsapp = set()
+    solicitante_nome = escala.ministro.nome if escala.ministro else "Um ministro"
 
     for ministro in elegiveis:
-        if not ministro.firebase_token or not ministro.token_publico:
+        if not ministro.token_publico:
             continue
         link = url_for(
             "escala.aceitar_substituicao_publica",
@@ -95,18 +99,30 @@ def criar_pedido_substituicao(escala):
             ministro_token_publico=ministro.token_publico,
             _external=True,
         )
-        enviar_push(
-            ministro.firebase_token,
-            "Pedido de Substituicao",
-            (
-                f"Escala em {escala.missa.data.strftime('%d/%m/%Y')} as {escala.missa.horario} "
-                f"na {escala.missa.comunidade}. Clique para aceitar: {link}"
-            ),
-            url=link,
+        mensagem = montar_mensagem_substituicao(
+            ministro,
+            escala.missa,
+            solicitante_nome,
+            link,
         )
-        enviados += 1
 
-    return pedido, enviados
+        if ministro.firebase_token:
+            enviar_push(
+                ministro.firebase_token,
+                "Pedido de Substituicao",
+                mensagem,
+                url=link,
+            )
+            enviados += 1
+
+        if ministro.telefone and ministro.id not in ids_whatsapp:
+            ids_whatsapp.add(ministro.id)
+            links_whatsapp.append({
+                "nome": ministro.nome,
+                "link": gerar_link_whatsapp_telefone(ministro.telefone, mensagem),
+            })
+
+    return pedido, enviados, links_whatsapp
 
 
 def aceitar_substituicao(pedido_token, ministro_token_publico):
