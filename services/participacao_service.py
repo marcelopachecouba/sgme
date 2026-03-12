@@ -11,7 +11,7 @@ def _aplicar_filtro_periodo(query, data_inicio=None, data_fim=None):
     return query
 
 
-def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None):
+def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None, ministro_id=None):
     agregados = db.session.query(
         Escala.id_ministro.label("ministro_id"),
         func.count(Escala.id).label("total_escalas"),
@@ -31,6 +31,9 @@ def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None
         Missa.id_paroquia == id_paroquia,
     )
 
+    if ministro_id:
+        agregados = agregados.filter(Escala.id_ministro == ministro_id)
+
     agregados = _aplicar_filtro_periodo(
         agregados,
         data_inicio=data_inicio,
@@ -48,7 +51,12 @@ def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None
         agregados.c.ministro_id == Ministro.id
     ).filter(
         Ministro.id_paroquia == id_paroquia
-    ).order_by(
+    )
+
+    if ministro_id:
+        query = query.filter(Ministro.id == ministro_id)
+
+    query = query.order_by(
         Ministro.nome.asc()
     )
 
@@ -80,6 +88,8 @@ def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None
 
 def obter_missas_ministro_periodo(ministro_id, id_paroquia, data_inicio=None, data_fim=None):
     query = db.session.query(
+        Escala.id.label("escala_id"),
+        Escala.id_missa.label("missa_id"),
         Missa.data,
         Missa.horario,
         Missa.comunidade,

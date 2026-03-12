@@ -2,7 +2,13 @@
 
 {% block content %}
 
-<h2 class="mb-4">Dashboard de Participacao dos Ministros</h2>
+<h2 class="mb-4">
+    {% if somente_proprio %}
+    Meu Dashboard de Participacao
+    {% else %}
+    Dashboard de Participacao dos Ministros
+    {% endif %}
+</h2>
 
 <form method="GET" class="row g-2 align-items-end mb-4">
     <div class="col-md-3">
@@ -23,7 +29,7 @@
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
-                <small class="text-muted">Ministros</small>
+                <small class="text-muted">{% if somente_proprio %}Ministro{% else %}Ministros{% endif %}</small>
                 <h4 class="mb-0">{{ resumo.ministros }}</h4>
             </div>
         </div>
