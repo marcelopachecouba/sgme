@@ -49,7 +49,6 @@ def obter_estatisticas_participacao(id_paroquia, data_inicio=None, data_fim=None
     ).filter(
         Ministro.id_paroquia == id_paroquia
     ).order_by(
-        func.coalesce(agregados.c.total_escalas, 0).desc(),
         Ministro.nome.asc()
     )
 

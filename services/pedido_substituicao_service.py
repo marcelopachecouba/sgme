@@ -2,17 +2,16 @@ from datetime import datetime
 import uuid
 
 from flask import url_for
-from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import (
     Escala,
-    Indisponibilidade,
     Ministro,
     PedidoSubstituicao,
     Missa,
     db,
 )
+from services.disponibilidade_service import esta_indisponivel
 from services.firebase_service import enviar_push
 from services.notificacao_service import notificar_escala_criada
 
@@ -26,20 +25,6 @@ def _tem_conflito(ministro_id, missa, id_paroquia, ignorar_escala_id=None):
     if ignorar_escala_id:
         query = query.filter(Escala.id != ignorar_escala_id)
     return query.first() is not None
-
-
-def _esta_indisponivel(ministro_id, missa, id_paroquia):
-    return Indisponibilidade.query.filter(
-        Indisponibilidade.id_ministro == ministro_id,
-        Indisponibilidade.id_paroquia == id_paroquia,
-        Indisponibilidade.data == missa.data,
-        or_(
-            Indisponibilidade.horario == None,
-            Indisponibilidade.horario == missa.horario,
-        ),
-    ).first() is not None
-
-
 def _elegiveis_para_substituicao(escala):
 
     missa = escala.missa
@@ -68,7 +53,7 @@ def _elegiveis_para_substituicao(escala):
             continue
 
         # indisponibilidade
-        if _esta_indisponivel(
+        if esta_indisponivel(
             ministro.id,
             missa,
             escala.id_paroquia
@@ -157,7 +142,7 @@ def aceitar_substituicao(pedido_token, ministro_token_publico):
     if _tem_conflito(ministro.id, missa, pedido.id_paroquia, ignorar_escala_id=escala.id):
         return False, "Voce possui conflito de escala neste dia."
 
-    if _esta_indisponivel(ministro.id, missa, pedido.id_paroquia):
+    if esta_indisponivel(ministro.id, missa, pedido.id_paroquia):
         return False, "Voce esta indisponivel para esta missa."
 
     try:

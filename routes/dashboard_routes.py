@@ -131,7 +131,7 @@ def whatsapp_sem_token_missa(missa_id):
             continue
         ids.add(ministro.id)
 
-        if ministro.firebase_token or not ministro.telefone:
+        if not ministro.telefone:
             continue
 
         mensagem = (
@@ -147,7 +147,7 @@ def whatsapp_sem_token_missa(missa_id):
         })
 
     if not links:
-        flash("Nenhum ministro sem token ativo com telefone cadastrado.")
+        flash("Nenhum ministro com telefone cadastrado para esta missa.")
         return redirect(url_for("dashboard.home"))
 
     return render_template("whatsapp_lista.html", links=links)
