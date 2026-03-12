@@ -58,6 +58,8 @@ def login():
             login_user(user)
             if user.primeiro_acesso:
                 return redirect(url_for("auth.trocar_senha"))
+            if user.tipo == "ministro":
+                return redirect(url_for("escala.dashboard_ministros"))
             return redirect(url_for("dashboard.home"))
 
         flash("Email ou senha invalidos ou sem permissao de acesso.")

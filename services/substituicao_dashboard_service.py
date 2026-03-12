@@ -164,6 +164,15 @@ def solicitar_substituicao(missa, ministro_original, ministro_substituto):
     return substituicao, whatsapp_link, True
 
 
+def excluir_substituicao_pendente(substituicao):
+    if substituicao.status != "pendente":
+        return False, "Somente solicitacoes pendentes podem ser excluidas."
+
+    db.session.delete(substituicao)
+    db.session.commit()
+    return True, "Solicitacao removida com sucesso."
+
+
 def processar_resposta_substituicao(substituicao, acao):
     if substituicao.status != "pendente":
         return False, "Este pedido ja foi atendido ou encerrado."

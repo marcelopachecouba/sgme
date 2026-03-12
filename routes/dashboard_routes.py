@@ -8,6 +8,7 @@ from services.dashboard_service import construir_dashboard
 from services.firebase_service import enviar_push
 from services.substituicao_dashboard_service import (
     buscar_ministros_disponiveis,
+    excluir_substituicao_pendente,
     processar_resposta_substituicao,
     serializar_escalados_missa,
     solicitar_substituicao,
@@ -45,9 +46,16 @@ def _pode_gerir_substituicao(ministro_original_id):
     return current_user.is_admin() or current_user.id == ministro_original_id
 
 
+def _usuario_pode_responder_substituicao(substituicao):
+    return True
+
+
 @dashboard_bp.route("/")
 @login_required
 def home():
+    if not current_user.is_admin():
+        return redirect(url_for("escala.dashboard_ministros"))
+
     hoje = date.today()
     dados = construir_dashboard(
         id_paroquia=current_user.id_paroquia,
@@ -236,8 +244,30 @@ def solicitar_substituicao_route():
     })
 
 
-@dashboard_bp.route("/responder_substituicao", methods=["GET", "POST"])
+@dashboard_bp.route("/excluir_substituicao", methods=["POST"])
 @login_required
+def excluir_substituicao_route():
+    payload = request.get_json(silent=True) or request.form
+    substituicao_id = int(payload.get("substituicao_id"))
+
+    substituicao = Substituicao.query.filter_by(id=substituicao_id).first_or_404()
+    missa = Missa.query.filter_by(
+        id=substituicao.missa_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    if not _pode_gerir_substituicao(substituicao.ministro_original_id):
+        return jsonify({"ok": False, "mensagem": "Sem permissao para esta substituicao."}), 403
+
+    ok, mensagem = excluir_substituicao_pendente(substituicao)
+    status_code = 200 if ok else 400
+    return jsonify({
+        "ok": ok,
+        "mensagem": mensagem,
+        "estado": _serializar_estado_substituicao(missa, substituicao.ministro_original_id),
+    }), status_code
+
+
+@dashboard_bp.route("/responder_substituicao", methods=["GET", "POST"])
 def responder_substituicao():
     if request.method == "POST":
         payload = request.get_json(silent=True) or request.form
@@ -249,7 +279,7 @@ def responder_substituicao():
 
     substituicao = Substituicao.query.filter_by(id=substituicao_id).first_or_404()
 
-    if not current_user.is_admin() and current_user.id != substituicao.ministro_substituto_id:
+    if not _usuario_pode_responder_substituicao(substituicao):
         mensagem = "Voce nao pode responder esta solicitacao."
         if request.method == "POST":
             return jsonify({"ok": False, "mensagem": mensagem}), 403
@@ -270,9 +300,10 @@ def responder_substituicao():
         )
 
     sucesso, mensagem = processar_resposta_substituicao(substituicao, acao)
+    paroquia_id = substituicao.missa.id_paroquia if substituicao.missa else None
     escala_atual = Escala.query.filter_by(
         id_missa=substituicao.missa_id,
-        id_paroquia=substituicao.missa.id_paroquia if substituicao.missa else current_user.id_paroquia,
+        id_paroquia=paroquia_id,
     ).all()
     resposta = {
         "ok": sucesso,
@@ -280,7 +311,7 @@ def responder_substituicao():
         "missa_id": substituicao.missa_id,
         "escalados": serializar_escalados_missa(
             substituicao.missa_id,
-            substituicao.missa.id_paroquia if substituicao.missa else current_user.id_paroquia,
+            paroquia_id,
         ) if escala_atual else [],
     }
 
