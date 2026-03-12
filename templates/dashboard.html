@@ -2,7 +2,6 @@
 {% block content %}
 
 <div class="container-fluid">
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold">Dashboard</h3>
     </div>
@@ -92,29 +91,15 @@
         </thead>
         <tbody>
             {% for item in proximas_missas %}
-            <tr id="missa-row-{{ item.missa_id }}">
+            <tr>
                 <td>{{ item.missa.data.strftime("%d/%m/%Y") }}</td>
                 <td>{{ item.missa.horario }}</td>
                 <td>{{ item.missa.comunidade }}</td>
-                <td id="ministros-cell-{{ item.missa_id }}">
+                <td>
                     {% for ministro in item.ministros %}
                     <div class="border rounded p-2 mb-2 bg-white">
-                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                            <div>
-                                <strong>{{ ministro.nome }}</strong>
-                                <div class="small text-muted">{{ ministro.comunidade }}</div>
-                            </div>
-                            {% if current_user.is_admin() %}
-                            <button
-                                type="button"
-                                class="btn btn-outline-primary btn-sm btn-substituicao"
-                                data-missa-id="{{ item.missa_id }}"
-                                data-ministro-id="{{ ministro.ministro_id }}"
-                                data-ministro-nome="{{ ministro.nome }}">
-                                Substituir / Trocar
-                            </button>
-                            {% endif %}
-                        </div>
+                        <strong>{{ ministro.nome }}</strong>
+                        <div class="small text-muted">{{ ministro.comunidade }}</div>
                     </div>
                     {% else %}
                     <span class="text-muted">Sem ministros escalados.</span>
@@ -144,251 +129,9 @@
                     {% endif %}
                 </td>
             </tr>
-            {% if current_user.is_admin() %}
-            <tr class="d-none" id="substituicao-panel-row-{{ item.missa_id }}">
-                <td colspan="6">
-                    <div class="card border-primary shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <h6 class="mb-0">Substituicao / Troca</h6>
-                                    <small class="text-muted" id="panel-title-{{ item.missa_id }}">Selecione um ministro.</small>
-                                </div>
-                                <button type="button" class="btn btn-outline-secondary btn-sm fechar-panel" data-missa-id="{{ item.missa_id }}">Fechar</button>
-                            </div>
-                            <div class="alert alert-info d-none mb-3" id="panel-feedback-{{ item.missa_id }}"></div>
-                            <div class="row g-4">
-                                <div class="col-lg-8">
-                                    <h6>Ministros Disponiveis</h6>
-                                    <div id="panel-body-{{ item.missa_id }}" class="small text-muted">
-                                        Carregando...
-                                    </div>
-                                </div>
-                                <div class="col-lg-4">
-                                    <h6>Solicitacoes Pendentes</h6>
-                                    <div id="panel-pendencias-{{ item.missa_id }}" class="small text-muted">
-                                        Nenhuma solicitacao enviada.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-            {% endif %}
             {% endfor %}
         </tbody>
     </table>
-
 </div>
-
-<script>
-const dashboardAdmin = {{ "true" if current_user.is_admin() else "false" }};
-const substituicaoState = {};
-
-function renderMinistrosCell(missaId, escalados) {
-    const cell = document.getElementById(`ministros-cell-${missaId}`);
-    if (!cell) {
-        return;
-    }
-
-    if (!escalados || !escalados.length) {
-        cell.innerHTML = '<span class="text-muted">Sem ministros escalados.</span>';
-        return;
-    }
-
-    cell.innerHTML = escalados.map((ministro) => `
-        <div class="border rounded p-2 mb-2 bg-white">
-            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                <div>
-                    <strong>${ministro.nome}</strong>
-                    <div class="small text-muted">${ministro.comunidade || "-"}</div>
-                </div>
-                ${dashboardAdmin ? `
-                <button
-                    type="button"
-                    class="btn btn-outline-primary btn-sm btn-substituicao"
-                    data-missa-id="${missaId}"
-                    data-ministro-id="${ministro.ministro_id}"
-                    data-ministro-nome="${ministro.nome}">
-                    Substituir / Trocar
-                </button>` : ""}
-            </div>
-        </div>
-    `).join("");
-}
-
-function renderPendencias(missaId, solicitacoes) {
-    const target = document.getElementById(`panel-pendencias-${missaId}`);
-    if (!target) {
-        return;
-    }
-
-    if (!solicitacoes || !solicitacoes.length) {
-        target.innerHTML = '<span class="text-muted">Nenhuma solicitacao enviada.</span>';
-        return;
-    }
-
-    target.innerHTML = solicitacoes.map((item) => `
-        <div class="border rounded p-2 mb-2 bg-light">
-            <div><strong>${item.nome}</strong></div>
-            <div class="small text-muted">${item.data_solicitacao}</div>
-            <span class="badge bg-warning text-dark">${item.status}</span>
-        </div>
-    `).join("");
-}
-
-function renderDisponiveis(missaId, disponiveis) {
-    const target = document.getElementById(`panel-body-${missaId}`);
-    if (!target) {
-        return;
-    }
-
-    if (!disponiveis || !disponiveis.length) {
-        target.innerHTML = '<div class="alert alert-warning mb-0">Nenhum ministro disponivel para este horario.</div>';
-        return;
-    }
-
-    target.innerHTML = disponiveis.map((ministro) => `
-        <div class="border rounded p-3 mb-2 bg-white">
-            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <div>
-                    <div class="fw-semibold">${ministro.nome}</div>
-                    <div class="small text-muted">${ministro.comunidade}</div>
-                    <div class="small">
-                        ${ministro.tem_push ? '<span class="badge bg-primary">Push</span>' : ''}
-                        ${ministro.tem_whatsapp ? '<span class="badge bg-success">WhatsApp</span>' : ''}
-                    </div>
-                </div>
-                <button
-                    type="button"
-                    class="btn btn-sm ${ministro.solicitacao_pendente ? 'btn-secondary' : 'btn-success'} btn-solicitar"
-                    data-missa-id="${missaId}"
-                    data-ministro-substituto-id="${ministro.id}"
-                    ${ministro.solicitacao_pendente ? 'disabled' : ''}>
-                    ${ministro.solicitacao_pendente ? 'Solicitado' : 'Solicitar'}
-                </button>
-            </div>
-        </div>
-    `).join("");
-}
-
-function showFeedback(missaId, message, type = "info") {
-    const box = document.getElementById(`panel-feedback-${missaId}`);
-    if (!box) {
-        return;
-    }
-    box.className = `alert alert-${type} mb-3`;
-    box.textContent = message;
-    box.classList.remove("d-none");
-}
-
-async function carregarDisponiveis(missaId, ministroOriginalId, ministroNome) {
-    substituicaoState[missaId] = {
-        ministroOriginalId,
-        ministroNome,
-    };
-
-    const panelRow = document.getElementById(`substituicao-panel-row-${missaId}`);
-    const title = document.getElementById(`panel-title-${missaId}`);
-    const body = document.getElementById(`panel-body-${missaId}`);
-    panelRow.classList.remove("d-none");
-    title.textContent = `Ministro original: ${ministroNome}`;
-    body.innerHTML = '<span class="text-muted">Carregando...</span>';
-
-    const response = await fetch(`/buscar_ministros_disponiveis?missa_id=${missaId}&ministro_original_id=${ministroOriginalId}`);
-    const data = await response.json();
-
-    renderMinistrosCell(missaId, data.escalados);
-    renderDisponiveis(missaId, data.disponiveis);
-    renderPendencias(missaId, data.solicitacoes);
-
-    if (substituicaoState[missaId].timer) {
-        clearInterval(substituicaoState[missaId].timer);
-    }
-    substituicaoState[missaId].timer = setInterval(() => {
-        carregarDisponiveisSilencioso(missaId);
-    }, 5000);
-}
-
-async function carregarDisponiveisSilencioso(missaId) {
-    const state = substituicaoState[missaId];
-    if (!state) {
-        return;
-    }
-
-    const response = await fetch(`/buscar_ministros_disponiveis?missa_id=${missaId}&ministro_original_id=${state.ministroOriginalId}`);
-    const data = await response.json();
-    renderMinistrosCell(missaId, data.escalados);
-    renderDisponiveis(missaId, data.disponiveis);
-    renderPendencias(missaId, data.solicitacoes);
-}
-
-async function solicitarSubstituicao(missaId, ministroSubstitutoId) {
-    const state = substituicaoState[missaId];
-    if (!state) {
-        return;
-    }
-
-    const response = await fetch("/solicitar_substituicao", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            missa_id: missaId,
-            ministro_original_id: state.ministroOriginalId,
-            ministro_substituto_id: ministroSubstitutoId,
-        }),
-    });
-
-    const data = await response.json();
-    showFeedback(missaId, data.mensagem, data.ok ? "success" : "danger");
-
-    if (!data.ok) {
-        return;
-    }
-
-    renderMinistrosCell(missaId, data.estado.escalados);
-    renderDisponiveis(missaId, data.estado.disponiveis);
-    renderPendencias(missaId, data.estado.solicitacoes);
-
-    if (data.whatsapp_link) {
-        window.open(data.whatsapp_link, "_blank");
-    }
-}
-
-document.addEventListener("click", (event) => {
-    const btnSubstituicao = event.target.closest(".btn-substituicao");
-    if (btnSubstituicao) {
-        carregarDisponiveis(
-            btnSubstituicao.dataset.missaId,
-            btnSubstituicao.dataset.ministroId,
-            btnSubstituicao.dataset.ministroNome,
-        );
-        return;
-    }
-
-    const btnSolicitar = event.target.closest(".btn-solicitar");
-    if (btnSolicitar) {
-        solicitarSubstituicao(
-            btnSolicitar.dataset.missaId,
-            btnSolicitar.dataset.ministroSubstitutoId,
-        );
-        return;
-    }
-
-    const btnFechar = event.target.closest(".fechar-panel");
-    if (btnFechar) {
-        const missaId = btnFechar.dataset.missaId;
-        const panelRow = document.getElementById(`substituicao-panel-row-${missaId}`);
-        panelRow.classList.add("d-none");
-        if (substituicaoState[missaId] && substituicaoState[missaId].timer) {
-            clearInterval(substituicaoState[missaId].timer);
-            delete substituicaoState[missaId].timer;
-        }
-    }
-});
-</script>
 
 {% endblock %}

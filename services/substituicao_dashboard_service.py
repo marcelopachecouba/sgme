@@ -166,7 +166,7 @@ def solicitar_substituicao(missa, ministro_original, ministro_substituto):
 
 def processar_resposta_substituicao(substituicao, acao):
     if substituicao.status != "pendente":
-        return False, "Esta solicitacao ja foi respondida."
+        return False, "Este pedido ja foi atendido ou encerrado."
 
     missa = Missa.query.filter_by(id=substituicao.missa_id).first()
     if not missa:
@@ -176,7 +176,10 @@ def processar_resposta_substituicao(substituicao, acao):
         substituicao.status = "recusado"
         substituicao.data_resposta = datetime.utcnow()
         db.session.commit()
-        return True, "Solicitacao recusada."
+        return True, (
+            "Solicitacao recusada. "
+            f"Missa em {missa.data.strftime('%d/%m/%Y')} as {missa.horario}."
+        )
 
     if acao != "confirmar":
         return False, "Acao invalida."
@@ -219,4 +222,7 @@ def processar_resposta_substituicao(substituicao, acao):
     if escala.ministro:
         notificar_escala_criada(escala.ministro, escala.missa)
 
-    return True, "Substituicao confirmada com sucesso."
+    return True, (
+        "Troca efetuada com sucesso. "
+        f"Data: {missa.data.strftime('%d/%m/%Y')} - Horario: {missa.horario}."
+    )

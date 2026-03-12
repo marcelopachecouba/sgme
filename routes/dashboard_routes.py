@@ -41,6 +41,10 @@ def _serializar_estado_substituicao(missa, ministro_original_id):
     }
 
 
+def _pode_gerir_substituicao(ministro_original_id):
+    return current_user.is_admin() or current_user.id == ministro_original_id
+
+
 @dashboard_bp.route("/")
 @login_required
 def home():
@@ -158,7 +162,6 @@ def whatsapp_sem_token_missa(missa_id):
 
 @dashboard_bp.route("/buscar_ministros_disponiveis")
 @login_required
-@admin_required
 def buscar_ministros_disponiveis_route():
     missa_id = request.args.get("missa_id", type=int)
     ministro_original_id = request.args.get("ministro_original_id", type=int)
@@ -171,6 +174,8 @@ def buscar_ministros_disponiveis_route():
         id=ministro_original_id,
         id_paroquia=current_user.id_paroquia,
     ).first_or_404()
+    if not _pode_gerir_substituicao(ministro_original.id):
+        return jsonify({"ok": False, "mensagem": "Sem permissao para esta substituicao."}), 403
 
     dados = _serializar_estado_substituicao(missa, ministro_original.id)
     dados["ministro_original"] = {
@@ -183,7 +188,6 @@ def buscar_ministros_disponiveis_route():
 
 @dashboard_bp.route("/solicitar_substituicao", methods=["POST"])
 @login_required
-@admin_required
 def solicitar_substituicao_route():
     payload = request.get_json(silent=True) or request.form
     missa_id = int(payload.get("missa_id"))
@@ -198,6 +202,8 @@ def solicitar_substituicao_route():
         id=ministro_original_id,
         id_paroquia=current_user.id_paroquia,
     ).first_or_404()
+    if not _pode_gerir_substituicao(ministro_original.id):
+        return jsonify({"ok": False, "mensagem": "Sem permissao para esta substituicao."}), 403
     ministro_substituto = Ministro.query.filter_by(
         id=ministro_substituto_id,
         id_paroquia=current_user.id_paroquia,
@@ -253,6 +259,14 @@ def responder_substituicao():
         return render_template(
             "responder_substituicao.html",
             substituicao=substituicao,
+            acao_sugerida="",
+        )
+
+    if request.method == "GET":
+        return render_template(
+            "responder_substituicao.html",
+            substituicao=substituicao,
+            acao_sugerida=acao,
         )
 
     sucesso, mensagem = processar_resposta_substituicao(substituicao, acao)
