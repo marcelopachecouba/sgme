@@ -79,6 +79,15 @@ def montar_mensagem_substituicao(destinatario, missa, solicitante_nome, link_con
     )
 
 
+def montar_mensagem_convite_substituicao(destinatario, ministro_original, missa, confirmar_url, recusar_url):
+    return (
+        f"Ola {destinatario.nome}. Voce pode substituir o ministro {ministro_original.nome} "
+        f"na missa de {missa.data.strftime('%d/%m/%Y')} as {missa.horario}?\n\n"
+        f"[Confirmar]\n{confirmar_url}\n\n"
+        f"[Recusar]\n{recusar_url}"
+    )
+
+
 def gerar_link_whatsapp_telefone(telefone, mensagem):
     if not telefone:
         return None

@@ -1,17 +1,22 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, flash, redirect, render_template, url_for
+from flask import Blueprint, jsonify, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from models import Escala, Missa
-from services.firebase_service import enviar_push
+from models import Escala, Missa, Ministro, Substituicao
 from services.dashboard_service import construir_dashboard
+from services.firebase_service import enviar_push
+from services.substituicao_dashboard_service import (
+    buscar_ministros_disponiveis,
+    processar_resposta_substituicao,
+    serializar_escalados_missa,
+    solicitar_substituicao,
+)
 from services.whatsapp_service import gerar_link_whatsapp_telefone, montar_mensagem_lembrete
 from utils.auth import admin_required
 
 
 dashboard_bp = Blueprint("dashboard", __name__)
-
 
 
 def _escala_missa_da_paroquia(missa_id):
@@ -24,6 +29,16 @@ def _escala_missa_da_paroquia(missa_id):
         id_paroquia=current_user.id_paroquia
     ).all()
     return missa, escalas
+
+
+def _serializar_estado_substituicao(missa, ministro_original_id):
+    dados = buscar_ministros_disponiveis(missa, ministro_original_id)
+    return {
+        "missa_id": missa.id,
+        "escalados": dados["escalados"],
+        "disponiveis": dados["disponiveis"],
+        "solicitacoes": dados["solicitacoes"],
+    }
 
 
 @dashboard_bp.route("/")
@@ -56,14 +71,12 @@ def avisar_missa(missa_id):
             continue
         ids.add(ministro.id)
 
-        if not ministro or not ministro.firebase_token:
+        if not ministro.firebase_token:
             sem_token += 1
-            if ministro:
-                nomes_sem_token.append(ministro.nome)
+            nomes_sem_token.append(ministro.nome)
             continue
 
         mensagem = montar_mensagem_lembrete(ministro, missa, escala=escala)
-
         enviar_push(
             ministro.firebase_token,
             "Lembrete de Escala",
@@ -72,9 +85,7 @@ def avisar_missa(missa_id):
         enviados += 1
         nomes_enviados.append(ministro.nome)
 
-    resumo = f"Aviso enviado via Firebase para {enviados} ministro(s). {sem_token} sem token ativo."
-    flash(resumo)
-
+    flash(f"Aviso enviado via Firebase para {enviados} ministro(s). {sem_token} sem token ativo.")
     if nomes_enviados:
         flash("Receberam push: " + ", ".join(nomes_enviados))
     if nomes_sem_token:
@@ -143,3 +154,128 @@ def whatsapp_sem_token_missa(missa_id):
         return redirect(url_for("dashboard.home"))
 
     return render_template("whatsapp_lista.html", links=links)
+
+
+@dashboard_bp.route("/buscar_ministros_disponiveis")
+@login_required
+@admin_required
+def buscar_ministros_disponiveis_route():
+    missa_id = request.args.get("missa_id", type=int)
+    ministro_original_id = request.args.get("ministro_original_id", type=int)
+
+    missa = Missa.query.filter_by(
+        id=missa_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    ministro_original = Ministro.query.filter_by(
+        id=ministro_original_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+
+    dados = _serializar_estado_substituicao(missa, ministro_original.id)
+    dados["ministro_original"] = {
+        "id": ministro_original.id,
+        "nome": ministro_original.nome,
+        "comunidade": ministro_original.comunidade or "-",
+    }
+    return jsonify(dados)
+
+
+@dashboard_bp.route("/solicitar_substituicao", methods=["POST"])
+@login_required
+@admin_required
+def solicitar_substituicao_route():
+    payload = request.get_json(silent=True) or request.form
+    missa_id = int(payload.get("missa_id"))
+    ministro_original_id = int(payload.get("ministro_original_id"))
+    ministro_substituto_id = int(payload.get("ministro_substituto_id"))
+
+    missa = Missa.query.filter_by(
+        id=missa_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    ministro_original = Ministro.query.filter_by(
+        id=ministro_original_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    ministro_substituto = Ministro.query.filter_by(
+        id=ministro_substituto_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+
+    dados_disponibilidade = buscar_ministros_disponiveis(missa, ministro_original.id)
+    if ministro_substituto.id not in {item["id"] for item in dados_disponibilidade["disponiveis"]}:
+        return jsonify({"ok": False, "mensagem": "Ministro nao esta disponivel para esta substituicao."}), 400
+
+    substituicao, whatsapp_link, criada = solicitar_substituicao(
+        missa,
+        ministro_original,
+        ministro_substituto,
+    )
+
+    return jsonify({
+        "ok": True,
+        "criada": criada,
+        "mensagem": (
+            f"Solicitacao enviada para {ministro_substituto.nome}."
+            if criada else
+            f"Ja existe solicitacao pendente para {ministro_substituto.nome}."
+        ),
+        "substituicao": {
+            "id": substituicao.id,
+            "status": substituicao.status,
+        },
+        "whatsapp_link": whatsapp_link,
+        "estado": _serializar_estado_substituicao(missa, ministro_original.id),
+    })
+
+
+@dashboard_bp.route("/responder_substituicao", methods=["GET", "POST"])
+@login_required
+def responder_substituicao():
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or request.form
+        substituicao_id = int(payload.get("substituicao_id"))
+        acao = (payload.get("acao") or "").strip().lower()
+    else:
+        substituicao_id = request.args.get("substituicao_id", type=int)
+        acao = (request.args.get("acao") or "").strip().lower()
+
+    substituicao = Substituicao.query.filter_by(id=substituicao_id).first_or_404()
+
+    if not current_user.is_admin() and current_user.id != substituicao.ministro_substituto_id:
+        mensagem = "Voce nao pode responder esta solicitacao."
+        if request.method == "POST":
+            return jsonify({"ok": False, "mensagem": mensagem}), 403
+        return render_template("substituicao_publica_resultado.html", sucesso=False, mensagem=mensagem), 403
+
+    if not acao:
+        return render_template(
+            "responder_substituicao.html",
+            substituicao=substituicao,
+        )
+
+    sucesso, mensagem = processar_resposta_substituicao(substituicao, acao)
+    escala_atual = Escala.query.filter_by(
+        id_missa=substituicao.missa_id,
+        id_paroquia=substituicao.missa.id_paroquia if substituicao.missa else current_user.id_paroquia,
+    ).all()
+    resposta = {
+        "ok": sucesso,
+        "mensagem": mensagem,
+        "missa_id": substituicao.missa_id,
+        "escalados": serializar_escalados_missa(
+            substituicao.missa_id,
+            substituicao.missa.id_paroquia if substituicao.missa else current_user.id_paroquia,
+        ) if escala_atual else [],
+    }
+
+    if request.method == "POST":
+        status_code = 200 if sucesso else 400
+        return jsonify(resposta), status_code
+
+    return render_template(
+        "substituicao_publica_resultado.html",
+        sucesso=sucesso,
+        mensagem=mensagem,
+    )
