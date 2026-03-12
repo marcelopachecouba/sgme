@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"] %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h2 class="mb-1">Missas de {{ ministro.nome }}</h2>
+        <h2 class="mb-1">Dashboard de {{ ministro.nome }}</h2>
         <small class="text-muted">
             Periodo:
             {% if inicio %}{{ inicio }}{% else %}inicio aberto{% endif %}
@@ -16,30 +17,132 @@
     </a>
 </div>
 
-<div class="card shadow-sm border-0">
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Missas</small>
+                <h4 class="mb-0">{{ resumo_ministro.missas }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Confirmadas</small>
+                <h4 class="mb-0 text-success">{{ resumo_ministro.confirmadas }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Reunioes</small>
+                <h4 class="mb-0">{{ resumo_ministro.reunioes }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <small class="text-muted">Pedidos de Substituicao</small>
+                <h4 class="mb-0">{{ resumo_ministro.pedidos_substituicao }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
     <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Calendario de Missas - {{ "%02d"|format(mes_ref) }}/{{ ano_ref }}</h5>
+            <form method="GET" class="row g-2 align-items-end">
+                <input type="hidden" name="inicio" value="{{ inicio }}">
+                <input type="hidden" name="fim" value="{{ fim }}">
+                <div class="col-auto">
+                    <input type="number" name="mes" min="1" max="12" value="{{ mes_ref }}" class="form-control">
+                </div>
+                <div class="col-auto">
+                    <input type="number" name="ano" min="2020" max="2100" value="{{ ano_ref }}" class="form-control">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary">Atualizar calendario</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        {% for dia in dias_semana %}
+                        <th class="text-center">{{ dia }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for semana in cal %}
+                    <tr>
+                        {% for dia in semana %}
+                        <td style="min-width: 150px; vertical-align: top;">
+                            {% if dia %}
+                            <div class="fw-bold mb-2">{{ dia }}</div>
+                            {% for item in calendario.get(dia, []) %}
+                            <div class="border rounded p-2 mb-2 bg-light">
+                                <div>{{ item.horario or "-" }}</div>
+                                <div class="small text-muted">{{ item.comunidade or "-" }}</div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            Nenhuma missa cadastrada neste calendario.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Missas e Acoes</h5>
         <div class="table-responsive">
             <table class="table table-striped align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>Data</th>
-                        <th>Dia da semana</th>
                         <th>Horario</th>
                         <th>Comunidade</th>
                         <th class="text-center">Confirmado</th>
                         <th class="text-center">Presente</th>
+                        <th class="text-center">Substituicao</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for m in missas %}
-                    {% set dias = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"] %}
                     <tr>
                         <td>{{ m.data.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ dias[m.data.weekday()] }}</td>
                         <td>{{ m.horario or '-' }}</td>
                         <td>{{ m.comunidade or '-' }}</td>
                         <td class="text-center">{{ "Sim" if m.confirmado else "Nao" }}</td>
                         <td class="text-center">{{ "Sim" if m.presente else "Nao" }}</td>
+                        <td class="text-center">
+                            {% if m.data >= hoje %}
+                            <form method="POST" action="{{ url_for('escala.dashboard_pedir_substituicao', escala_id=m.escala_id) }}">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Pedir substituicao</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">Encerrada</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
@@ -50,6 +153,132 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Disponibilidades</h5>
+                <div class="mb-3">
+                    <strong>Por data</strong>
+                    <ul class="mt-2 mb-0">
+                        {% for item in disponibilidades_data %}
+                        <li>{{ item.data.strftime('%d/%m/%Y') }} {% if item.horario %}- {{ item.horario }}{% endif %}</li>
+                        {% else %}
+                        <li class="text-muted">Nenhuma disponibilidade por data.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <strong>Fixas</strong>
+                    <ul class="mt-2 mb-0">
+                        {% for item in disponibilidades_fixas %}
+                        <li>Semana {{ item.semana or "todas" }} - {{ dias_semana[item.dia_semana] }} {% if item.horario %}- {{ item.horario }}{% endif %}</li>
+                        {% else %}
+                        <li class="text-muted">Nenhuma disponibilidade fixa.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Indisponibilidades</h5>
+                <div class="mb-3">
+                    <strong>Por data</strong>
+                    <ul class="mt-2 mb-0">
+                        {% for item in indisponibilidades_data %}
+                        <li>{{ item.data.strftime('%d/%m/%Y') }} {% if item.horario %}- {{ item.horario }}{% endif %}</li>
+                        {% else %}
+                        <li class="text-muted">Nenhuma indisponibilidade por data.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <strong>Fixas</strong>
+                    <ul class="mt-2 mb-0">
+                        {% for item in indisponibilidades_fixas %}
+                        <li>Semana {{ item.semana or "todas" }} - {{ dias_semana[item.dia_semana] }} {% if item.horario %}- {{ item.horario }}{% endif %}</li>
+                        {% else %}
+                        <li class="text-muted">Nenhuma indisponibilidade fixa.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Participacao em Reunioes</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Assunto</th>
+                                <th class="text-center">Presente</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in reunioes %}
+                            <tr>
+                                <td>{{ item.data.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ "Formacao" if item.tipo == "formacao" else "Reuniao" }}</td>
+                                <td>{{ item.assunto }}</td>
+                                <td class="text-center">{{ "Sim" if item.presente else "Nao" }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Nenhuma participacao registrada.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Pedidos de Substituicao</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Data</th>
+                                <th>Comunidade</th>
+                                <th>Status</th>
+                                <th>Aceite</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pedido, missa, aceite_nome in pedidos_substituicao %}
+                            <tr>
+                                <td>{{ missa.data.strftime('%d/%m/%Y') }} {{ missa.horario or '' }}</td>
+                                <td>{{ missa.comunidade }}</td>
+                                <td>{{ pedido.status }}</td>
+                                <td>{{ aceite_nome or "-" }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Nenhum pedido de substituicao registrado.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>

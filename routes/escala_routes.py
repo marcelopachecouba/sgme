@@ -1,12 +1,27 @@
 import random
 import math
+import calendar
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date
 from flask import Blueprint, render_template, redirect, request, url_for, flash, send_file
 from flask_login import login_required, current_user
-from models import db, Ministro, Missa, Escala, EscalaFixa, Presenca
-from datetime import date, timedelta
-import calendar, uuid, urllib.parse, base64, io
+from models import (
+    db,
+    Ministro,
+    Missa,
+    Escala,
+    EscalaFixa,
+    Presenca,
+    Disponibilidade,
+    DisponibilidadeFixa,
+    Indisponibilidade,
+    IndisponibilidadeFixa,
+    PedidoSubstituicao,
+    PresencaReuniao,
+    ReuniaoFormacao,
+)
+from datetime import timedelta
+import uuid, urllib.parse, base64, io
 from utils.auth import admin_required
 from services.notificacao_service import (
     notificar_escala_criada,
@@ -1017,18 +1032,19 @@ def checkin_publico_localizacao(token):
 
 @escala_bp.route("/dashboard_ministros")
 @login_required
-#@admin_required
 def dashboard_ministros():
     inicio_str = (request.args.get("inicio") or "").strip()
     fim_str = (request.args.get("fim") or "").strip()
 
     data_inicio = datetime.strptime(inicio_str, "%Y-%m-%d").date() if inicio_str else None
     data_fim = datetime.strptime(fim_str, "%Y-%m-%d").date() if fim_str else None
+    filtro_ministro_id = None if current_user.is_admin() else current_user.id
 
     resultado = obter_estatisticas_participacao(
         current_user.id_paroquia,
         data_inicio=data_inicio,
-        data_fim=data_fim
+        data_fim=data_fim,
+        ministro_id=filtro_ministro_id,
     )
 
     return render_template(
@@ -1037,18 +1053,23 @@ def dashboard_ministros():
         resumo=resultado["resumo"],
         inicio=inicio_str,
         fim=fim_str,
+        somente_proprio=not current_user.is_admin(),
     )
 
 
 @escala_bp.route("/dashboard_ministros/ministro/<int:ministro_id>")
 @login_required
-@admin_required
 def dashboard_ministro_detalhe(ministro_id):
     inicio_str = (request.args.get("inicio") or "").strip()
     fim_str = (request.args.get("fim") or "").strip()
+    mes_ref = request.args.get("mes", type=int)
+    ano_ref = request.args.get("ano", type=int)
 
     data_inicio = datetime.strptime(inicio_str, "%Y-%m-%d").date() if inicio_str else None
     data_fim = datetime.strptime(fim_str, "%Y-%m-%d").date() if fim_str else None
+
+    if not current_user.is_admin():
+        ministro_id = current_user.id
 
     ministro = get_ministro_or_404(ministro_id, current_user.id_paroquia)
     missas = obter_missas_ministro_periodo(
@@ -1058,12 +1079,141 @@ def dashboard_ministro_detalhe(ministro_id):
         data_fim=data_fim
     )
 
+    disponibilidades_data = Disponibilidade.query.filter_by(
+        id_ministro=ministro.id,
+        id_paroquia=current_user.id_paroquia,
+    ).order_by(Disponibilidade.data.asc(), Disponibilidade.horario.asc()).all()
+    disponibilidades_fixas = DisponibilidadeFixa.query.filter_by(
+        id_ministro=ministro.id,
+        id_paroquia=current_user.id_paroquia,
+    ).order_by(DisponibilidadeFixa.dia_semana.asc(), DisponibilidadeFixa.semana.asc(), DisponibilidadeFixa.horario.asc()).all()
+    indisponibilidades_data = Indisponibilidade.query.filter_by(
+        id_ministro=ministro.id,
+        id_paroquia=current_user.id_paroquia,
+    ).order_by(Indisponibilidade.data.asc(), Indisponibilidade.horario.asc()).all()
+    indisponibilidades_fixas = IndisponibilidadeFixa.query.filter_by(
+        id_ministro=ministro.id,
+        id_paroquia=current_user.id_paroquia,
+    ).order_by(IndisponibilidadeFixa.dia_semana.asc(), IndisponibilidadeFixa.semana.asc(), IndisponibilidadeFixa.horario.asc()).all()
+
+    reunioes = db.session.query(
+        ReuniaoFormacao.data,
+        ReuniaoFormacao.tipo,
+        ReuniaoFormacao.assunto,
+        PresencaReuniao.presente,
+    ).join(
+        PresencaReuniao,
+        PresencaReuniao.id_reuniao == ReuniaoFormacao.id,
+    ).filter(
+        PresencaReuniao.id_ministro == ministro.id,
+        PresencaReuniao.id_paroquia == current_user.id_paroquia,
+        ReuniaoFormacao.id_paroquia == current_user.id_paroquia,
+    ).order_by(
+        ReuniaoFormacao.data.desc(),
+        ReuniaoFormacao.id.desc(),
+    ).all()
+
+    pedidos_substituicao = db.session.query(
+        PedidoSubstituicao,
+        Missa,
+        Ministro.nome.label("aceite_nome"),
+    ).join(
+        Escala,
+        Escala.id == PedidoSubstituicao.id_escala,
+    ).join(
+        Missa,
+        Missa.id == Escala.id_missa,
+    ).outerjoin(
+        Ministro,
+        Ministro.id == PedidoSubstituicao.id_ministro_aceite,
+    ).filter(
+        PedidoSubstituicao.id_paroquia == current_user.id_paroquia,
+        PedidoSubstituicao.id_ministro_solicitante == ministro.id,
+    ).order_by(
+        PedidoSubstituicao.criado_em.desc(),
+    ).all()
+
+    hoje = date.today()
+    mes_base = mes_ref or (data_inicio.month if data_inicio else hoje.month)
+    ano_base = ano_ref or (data_inicio.year if data_inicio else hoje.year)
+    cal = calendar.monthcalendar(ano_base, mes_base)
+    inicio_mes = date(ano_base, mes_base, 1)
+    ultimo_dia = calendar.monthrange(ano_base, mes_base)[1]
+    fim_mes = date(ano_base, mes_base, ultimo_dia)
+    missas_calendario = obter_missas_ministro_periodo(
+        ministro_id=ministro.id,
+        id_paroquia=current_user.id_paroquia,
+        data_inicio=inicio_mes,
+        data_fim=fim_mes,
+    )
+    calendario = defaultdict(list)
+    for item in missas_calendario:
+        calendario[item.data.day].append(item)
+
+    resumo_ministro = {
+        "missas": len(missas),
+        "confirmadas": sum(1 for item in missas if item.confirmado),
+        "pendentes": sum(1 for item in missas if not item.confirmado),
+        "reunioes": sum(1 for item in reunioes if item.presente),
+        "pedidos_substituicao": len(pedidos_substituicao),
+    }
+
     return render_template(
         "dashboard_ministro_detalhe.html",
         ministro=ministro,
         missas=missas,
+        resumo_ministro=resumo_ministro,
+        disponibilidades_data=disponibilidades_data,
+        disponibilidades_fixas=disponibilidades_fixas,
+        indisponibilidades_data=indisponibilidades_data,
+        indisponibilidades_fixas=indisponibilidades_fixas,
+        reunioes=reunioes,
+        pedidos_substituicao=pedidos_substituicao,
+        cal=cal,
+        calendario=calendario,
+        mes_ref=mes_base,
+        ano_ref=ano_base,
+        hoje=hoje,
         inicio=inicio_str,
         fim=fim_str,
+    )
+
+
+@escala_bp.route("/dashboard_ministros/substituicao/<int:escala_id>", methods=["POST"])
+@login_required
+def dashboard_pedir_substituicao(escala_id):
+    escala = get_escala_or_404(escala_id, current_user.id_paroquia)
+
+    if not current_user.is_admin() and escala.id_ministro != current_user.id:
+        flash("Voce nao pode solicitar substituicao para esta escala.")
+        return redirect(url_for("escala.dashboard_ministros"))
+
+    pedido, enviados, links_whatsapp = criar_pedido_substituicao(escala)
+    if links_whatsapp:
+        flash(
+            f"Pedido de substituicao aberto. Push enviados: {enviados}. "
+            "Voce tambem pode avisar pelo WhatsApp."
+        )
+        return render_template(
+            "whatsapp_lista.html",
+            links=links_whatsapp,
+            titulo="Avisar Disponiveis por WhatsApp",
+            mensagem_topo=(
+                "Os links abaixo enviam o pedido de substituicao para ministros disponiveis. "
+                "Quem confirmar primeiro entra automaticamente na escala."
+            ),
+            voltar_url=url_for(
+                "escala.dashboard_ministro_detalhe",
+                ministro_id=escala.id_ministro,
+            ),
+        )
+
+    flash(f"Pedido de substituicao aberto. Ministros notificados: {enviados}.")
+    return redirect(
+        url_for(
+            "escala.dashboard_ministro_detalhe",
+            ministro_id=escala.id_ministro,
+        )
     )
 
 
