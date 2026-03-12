@@ -43,6 +43,29 @@
         </div>
 
         <div class="row g-3 mt-1">
+            <div class="col-md-6">
+                <label class="form-label">Latitude da reuniao (opcional)</label>
+                <input
+                    type="text"
+                    name="latitude"
+                    class="form-control"
+                    placeholder="-23.550520"
+                    value="{{ reuniao.latitude if reuniao and reuniao.latitude else '' }}"
+                >
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Longitude da reuniao (opcional)</label>
+                <input
+                    type="text"
+                    name="longitude"
+                    class="form-control"
+                    placeholder="-46.633308"
+                    value="{{ reuniao.longitude if reuniao and reuniao.longitude else '' }}"
+                >
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1">
             <div class="col-md-4">
                 <label class="form-label">Foto (opcional)</label>
                 <input type="file" name="foto" class="form-control" accept="image/*">

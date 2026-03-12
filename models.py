@@ -308,6 +308,8 @@ class ReuniaoFormacao(db.Model):
     foto_url = db.Column(db.String(300))
     video_url = db.Column(db.String(300))
     video_arquivo_url = db.Column(db.String(300))
+    latitude = db.Column(db.String(50))
+    longitude = db.Column(db.String(50))
 
     id_paroquia = db.Column(
         db.Integer,
