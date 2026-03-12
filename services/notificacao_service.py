@@ -1,7 +1,7 @@
 import logging
 
 from services.firebase_service import enviar_push
-from services.whatsapp_service import gerar_link_whatsapp
+from services.whatsapp_service import gerar_link_whatsapp, montar_mensagem_escala
 
 
 logger = logging.getLogger(__name__)
@@ -13,15 +13,13 @@ def notificar_escala_criada(ministro, missa):
     if escala and getattr(escala, "token", None):
         from flask import url_for
         url = url_for("escala.checkin_publico_localizacao", token=escala.token, _external=True)
+    mensagem = montar_mensagem_escala(ministro, missa)
 
     if ministro.firebase_token:
         enviar_push(
             ministro.firebase_token,
             "Nova Escala",
-            (
-                f"Voce foi escalado para {missa.data.strftime('%d/%m')} as {missa.horario} "
-                f"na {missa.comunidade}. Toque para confirmar, pedir substituicao ou recusar."
-            ),
+            mensagem,
             url=url,
         )
 

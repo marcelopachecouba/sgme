@@ -926,7 +926,22 @@ def escala_publica(token):
             return redirect(url_for("publico.calendario_paroquia", id=paroquia_id))
 
         elif acao == "substituicao":
-            pedido, enviados = criar_pedido_substituicao(escala)
+            pedido, enviados, links_whatsapp = criar_pedido_substituicao(escala)
+            if links_whatsapp:
+                flash(
+                    f"Pedido de substituicao aberto. Push enviados: {enviados}. "
+                    "Voce tambem pode avisar pelo WhatsApp."
+                )
+                return render_template(
+                    "whatsapp_lista.html",
+                    links=links_whatsapp,
+                    titulo="Avisar Substitutos por WhatsApp",
+                    mensagem_topo=(
+                        "Os links abaixo levam a uma mensagem com o link de confirmacao. "
+                        "Quem confirmar primeiro entra automaticamente na escala."
+                    ),
+                    voltar_url=url_for("escala.escala_publica", token=escala.token),
+                )
             flash(
                 f"Pedido de substituicao aberto. "
                 f"Ministros notificados: {enviados}."
