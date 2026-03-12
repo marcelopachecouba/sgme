@@ -8,10 +8,12 @@ from services.dashboard_service import construir_dashboard
 from services.firebase_service import enviar_push
 from services.substituicao_dashboard_service import (
     buscar_ministros_disponiveis,
+    buscar_ministros_troca,
     excluir_substituicao_pendente,
     processar_resposta_substituicao,
     serializar_escalados_missa,
     solicitar_substituicao,
+    solicitar_troca,
 )
 from services.whatsapp_service import gerar_link_whatsapp_telefone, montar_mensagem_lembrete
 from utils.auth import admin_required
@@ -38,6 +40,15 @@ def _serializar_estado_substituicao(missa, ministro_original_id):
         "missa_id": missa.id,
         "escalados": dados["escalados"],
         "disponiveis": dados["disponiveis"],
+        "solicitacoes": dados["solicitacoes"],
+    }
+
+
+def _serializar_estado_troca(missa, ministro_original_id):
+    dados = buscar_ministros_troca(missa, ministro_original_id)
+    return {
+        "missa_id": missa.id,
+        "trocas": dados["trocas"],
         "solicitacoes": dados["solicitacoes"],
     }
 
@@ -194,6 +205,32 @@ def buscar_ministros_disponiveis_route():
     return jsonify(dados)
 
 
+@dashboard_bp.route("/buscar_ministros_troca")
+@login_required
+def buscar_ministros_troca_route():
+    missa_id = request.args.get("missa_id", type=int)
+    ministro_original_id = request.args.get("ministro_original_id", type=int)
+
+    missa = Missa.query.filter_by(
+        id=missa_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    ministro_original = Ministro.query.filter_by(
+        id=ministro_original_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    if not _pode_gerir_substituicao(ministro_original.id):
+        return jsonify({"ok": False, "mensagem": "Sem permissao para esta troca."}), 403
+
+    dados = _serializar_estado_troca(missa, ministro_original.id)
+    dados["ministro_original"] = {
+        "id": ministro_original.id,
+        "nome": ministro_original.nome,
+        "comunidade": ministro_original.comunidade or "-",
+    }
+    return jsonify(dados)
+
+
 @dashboard_bp.route("/solicitar_substituicao", methods=["POST"])
 @login_required
 def solicitar_substituicao_route():
@@ -241,6 +278,66 @@ def solicitar_substituicao_route():
         },
         "whatsapp_link": whatsapp_link,
         "estado": _serializar_estado_substituicao(missa, ministro_original.id),
+    })
+
+
+@dashboard_bp.route("/solicitar_troca", methods=["POST"])
+@login_required
+def solicitar_troca_route():
+    payload = request.get_json(silent=True) or request.form
+    missa_id = int(payload.get("missa_id"))
+    ministro_original_id = int(payload.get("ministro_original_id"))
+    missa_troca_id = int(payload.get("missa_troca_id"))
+    ministro_troca_id = int(payload.get("ministro_troca_id"))
+
+    missa = Missa.query.filter_by(
+        id=missa_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    missa_troca = Missa.query.filter_by(
+        id=missa_troca_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    ministro_original = Ministro.query.filter_by(
+        id=ministro_original_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+    if not _pode_gerir_substituicao(ministro_original.id):
+        return jsonify({"ok": False, "mensagem": "Sem permissao para esta troca."}), 403
+    ministro_troca = Ministro.query.filter_by(
+        id=ministro_troca_id,
+        id_paroquia=current_user.id_paroquia,
+    ).first_or_404()
+
+    dados_troca = buscar_ministros_troca(missa, ministro_original.id)
+    if (missa_troca.id, ministro_troca.id) not in {
+        (item["missa_id"], item["ministro_id"])
+        for item in dados_troca["trocas"]
+    }:
+        return jsonify({"ok": False, "mensagem": "Ministro nao esta disponivel para esta troca."}), 400
+
+    substituicao, whatsapp_link, criada = solicitar_troca(
+        missa,
+        ministro_original,
+        missa_troca,
+        ministro_troca,
+    )
+
+    return jsonify({
+        "ok": True,
+        "criada": criada,
+        "mensagem": (
+            f"Solicitacao de troca enviada para {ministro_troca.nome}."
+            if criada else
+            f"Ja existe solicitacao pendente de troca para {ministro_troca.nome}."
+        ),
+        "substituicao": {
+            "id": substituicao.id,
+            "status": substituicao.status,
+            "tipo": substituicao.tipo,
+        },
+        "whatsapp_link": whatsapp_link,
+        "estado": _serializar_estado_troca(missa, ministro_original.id),
     })
 
 
