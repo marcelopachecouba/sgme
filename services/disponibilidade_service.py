@@ -79,3 +79,27 @@ def resolver_status_missa(ministro_id, missa, id_paroquia):
 
 def esta_indisponivel(ministro_id, missa, id_paroquia):
     return resolver_status_missa(ministro_id, missa, id_paroquia) == "indisponivel"
+
+def esta_disponivel(ministro_id, missa, paroquia_id):
+
+    # disponibilidade por data
+    disp_data = Disponibilidade.query.filter_by(
+        id_ministro=ministro_id,
+        data=missa.data,
+        id_paroquia=paroquia_id
+    ).first()
+
+    if disp_data:
+        return True
+
+    # disponibilidade fixa
+    disp_fixa = DisponibilidadeFixa.query.filter_by(
+        id_ministro=ministro_id,
+        dia_semana=missa.data.weekday(),
+        id_paroquia=paroquia_id
+    ).first()
+
+    if disp_fixa:
+        return True
+
+    return False

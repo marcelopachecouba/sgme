@@ -1,3 +1,4 @@
+
 import random
 import math
 import calendar
@@ -27,7 +28,7 @@ from services.notificacao_service import (
     notificar_escala_criada,
     notificar_escala_removida
 )
-from services.disponibilidade_service import esta_indisponivel
+from services.disponibilidade_service import esta_indisponivel, esta_disponivel
 from services.participacao_service import (
     obter_estatisticas_participacao,
     obter_missas_ministro_periodo,
@@ -150,9 +151,14 @@ def gerar_escala_auto(missa_id):
         if conflito_dia:
             continue
 
+        # verifica indisponibilidade
         if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
             continue
 
+        # verifica disponibilidade (fixa ou por data)
+        if not esta_disponivel(ministro.id, missa, current_user.id_paroquia):
+            continue
+        
         if ministro not in selecionados:
             selecionados.append(ministro)
 
@@ -192,6 +198,9 @@ def gerar_escala_auto(missa_id):
                 continue
 
             if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
+                continue
+
+            if not esta_disponivel(ministro.id, missa, current_user.id_paroquia):
                 continue
 
             selecionados.append(ministro)
@@ -844,6 +853,10 @@ def adicionar_ministro_escala(missa_id):
     if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
         flash("Nao e permitido cadastrar ministro indisponivel nesta missa.")
         return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
+    
+    if not esta_disponivel(ministro.id, missa, current_user.id_paroquia):
+        flash("Este ministro nao possui disponibilidade para esta missa.")
+        return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))    
 
     if not existe:
         nova = Escala(
