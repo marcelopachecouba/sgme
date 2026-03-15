@@ -822,13 +822,17 @@ def remover_ministro_escala(escala_id):
     return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
 
 
-
 @escala_bp.route("/escala/adicionar/<int:missa_id>", methods=["POST"])
 @login_required
 @admin_required
 def adicionar_ministro_escala(missa_id):
 
     ministro_id = request.form.get("ministro_id")
+
+    if not ministro_id:
+        flash("Selecione um ministro.")
+        return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
+
     missa = get_missa_or_404(missa_id, current_user.id_paroquia)
     ministro = get_ministro_or_404(ministro_id, current_user.id_paroquia)
 
@@ -837,39 +841,21 @@ def adicionar_ministro_escala(missa_id):
         id_ministro=ministro_id
     ).first()
 
-    conflito_dia = db.session.query(Escala)\
-        .join(Missa)\
-        .filter(
-            Escala.id_ministro == ministro.id,
-            Escala.id_paroquia == current_user.id_paroquia,
-            Escala.id_missa != missa_id,
-            Missa.data == missa.data,
-        ).first()
-
-    if conflito_dia:
-        flash("Este ministro ja esta escalado em outra missa no mesmo dia.")
+    if existe:
+        flash("Este ministro já está na escala.")
         return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
 
-    if esta_indisponivel(ministro.id, missa, current_user.id_paroquia):
-        flash("Nao e permitido cadastrar ministro indisponivel nesta missa.")
-        return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
-    
-    if not esta_disponivel(ministro.id, missa, current_user.id_paroquia):
-        flash("Este ministro nao possui disponibilidade para esta missa.")
-        return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))    
+    nova = Escala(
+        id_missa=missa_id,
+        id_ministro=ministro_id,
+        id_paroquia=current_user.id_paroquia,
+        token=str(uuid.uuid4())
+    )
 
-    if not existe:
-        nova = Escala(
-            id_missa=missa_id,
-            id_ministro=ministro_id,
-            id_paroquia=current_user.id_paroquia,
-            token=str(uuid.uuid4())
-        )
-        db.session.add(nova)
-        missa.escala_ref = nova
-        notificar_escala_criada(ministro, missa)
+    db.session.add(nova)
+    db.session.commit()
 
-        db.session.commit()
+    flash("Ministro adicionado com sucesso!")
 
     return redirect(url_for("escala.visualizar_escala", missa_id=missa_id))
 
