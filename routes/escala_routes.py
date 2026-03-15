@@ -282,10 +282,26 @@ def visualizar_escala(missa_id):
         id_paroquia=current_user.id_paroquia
     ).all()
 
-    ministros = Ministro.query.filter_by(
-        id_paroquia=current_user.id_paroquia
+    # ministros já escalados no mesmo dia
+    ministros_ocupados = db.session.query(Escala.id_ministro)\
+        .join(Missa)\
+        .filter(
+            Escala.id_paroquia == current_user.id_paroquia,
+            Missa.data == missa.data
+        ).subquery()
+
+    # ministros disponíveis
+    ministros = Ministro.query.filter(
+        Ministro.id_paroquia == current_user.id_paroquia,
+        ~Ministro.id.in_(ministros_ocupados)
     ).order_by(Ministro.nome).all()
 
+    # remove indisponíveis
+    ministros = [
+        m for m in ministros
+        if not esta_indisponivel(m.id, missa, current_user.id_paroquia)
+    ]
+    
     return render_template(
         "visualizar_escala.html",
         missa=missa,
