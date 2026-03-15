@@ -28,7 +28,7 @@ from services.firebase_service import iniciar_firebase
 from services.lembrete_missa_service import enviar_lembretes_missa
 from routes.push_routes import push_bp
 from routes.notificacoes_routes import notificacao_bp
-
+from services.notification_manager import NotificationManager
 
 
 scheduler = BackgroundScheduler()
@@ -69,7 +69,9 @@ def _registrar_rotas_internas(app):
 
     @app.route("/firebase-messaging-sw.js")
     def firebase_sw():
-        return send_from_directory("static", "firebase-messaging-sw.js")
+        response = send_from_directory("static", "firebase-messaging-sw.js")
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
     @app.context_processor
     def variaveis_globais():
@@ -89,25 +91,28 @@ def _iniciar_scheduler(app):
     if scheduler.running:
         return
 
-    scheduler.add_job(
-        enviar_lembretes_missa,
-        trigger="interval",
-        minutes=10,
-        args=[app],
-        max_instances=1,
-        replace_existing=True,
-        id="lembretes_missa",
-    )
+    with app.app_context():
 
-    scheduler.add_job(
-        NotificationManager.limpar_tokens_inativos,
-        trigger="interval",
-        hours=24,
-        id="limpar_tokens_push"
-    )
+        scheduler.add_job(
+            enviar_lembretes_missa,
+            trigger="interval",
+            minutes=10,
+            args=[app],
+            max_instances=1,
+            replace_existing=True,
+            id="lembretes_missa",
+        )
 
-    scheduler.start()
+        scheduler.add_job(
+            NotificationManager.limpar_tokens_inativos,
+            trigger="interval",
+            hours=24,
+            id="limpar_tokens_push"
+        )
 
+        scheduler.start()
+
+        
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -121,8 +126,8 @@ def create_app():
     _registrar_rotas_internas(app)
     _registrar_blueprints(app)
 
-    if app.config.get("ENV") == "development" or os.getenv("FLASK_ENV") == "development":
-        _iniciar_scheduler(app)
+    
+    _iniciar_scheduler(app)
 
     return app
 
