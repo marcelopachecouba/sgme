@@ -1,0 +1,26 @@
+<h2>Escala</h2>
+
+<p>
+Você está escalado para
+<b>{{ escala.missa.data }}</b>
+às
+<b>{{ escala.missa.horario }}</b>
+</p>
+
+<br>
+
+<a href="/escala/confirmar/{{ escala.token }}">
+<button>✅ Confirmar presença</button>
+</a>
+
+<br><br>
+
+<a href="/substituicao/pedir/{{ escala.token }}">
+<button>🔄 Pedir substituição</button>
+</a>
+
+<br><br>
+
+<a href="/troca/pedir/{{ escala.token }}">
+<button>🔁 Solicitar troca</button>
+</a>

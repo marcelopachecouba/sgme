@@ -1219,7 +1219,16 @@ def dashboard_pedir_substituicao(escala_id):
         )
     )
 
+@escala_bp.route("/escala/confirmar/<token>")
+def confirmar_presenca(token):
 
+    escala = Escala.query.filter_by(token=token).first_or_404()
+
+    escala.confirmado = True
+
+    db.session.commit()
+
+    return "Presença confirmada com sucesso"
 
 
 
