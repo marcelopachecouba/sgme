@@ -26,6 +26,9 @@ from routes.publico_routes import publico_bp
 from routes.superadmin_routes import superadmin_bp
 from services.firebase_service import iniciar_firebase
 from services.lembrete_missa_service import enviar_lembretes_missa
+from routes.push_routes import push_bp
+from routes.notificacoes_routes import notificacao_bp
+
 
 
 scheduler = BackgroundScheduler()
@@ -51,6 +54,8 @@ def _registrar_blueprints(app):
         api_bp,
         superadmin_bp,
         minhas_escalas_bp,
+        push_bp,
+        notificacao_bp
     ]
 
     for blueprint in blueprints:
@@ -80,6 +85,7 @@ def _configurar_login():
 
 
 def _iniciar_scheduler(app):
+
     if scheduler.running:
         return
 
@@ -92,8 +98,15 @@ def _iniciar_scheduler(app):
         replace_existing=True,
         id="lembretes_missa",
     )
-    scheduler.start()
 
+    scheduler.add_job(
+        NotificationManager.limpar_tokens_inativos,
+        trigger="interval",
+        hours=24,
+        id="limpar_tokens_push"
+    )
+
+    scheduler.start()
 
 def create_app():
     app = Flask(__name__)

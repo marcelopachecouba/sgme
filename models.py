@@ -504,3 +504,48 @@ class Presenca(db.Model):
         "Missa",
         backref="presencas"
     )
+
+from extensions import db
+from datetime import datetime
+
+class PushToken(db.Model):
+    __tablename__ = "push_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+
+    token = db.Column(db.String(500), nullable=False)
+
+    device = db.Column(db.String(100))
+
+    ativo = db.Column(db.Boolean, default=True)
+
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    ministro = db.relationship("Ministro")
+        
+class Notificacao(db.Model):
+
+    __tablename__ = "notificacoes"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    usuario_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ministro.id"),
+        nullable=False
+    )
+
+    titulo = db.Column(db.String(200))
+    mensagem = db.Column(db.Text)
+
+    lida = db.Column(db.Boolean, default=False)
+
+    criada_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    ministro = db.relationship("Ministro")
