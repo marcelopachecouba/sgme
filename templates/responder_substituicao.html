@@ -13,7 +13,7 @@
             <h4 class="mb-3">Convite de {{ "Troca" if substituicao.tipo == "troca" else "Substituicao" }}</h4>
             <p>
                 {% if substituicao.tipo == "troca" %}
-                Ola {{ substituicao.ministro_substituto.nome }}. Voce pode trocar a sua missa de
+                {{ saudacao }} {{ substituicao.ministro_substituto.nome }}. Voce pode trocar a sua missa de
                 <strong>{{ substituicao.missa_troca.data.strftime('%d/%m/%Y') }}</strong>
                 as <strong>{{ substituicao.missa_troca.horario }}</strong>
                 com o ministro <strong>{{ substituicao.ministro_original.nome }}</strong>,
@@ -21,7 +21,7 @@
                 <strong>{{ substituicao.missa.data.strftime('%d/%m/%Y') }}</strong>
                 as <strong>{{ substituicao.missa.horario }}</strong>?
                 {% else %}
-                Ola {{ substituicao.ministro_substituto.nome }}. Voce pode substituir
+                {{ saudacao }} {{ substituicao.ministro_substituto.nome }}. Voce pode substituir
                 <strong>{{ substituicao.ministro_original.nome }}</strong>
                 na missa de
                 <strong>{{ substituicao.missa.data.strftime('%d/%m/%Y') }}</strong>

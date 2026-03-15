@@ -215,3 +215,16 @@ def salvar_token():
     current_user.notificacoes_ativas = True
     db.session.commit()
     return {"status": "ok"}
+
+from datetime import datetime
+
+def obter_saudacao():
+
+    hora = datetime.now().hour
+
+    if 5 <= hora < 12:
+        return "Bom dia"
+    elif 12 <= hora < 18:
+        return "Boa tarde"
+    else:
+        return "Boa noite"

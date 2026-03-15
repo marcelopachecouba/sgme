@@ -67,10 +67,13 @@ def montar_mensagem_lembrete(ministro, missa, escala=None):
 def montar_mensagem_escala(ministro, missa, escala=None):
     return montar_mensagem_lembrete(ministro, missa, escala=escala)
 
+import routes.auth_routes as auth
+
+saudacao = auth.obter_saudacao()
 
 def montar_mensagem_substituicao(destinatario, missa, solicitante_nome, link_confirmacao):
     return (
-        f"Ola {destinatario.nome},\n\n"
+        f"{saudacao} {destinatario.nome},\n\n"
         f"{solicitante_nome} solicitou substituicao para esta missa.\n\n"
         f"Data: {missa.data.strftime('%d/%m/%Y')}\n"
         f"Horario: {missa.horario}\n"
@@ -81,7 +84,7 @@ def montar_mensagem_substituicao(destinatario, missa, solicitante_nome, link_con
 
 def montar_mensagem_convite_substituicao(destinatario, ministro_original, missa, confirmar_url, recusar_url):
     return (
-        f"Ola {destinatario.nome}. Voce pode substituir o ministro {ministro_original.nome} "
+        f"{saudacao} {destinatario.nome}. Voce pode substituir o ministro {ministro_original.nome} "
         f"na missa de {missa.data.strftime('%d/%m/%Y')} as {missa.horario}?\n\n"
         f"[Confirmar]\n{confirmar_url}\n\n"
         f"[Recusar]\n{recusar_url}"
@@ -96,8 +99,12 @@ def montar_mensagem_convite_troca(
     confirmar_url,
     recusar_url,
 ):
+    import routes.auth_routes as auth
+
+    saudacao = auth.obter_saudacao()
+
     return (
-        f"Ola {destinatario.nome}. Voce pode trocar a sua missa de "
+        f"{saudacao} {destinatario.nome}. Voce pode trocar a sua missa de "
         f"{missa_troca.data.strftime('%d/%m/%Y')} as {missa_troca.horario} "
         f"com o ministro {ministro_original.nome}, que esta na missa de "
         f"{missa_original.data.strftime('%d/%m/%Y')} as {missa_original.horario}?\n\n"

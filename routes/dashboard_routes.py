@@ -363,9 +363,14 @@ def excluir_substituicao_route():
         "estado": _serializar_estado_substituicao(missa, substituicao.ministro_original_id),
     }), status_code
 
+import routes.auth_routes as auth
 
 @dashboard_bp.route("/responder_substituicao", methods=["GET", "POST"])
 def responder_substituicao():
+    substituicao = Substituicao.query.get_or_404(id)
+
+    saudacao = auth.obter_saudacao()
+
     if request.method == "POST":
         payload = request.get_json(silent=True) or request.form
         substituicao_id = int(payload.get("substituicao_id"))
