@@ -7,22 +7,34 @@ self.addEventListener("activate", (event) => {
 });
 
 
-/* RECEBER PUSH */
 self.addEventListener("push", function(event) {
 
   if (!event.data) return;
 
-  const data = event.data.json();
+  const payload = event.data.json();
 
-  const title = data.title || "SGME";
+  const title =
+    payload.title ||
+    payload.notification?.title ||
+    "SGME";
+
+  const body =
+    payload.body ||
+    payload.notification?.body ||
+    "";
+
+  const url =
+    payload.url ||
+    payload.data?.url ||
+    "/";
 
   const options = {
-    body: data.body || "",
+    body: body,
     icon: "/static/img/icon-192.png",
     badge: "/static/img/badge.png",
-    data: {
-      url: data.url || "/"
-    }
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
+    data: { url }
   };
 
   event.waitUntil(
@@ -32,7 +44,6 @@ self.addEventListener("push", function(event) {
 });
 
 
-/* CLICAR NA NOTIFICAÇÃO */
 self.addEventListener("notificationclick", function(event) {
 
   const url = event.notification.data.url || "/";
@@ -40,26 +51,20 @@ self.addEventListener("notificationclick", function(event) {
   event.notification.close();
 
   event.waitUntil(
-
     clients.matchAll({
       type: "window",
       includeUncontrolled: true
     }).then(function(clientList) {
 
       for (const client of clientList) {
-
-        if (client.url === url && "focus" in client) {
+        if (client.url.includes(url) && "focus" in client) {
           return client.focus();
         }
-
       }
 
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
+      return clients.openWindow(url);
 
     })
-
   );
 
 });

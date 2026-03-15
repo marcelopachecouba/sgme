@@ -39,26 +39,32 @@ def enviar_push(token, titulo, mensagem, url=None):
 
     try:
 
-        data_payload = {}
+        data_payload = {
+            "title": titulo,
+            "body": mensagem
+        }
 
         if url:
             data_payload["url"] = url
 
         message = messaging.Message(
-            notification=messaging.Notification(
-                title=titulo,
-                body=mensagem,
-            ),
+
             data=data_payload,
-            token=token,
+
+            android=messaging.AndroidConfig(
+                priority="high"
+            ),
+
+            token=token
         )
 
         messaging.send(message)
+
         logger.info("Push enviado")
 
     except Exception as e:
         logger.exception("Erro push: %s", e)
-
+        
 
 from firebase_admin import messaging
 from models import Ministro
