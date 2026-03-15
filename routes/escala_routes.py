@@ -271,6 +271,8 @@ def gerar_escala_auto_inteligente(missa_id):
     return redirect(url_for("escala.visualizar_escala", missa_id=missa.id))
 
 
+from sqlalchemy import extract, func
+
 @escala_bp.route("/escala/visualizar/<int:missa_id>")
 @login_required
 def visualizar_escala(missa_id):
@@ -290,24 +292,46 @@ def visualizar_escala(missa_id):
             Missa.data == missa.data
         ).subquery()
 
-    # ministros disponíveis
+    # todos disponíveis
     ministros = Ministro.query.filter(
         Ministro.id_paroquia == current_user.id_paroquia,
         ~Ministro.id.in_(ministros_ocupados)
-    ).order_by(Ministro.nome).all()
+    ).all()
 
     # remove indisponíveis
     ministros = [
         m for m in ministros
         if not esta_indisponivel(m.id, missa, current_user.id_paroquia)
     ]
-    
+
+    # contar missas no mês
+    contagem = dict(
+        db.session.query(
+            Escala.id_ministro,
+            func.count(Escala.id)
+        )
+        .join(Missa)
+        .filter(
+            Escala.id_paroquia == current_user.id_paroquia,
+            extract("month", Missa.data) == missa.data.month,
+            extract("year", Missa.data) == missa.data.year
+        )
+        .group_by(Escala.id_ministro)
+        .all()
+    )
+
+    # ordenar por menos missas
+    ministros.sort(key=lambda m: contagem.get(m.id, 0))
+
     return render_template(
         "visualizar_escala.html",
         missa=missa,
         escalas=escalas,
-        ministros=ministros
+        ministros=ministros,
+        contagem=contagem
     )
+
+
 from utils.auth import admin_required
 @escala_bp.route("/escala_fixa", methods=["GET", "POST"])
 @login_required

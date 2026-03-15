@@ -60,15 +60,18 @@ action="{{ url_for('escala.adicionar_ministro_escala', missa_id=missa.id) }}">
 <div class="row">
 
 <div class="col-md-6">
+
+
 <select name="ministro_id" class="form-control" required>
 
 {% for ministro in ministros %}
 <option value="{{ ministro.id }}">
-{{ ministro.nome }}
+{{ ministro.nome }} ({{ contagem.get(ministro.id,0) }} missas no mês)
 </option>
 {% endfor %}
 
 </select>
+
 </div>
 
 <div class="col-md-3">
