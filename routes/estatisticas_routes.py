@@ -15,11 +15,14 @@ from services.estatisticas_service import dados_confiabilidade
 
 estatisticas_bp = Blueprint("estatisticas", __name__)
 
+import routes.auth_routes as auth
+
+
 @estatisticas_bp.route("/estatisticas", methods=["GET", "POST"])
 @login_required
 @admin_required
 def estatisticas():
-
+    saudacao = auth.obter_saudacao()
     data_inicio = ""
     data_fim = ""
 
@@ -147,8 +150,10 @@ def whatsapp_periodo():
     links = []
 
     for ministro, lista_escalas in ministros_dict.items():
+        import routes.auth_routes as auth
+        saudacao = auth.obter_saudacao()
 
-        mensagem = f"Olá {ministro.nome},\n\n"
+        mensagem = f"{saudacao} {ministro.nome},\n\n"
         mensagem += "Esse é um lembrete para sua próxima escala do grupo Ministério da Eucaristia.\n\n"
 
         # 🔹 FORMATA DATA EM PORTUGUÊS

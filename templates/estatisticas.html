@@ -94,7 +94,7 @@
                             <br><br>
 
                         <a target="_blank"
-                            href="https://wa.me/55{{ e.ministro.telefone }}?text=Olá {{ e.ministro.nome }}, você está escalado dia {{ e.missa.data.strftime('%d/%m/%Y') }} às {{ e.missa.horario }} na {{ e.missa.comunidade }}."
+                            href="https://wa.me/55{{ e.ministro.telefone }}?text={{ saudacao }}  {{ e.ministro.nome }}, você está escalado dia {{ e.missa.data.strftime('%d/%m/%Y') }} às {{ e.missa.horario }} na {{ e.missa.comunidade }}."
                             class="btn btn-success btn-sm">
                             WhatsApp
                         </a> 

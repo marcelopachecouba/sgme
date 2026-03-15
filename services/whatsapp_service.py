@@ -33,10 +33,12 @@ def _link_calendario_publico(ministro):
         return None
     return url_for("publico.calendario_publico", token=ministro.token_publico, _external=True)
 
+    import routes.auth_routes as auth
+    saudacao = auth.obter_saudacao()
 
 def montar_mensagem_lembrete(ministro, missa, escala=None):
     linhas = [
-        f"Olá {ministro.nome.upper()},",
+        f"{saudacao} {ministro.nome.upper()},",
         "",
         "Esse é um lembrete para sua próxima escala do grupo Ministério da Eucaristia.",
         "",
