@@ -71,11 +71,12 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
         extract("year", Missa.data) == ano_novo
     ).all()
 
+    missas_processadas = set()
+
     for missa_base in missas_base:
 
         semana = semana_do_mes(missa_base.data)
 
-        # ignorar 5ª semana
         if semana == 5:
             continue
 
@@ -97,13 +98,17 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
         if not missa_destino:
             continue
 
-        # limpa escala existente da missa destino
+        if missa_destino.id in missas_processadas:
+            continue
+
+        missas_processadas.add(missa_destino.id)
+
         Escala.query.filter_by(
             id_missa=missa_destino.id
-        ).delete()
+        ).delete(synchronize_session=False)
 
         db.session.flush()
-        
+
         escalas_base = Escala.query.filter_by(
             id_missa=missa_base.id
         ).all()
@@ -113,14 +118,6 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
             ministro = escala.ministro
 
             if esta_indisponivel(ministro.id, missa_destino, paroquia_id):
-                continue
-
-            existe = Escala.query.filter_by(
-                id_missa=missa_destino.id,
-                id_ministro=ministro.id
-            ).first()
-
-            if existe:
                 continue
 
             nova = Escala(
