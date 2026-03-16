@@ -1292,7 +1292,7 @@ def gerar_escala_equilibrada():
 
     flash("Escala gerada baseada no mês escolhido!")
 
-    return redirect(url_for("dashboard.home"))
+    return redirect(url_for("dashboard.home")) 
 
 
 
