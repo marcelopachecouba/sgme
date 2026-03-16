@@ -59,14 +59,12 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
     from services.disponibilidade_service import esta_indisponivel
     import uuid
 
-    # missas do mês base
     missas_base = Missa.query.filter(
         Missa.id_paroquia == paroquia_id,
         extract("month", Missa.data) == mes_base,
         extract("year", Missa.data) == ano_base
     ).all()
 
-    # missas do mês novo
     missas_novas = Missa.query.filter(
         Missa.id_paroquia == paroquia_id,
         extract("month", Missa.data) == mes_novo,
@@ -76,9 +74,13 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
     for missa_base in missas_base:
 
         semana = semana_do_mes(missa_base.data)
+
+        # ignorar 5ª semana
+        if semana == 5:
+            continue
+
         dia_semana = missa_base.data.weekday()
 
-        # procurar missa equivalente
         missa_destino = None
 
         for missa in missas_novas:
@@ -99,7 +101,12 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
             id_missa=missa_base.id
         ).all()
 
+        contador = 0
+
         for escala in escalas_base:
+
+            if contador >= missa_destino.qtd_ministros:
+                break
 
             ministro = escala.ministro
 
@@ -122,5 +129,7 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
             )
 
             db.session.add(nova)
+
+            contador += 1
 
     db.session.commit()
