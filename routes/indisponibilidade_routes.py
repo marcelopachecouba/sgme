@@ -476,15 +476,53 @@ def mapa_disponibilidade():
 @login_required
 @admin_required
 def nova_disponibilidade():
+
     ministros = _listar_ministros_paroquia()
 
     if request.method == "POST":
+
         ministro_id, ministro = _get_ministro_do_form()
 
         if not ministro:
             abort(403)
 
-        horario = request.form.get("horario") or None
+        tipo_regra = (request.form.get("tipo_regra") or "fixa").strip()
+
+        horario = (request.form.get("horario") or "").strip() or None
+
+        # --------------------------------
+        # DISPONIBILIDADE POR DATA
+        # --------------------------------
+
+        if tipo_regra == "pontual":
+
+            data_str = request.form.get("data_especifica")
+
+            if not data_str:
+                flash("Informe uma data válida.")
+                return redirect(url_for("indisponibilidade.nova_disponibilidade"))
+
+            data_ref = datetime.strptime(data_str, "%Y-%m-%d").date()
+
+            db.session.add(
+                Disponibilidade(
+                    id_ministro=ministro_id,
+                    id_paroquia=current_user.id_paroquia,
+                    data=data_ref,
+                    horario=horario
+                )
+            )
+
+            db.session.commit()
+
+            flash("Disponibilidade por data cadastrada com sucesso.")
+
+            return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
+
+        # --------------------------------
+        # DISPONIBILIDADE FIXA
+        # --------------------------------
+
         dias = [int(d) for d in request.form.getlist("dias_semana[]")]
         semanas_raw = request.form.getlist("semanas[]")
 
@@ -495,6 +533,7 @@ def nova_disponibilidade():
 
         for dia in dias:
             for semana in semanas:
+
                 db.session.add(
                     DisponibilidadeFixa(
                         id_ministro=ministro_id,
@@ -506,10 +545,15 @@ def nova_disponibilidade():
                 )
 
         db.session.commit()
-        flash("Disponibilidade cadastrada com sucesso.")
+
+        flash("Disponibilidade fixa cadastrada com sucesso.")
+
         return redirect(url_for("indisponibilidade.listar_indisponibilidade"))
 
-    return render_template("nova_disponibilidade.html", ministros=ministros)
+    return render_template(
+        "nova_disponibilidade.html",
+        ministros=ministros
+    )
 
 
 @indisp_bp.route("/indisponibilidade/fixa/excluir/<int:id>", methods=["POST"])
