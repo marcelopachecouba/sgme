@@ -48,47 +48,51 @@ def gerar_escala_equilibrada_mes(mes, ano, paroquia_id, casais_juntos=True):
 
     db.session.commit()
 
+def semana_do_mes(data):
+    return ((data.day - 1) // 7) + 1
+
+
 def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
 
     from sqlalchemy import extract
-    from models import Missa, Escala, Ministro
+    from models import Missa, Escala
     from services.disponibilidade_service import esta_indisponivel
     import uuid
-    import calendar
 
+    # missas do mês base
     missas_base = Missa.query.filter(
         Missa.id_paroquia == paroquia_id,
         extract("month", Missa.data) == mes_base,
         extract("year", Missa.data) == ano_base
     ).all()
 
-    ministros = Ministro.query.filter_by(
-        id_paroquia=paroquia_id
+    # missas do mês novo
+    missas_novas = Missa.query.filter(
+        Missa.id_paroquia == paroquia_id,
+        extract("month", Missa.data) == mes_novo,
+        extract("year", Missa.data) == ano_novo
     ).all()
 
     for missa_base in missas_base:
 
-        dia = missa_base.data.day
+        semana = semana_do_mes(missa_base.data)
+        dia_semana = missa_base.data.weekday()
 
-        ultimo_dia = calendar.monthrange(ano_novo, mes_novo)[1]
+        # procurar missa equivalente
+        missa_destino = None
 
-        if dia > ultimo_dia:
-            dia = ultimo_dia
+        for missa in missas_novas:
 
-        nova_data = missa_base.data.replace(
-            year=ano_novo,
-            month=mes_novo,
-            day=dia
-        )
+            if (
+                semana_do_mes(missa.data) == semana
+                and missa.data.weekday() == dia_semana
+                and missa.horario == missa_base.horario
+                and missa.comunidade == missa_base.comunidade
+            ):
+                missa_destino = missa
+                break
 
-        nova_missa = Missa.query.filter_by(
-            data=nova_data,
-            horario=missa_base.horario,
-            comunidade=missa_base.comunidade,
-            id_paroquia=paroquia_id
-        ).first()
-
-        if not nova_missa:
+        if not missa_destino:
             continue
 
         escalas_base = Escala.query.filter_by(
@@ -99,32 +103,11 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
 
             ministro = escala.ministro
 
-            # verifica indisponibilidade
-            if esta_indisponivel(ministro.id, nova_missa, paroquia_id):
+            if esta_indisponivel(ministro.id, missa_destino, paroquia_id):
+                continue
 
-                # procurar substituto
-                for candidato in ministros:
-
-                    if candidato.id == ministro.id:
-                        continue
-
-                    if esta_indisponivel(candidato.id, nova_missa, paroquia_id):
-                        continue
-
-                    conflito = Escala.query.join(Missa).filter(
-                        Escala.id_ministro == candidato.id,
-                        Missa.data == nova_missa.data
-                    ).first()
-
-                    if conflito:
-                        continue
-
-                    ministro = candidato
-                    break
-
-            # evitar duplicar escala
             existe = Escala.query.filter_by(
-                id_missa=nova_missa.id,
+                id_missa=missa_destino.id,
                 id_ministro=ministro.id
             ).first()
 
@@ -132,7 +115,7 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
                 continue
 
             nova = Escala(
-                id_missa=nova_missa.id,
+                id_missa=missa_destino.id,
                 id_ministro=ministro.id,
                 id_paroquia=paroquia_id,
                 token=str(uuid.uuid4())
