@@ -1269,7 +1269,25 @@ def confirmar_presenca(token):
 
     return "Presença confirmada com sucesso"
 
+@escala_bp.route("/gerar_escala_equilibrada", methods=["POST"])
+@login_required
+@admin_required
+def gerar_escala_equilibrada():
 
+    mes = int(request.form["mes"])
+    ano = int(request.form["ano"])
+
+    from services.escala_equilibrada_service import gerar_escala_equilibrada_mes
+
+    gerar_escala_equilibrada_mes(
+        mes=mes,
+        ano=ano,
+        paroquia_id=current_user.id_paroquia
+    )
+
+    flash("Escala automática equilibrada gerada com sucesso!")
+
+    return redirect(url_for("missas.missas"))
 
 
 
