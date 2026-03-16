@@ -97,16 +97,18 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
         if not missa_destino:
             continue
 
+        # limpa escala existente da missa destino
+        Escala.query.filter_by(
+            id_missa=missa_destino.id
+        ).delete()
+
+        db.session.flush()
+        
         escalas_base = Escala.query.filter_by(
             id_missa=missa_base.id
         ).all()
 
-        contador = 0
-
         for escala in escalas_base:
-
-            if contador >= missa_destino.qtd_ministros:
-                break
 
             ministro = escala.ministro
 
@@ -129,7 +131,5 @@ def copiar_escala_mes(mes_base, ano_base, mes_novo, ano_novo, paroquia_id):
             )
 
             db.session.add(nova)
-
-            contador += 1
 
     db.session.commit()
