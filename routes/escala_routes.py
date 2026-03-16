@@ -1274,21 +1274,25 @@ def confirmar_presenca(token):
 @admin_required
 def gerar_escala_equilibrada():
 
-    mes = int(request.form["mes"])
-    ano = int(request.form["ano"])
+    mes_novo = int(request.form["mes_novo"])
+    ano_novo = int(request.form["ano_novo"])
 
-    from services.escala_equilibrada_service import gerar_escala_equilibrada_mes
+    mes_base = int(request.form["mes_base"])
+    ano_base = int(request.form["ano_base"])
 
-    gerar_escala_equilibrada_mes(
-        mes=mes,
-        ano=ano,
+    from services.escala_equilibrada_service import copiar_escala_mes
+
+    copiar_escala_mes(
+        mes_base=mes_base,
+        ano_base=ano_base,
+        mes_novo=mes_novo,
+        ano_novo=ano_novo,
         paroquia_id=current_user.id_paroquia
     )
 
-    flash("Escala automática equilibrada gerada com sucesso!")
+    flash("Escala gerada baseada no mês escolhido!")
 
-    return redirect(url_for("missas.missas"))
-
+    return redirect(url_for("dashboard.dashboard"))
 
 
 
