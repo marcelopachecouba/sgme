@@ -3,7 +3,7 @@ from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import urllib.parse
-
+from services.relatorio_service import montar_mensagem
 
 def semana_do_mes(dia):
     return ((dia - 1) // 7) + 1
