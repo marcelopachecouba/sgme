@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from services.relatorio_service import obter_saudacao
 
 from models import Escala, Missa, Ministro, Substituicao
 from services.dashboard_service import construir_dashboard
@@ -369,7 +370,7 @@ import routes.auth_routes as auth
 def responder_substituicao():
     substituicao = Substituicao.query.get_or_404(id)
 
-    saudacao = auth.obter_saudacao()
+    saudacao = obter_saudacao()
 
     if request.method == "POST":
         payload = request.get_json(silent=True) or request.form

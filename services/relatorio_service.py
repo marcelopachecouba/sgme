@@ -1,6 +1,19 @@
 from datetime import datetime
 from models import Escala
 
+def obter_saudacao():
+    from datetime import datetime
+
+    hora = datetime.now().hour
+
+    if hora < 12:
+        return "Bom dia"
+    elif hora < 18:
+        return "Boa tarde"
+    else:
+        return "Boa noite"
+
+
 def semana_do_mes(data):
     return ((data.day - 1) // 7) + 1
 

@@ -1,6 +1,6 @@
 import urllib.parse
 from flask import url_for
-
+from services.relatorio_service import obter_saudacao
 
 MESES_PT = {
     1: "Janeiro",
@@ -34,7 +34,7 @@ def _link_calendario_publico(ministro):
     return url_for("publico.calendario_publico", token=ministro.token_publico, _external=True)
 
     import routes.auth_routes as auth
-    saudacao = auth.obter_saudacao()
+    saudacao = obter_saudacao()
 
 def montar_mensagem_lembrete(ministro, missa, escala=None):
     linhas = [
@@ -71,7 +71,7 @@ def montar_mensagem_escala(ministro, missa, escala=None):
 
 import routes.auth_routes as auth
 
-saudacao = auth.obter_saudacao()
+saudacao = obter_saudacao()
 
 def montar_mensagem_substituicao(destinatario, missa, solicitante_nome, link_confirmacao):
     return (
@@ -103,7 +103,7 @@ def montar_mensagem_convite_troca(
 ):
     import routes.auth_routes as auth
 
-    saudacao = auth.obter_saudacao()
+    saudacao = obter_saudacao()
 
     return (
         f"{saudacao} {destinatario.nome}. Voce pode trocar a sua missa de "

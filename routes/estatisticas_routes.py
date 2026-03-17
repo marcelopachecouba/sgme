@@ -15,16 +15,18 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from services.estatisticas_service import dados_confiabilidade
 
+
 estatisticas_bp = Blueprint("estatisticas", __name__)
 
 import routes.auth_routes as auth
 
+from services.relatorio_service import obter_saudacao
 
 @estatisticas_bp.route("/estatisticas", methods=["GET", "POST"])
 @login_required
 @admin_required
 def estatisticas():
-    saudacao = auth.obter_saudacao()
+    saudacao = obter_saudacao()
     data_inicio = ""
     data_fim = ""
 
@@ -153,7 +155,7 @@ def whatsapp_periodo():
 
     for ministro, lista_escalas in ministros_dict.items():
         import routes.auth_routes as auth
-        saudacao = auth.obter_saudacao()
+        saudacao = obter_saudacao()
 
         mensagem = f"{saudacao} {ministro.nome},\n\n"
         mensagem += "Esse é um lembrete para sua próxima escala do grupo Ministério da Eucaristia.\n\n"
@@ -248,7 +250,7 @@ def whatsapp_relatorio():
 
     for ministro, lista_escalas in ministros_dict.items():
 
-        saudacao = auth.obter_saudacao()
+        saudacao = obter_saudacao()
 
         mensagem = f"{saudacao} {ministro.nome} 🙏\n\n"
         mensagem += "Segue sua escala do período:\n\n"
@@ -320,7 +322,7 @@ def whatsapp_auto():
 
     for ministro, lista_escalas in ministros_dict.items():
 
-        saudacao = auth.obter_saudacao()
+        saudacao = obter_saudacao()
 
         mensagem = f"{saudacao} {ministro.nome} 🙏\n\n"
         mensagem += "Segue sua escala do período:\n\n"

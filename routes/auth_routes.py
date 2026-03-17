@@ -216,16 +216,3 @@ def salvar_token():
     db.session.commit()
     return {"status": "ok"}
 
-from datetime import datetime
-
-def obter_saudacao():
-    from datetime import datetime
-
-    hora = datetime.now().hour
-
-    if hora < 12:
-        return "Bom dia"
-    elif hora < 18:
-        return "Boa tarde"
-    else:
-        return "Boa noite"
