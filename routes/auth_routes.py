@@ -237,16 +237,28 @@ def semana_do_mes(dia):
 
 def montar_mensagem(ministro):
 
+    from datetime import datetime
+    from collections import defaultdict
+
+    def saudacao():
+        h = datetime.now().hour
+        if h < 12:
+            return "Bom dia"
+        elif h < 18:
+            return "Boa tarde"
+        return "Boa noite"
+
+    def semana_do_mes(dia):
+        return ((dia - 1) // 7) + 1
+
     meses_nome = {
-        1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO",
-        4: "ABRIL", 5: "MAIO", 6: "JUNHO",
-        7: "JULHO", 8: "AGOSTO", 9: "SETEMBRO",
-        10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
+        1:"JANEIRO",2:"FEVEREIRO",3:"MARÇO",
+        4:"ABRIL",5:"MAIO",6:"JUNHO",
+        7:"JULHO",8:"AGOSTO",9:"SETEMBRO",
+        10:"OUTUBRO",11:"NOVEMBRO",12:"DEZEMBRO"
     }
 
     dias_nome = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
-
-    from collections import defaultdict
 
     por_mes = defaultdict(list)
 
@@ -254,33 +266,30 @@ def montar_mensagem(ministro):
         dia, mes, ano = map(int, m["data"].split("/"))
         por_mes[mes].append(m)
 
-    mensagem = f"{obter_saudacao()} {ministro['nome']} 🙏\n\n"
-    mensagem += "📅 *Sua escala por mês:*\n\n"
-    mensagem += "━━━━━━━━━━━━━━━\n"
+    msg = f"{saudacao()} {ministro['nome']} 🙏\n\n"
+    msg += "📅 *ESCALA DO PERÍODO*\n\n"
 
     for mes in sorted(por_mes.keys()):
 
-        mensagem += f"📌 *{meses_nome[mes]}*\n"
+        msg += "━━━━━━━━━━━━━━━\n"
+        msg += f"📌 *{meses_nome[mes]}*\n"
 
-        lista = sorted(por_mes[mes], key=lambda x: int(x["data"].split("/")[0]))
+        lista = sorted(
+            por_mes[mes],
+            key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y")
+        )
 
         for m in lista:
 
             dia = int(m["data"].split("/")[0])
             semana = semana_do_mes(dia)
 
-            mensagem += (
-                f"{m['data']} - "
-                f"{dias_nome[m['dia_semana']]} "
-                f"({semana}ª semana) - {m['horario']}\n"
+            msg += (
+                f"🗓 {m['data'][:2]} • {dias_nome[m['dia_semana']]} ({semana}ª semana)\n"
+                f"⏰ {m['horario']} | 📍 {m['comunidade']}\n\n"
             )
 
-        mensagem += "\n"
+    msg += "━━━━━━━━━━━━━━━\n\n"
+    msg += "🙏 Deus abençoe seu serviço!"
 
-    if ministro["missas"]:
-        mensagem += "━━━━━━━━━━━━━━━\n"
-        mensagem += f"📍 Comunidade: {ministro['missas'][0]['comunidade']}\n\n"
-
-    mensagem += "Deus abençoe seu serviço 🙏"
-
-    return mensagem
+    return msg
