@@ -2,6 +2,8 @@ from datetime import datetime
 import io
 import urllib.parse
 from collections import defaultdict
+import os
+if os.getenv("RENDER") != "true":
 from services.whatsapp_selenium_service import iniciar_driver, enviar_mensagem
 from flask import Blueprint, render_template, request, url_for, send_file
 from flask_login import login_required, current_user
@@ -340,3 +342,56 @@ def whatsapp_auto():
         enviar_mensagem(ministro.telefone, mensagem)
 
     return "Mensagens enviadas com sucesso!"
+
+@estatisticas_bp.route("/estatisticas/exportar_whatsapp", methods=["POST"])
+@login_required
+@admin_required
+def exportar_whatsapp():
+
+    import json
+    from collections import defaultdict
+
+    data_inicio = request.form.get("data_inicio")
+    data_fim = request.form.get("data_fim")
+
+    query = Escala.query.join(Missa).join(Ministro).filter(
+        Escala.id_paroquia == current_user.id_paroquia
+    )
+
+    if data_inicio:
+        data_inicio_date = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) >= data_inicio_date)
+
+    if data_fim:
+        data_fim_date = datetime.strptime(data_fim, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) <= data_fim_date)
+
+    escalas = query.order_by(Ministro.nome, Missa.data).all()
+
+    ministros_dict = defaultdict(list)
+
+    for e in escalas:
+        if e.ministro and e.ministro.telefone:
+            ministros_dict[e.ministro].append(e)
+
+    dados = []
+
+    for ministro, lista in ministros_dict.items():
+
+        missas = []
+
+        for e in lista:
+            missas.append({
+                "data": e.missa.data.strftime("%d/%m/%Y"),
+                "dia_semana": e.missa.data.weekday(),
+                "horario": e.missa.horario,
+                "comunidade": e.missa.comunidade
+            })
+
+        dados.append({
+            "nome": ministro.nome,
+            "telefone": ministro.telefone,
+            "missas": missas
+        })
+
+    return json.dumps(dados, ensure_ascii=False)

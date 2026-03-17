@@ -1,0 +1,21 @@
+# Ambiente virtual
+venv/
+
+# Arquivos grandes
+*.zip
+*.rar
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Selenium / Chrome
+chromedriver*
+chrome-win64*
