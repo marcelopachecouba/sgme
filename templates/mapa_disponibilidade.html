@@ -189,8 +189,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function aplicarEstado(ministroId, semana, dia, horario, status) {
     const mapaStatus = {
       disponivel: { texto: "✔", add: "disponivel", remove: ["indisponivel", "neutro"] },
-      indisponivel: { texto: "X", add: "indisponivel", remove: ["disponivel", "neutro"] },
-      neutro: { texto: "•", add: "neutro", remove: ["disponivel", "indisponivel"] }
+      indisponivel: { texto: "", add: "indisponivel", remove: ["disponivel", "neutro"] },
+      neutro: { texto: "", add: "neutro", remove: ["disponivel", "indisponivel"] }
     };
     const estado = mapaStatus[status] || mapaStatus.neutro;
 
@@ -206,13 +206,29 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   document.querySelectorAll(".celula-mapa").forEach((celula) => {
-    celula.addEventListener("click", function () {
-      const ministroId = this.dataset.ministro;
-      const semana = Number(this.dataset.semana);
-      const dia = Number(this.dataset.dia);
-      const horario = this.dataset.horario;
+        celula.addEventListener("click", function () {
 
-      fetch("/api/toggle_indisponibilidade", {
+        const ministroId = this.dataset.ministro;
+        const semana = Number(this.dataset.semana);
+        const dia = Number(this.dataset.dia);
+        const horario = this.dataset.horario;
+
+        // detectar estado atual
+        const estaIndisponivel = this.classList.contains("indisponivel");
+
+        let mensagem = "";
+
+        if (estaIndisponivel) {
+            mensagem = "Deseja REMOVER a indisponibilidade deste ministro?";
+        } else {
+            mensagem = "Deseja marcar como INDISPONÍVEL?";
+        }
+
+        if (!confirm(mensagem)) {
+            return; // cancela
+        }
+
+        fetch("/api/toggle_indisponibilidade", {        
         method: "POST",
         headers: {
           "Content-Type": "application/json"

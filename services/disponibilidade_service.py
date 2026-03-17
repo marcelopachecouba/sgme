@@ -77,44 +77,42 @@ def resolver_status_missa(ministro_id, missa, id_paroquia):
     return "neutro"
 
 
-def esta_indisponivel(ministro_id, missa, paroquia_id):
+def esta_indisponivel(ministro_id, missa, id_paroquia):
+    return resolver_status_missa(ministro_id, missa, id_paroquia) == "indisponivel"
 
-    from models import Disponibilidade
+def esta_disponivel(ministro_id, missa, paroquia_id):
 
-    data = missa.data
-    dia_semana = data.weekday()
-
-    # 1️⃣ DISPONIBILIDADE POR DATA (tem prioridade)
+    # disponibilidade por data
     disp_data = Disponibilidade.query.filter_by(
         id_ministro=ministro_id,
-        data=data,
-        tipo="disponivel",
+        data=missa.data,
         id_paroquia=paroquia_id
     ).first()
 
     if disp_data:
-        return False
-
-    # 2️⃣ INDISPONIBILIDADE POR DATA
-    indis_data = Disponibilidade.query.filter_by(
-        id_ministro=ministro_id,
-        data=data,
-        tipo="indisponivel",
-        id_paroquia=paroquia_id
-    ).first()
-
-    if indis_data:
         return True
 
-    # 3️⃣ INDISPONIBILIDADE SEMANAL
-    indis_semana = Disponibilidade.query.filter_by(
+    # disponibilidade fixa
+    disp_fixa = DisponibilidadeFixa.query.filter_by(
         id_ministro=ministro_id,
-        dia_semana=dia_semana,
-        tipo="indisponivel",
+        dia_semana=missa.data.weekday(),
         id_paroquia=paroquia_id
     ).first()
 
-    if indis_semana:
+    if disp_fixa:
         return True
 
     return False
+
+def pode_escalar(ministro_id, missa, paroquia_id):
+
+    # 1️⃣ Se tem disponibilidade específica → PRIORIDADE MÁXIMA
+    if esta_disponivel(ministro_id, missa, paroquia_id):
+        return True
+
+    # 2️⃣ Se está indisponível → NÃO pode
+    if esta_indisponivel(ministro_id, missa, paroquia_id):
+        return False
+
+    # 3️⃣ Caso contrário → disponível por padrão
+    return True
