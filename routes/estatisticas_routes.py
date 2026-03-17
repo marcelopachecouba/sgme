@@ -213,3 +213,73 @@ def confiabilidade():
     dados = dados_confiabilidade(current_user.id_paroquia)
     return render_template("confiabilidade.html", dados=dados)
 
+@estatisticas_bp.route("/estatisticas/whatsapp_relatorio", methods=["POST"])
+@login_required
+@admin_required
+def whatsapp_relatorio():
+
+    data_inicio = request.form.get("data_inicio")
+    data_fim = request.form.get("data_fim")
+
+    query = Escala.query.join(Missa).join(Ministro).filter(
+        Escala.id_paroquia == current_user.id_paroquia
+    )
+
+    if data_inicio:
+        data_inicio_date = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) >= data_inicio_date)
+
+    if data_fim:
+        data_fim_date = datetime.strptime(data_fim, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) <= data_fim_date)
+
+    escalas = query.order_by(Ministro.nome, Missa.data).all()
+
+    from collections import defaultdict
+    ministros_dict = defaultdict(list)
+
+    for e in escalas:
+        if e.ministro and e.ministro.telefone:
+            ministros_dict[e.ministro].append(e)
+
+    links = []
+
+    for ministro, lista_escalas in ministros_dict.items():
+
+        saudacao = auth.obter_saudacao()
+
+        mensagem = f"{saudacao} {ministro.nome} 🙏\n\n"
+        mensagem += "Segue sua escala do período:\n\n"
+
+        for escala in lista_escalas:
+
+            missa = escala.missa
+
+            semana = ((missa.data.day - 1) // 7) + 1
+
+            dias_semana = [
+                "Segunda", "Terça", "Quarta", "Quinta",
+                "Sexta", "Sábado", "Domingo"
+            ]
+
+            dia_nome = dias_semana[missa.data.weekday()]
+
+            mensagem += (
+                f"{missa.data.strftime('%d/%m')} - "
+                f"{dia_nome} ({semana}ª semana)\n"
+                f"{missa.horario} - {missa.comunidade}\n\n"
+            )
+
+        mensagem += "Deus abençoe seu serviço 🙏"
+
+        mensagem_codificada = urllib.parse.quote(mensagem)
+
+        link = f"https://wa.me/55{ministro.telefone}?text={mensagem_codificada}"
+
+        links.append({
+            "nome": ministro.nome,
+            "qtd": len(lista_escalas),
+            "link": link
+        })
+
+    return render_template("whatsapp_lista.html", links=links)
