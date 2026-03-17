@@ -4,7 +4,7 @@ import urllib.parse
 from collections import defaultdict
 import os
 if os.getenv("RENDER") != "true":
-from services.whatsapp_selenium_service import iniciar_driver, enviar_mensagem
+ from services.whatsapp_selenium_service import iniciar_driver, enviar_mensagem
 from flask import Blueprint, render_template, request, url_for, send_file
 from flask_login import login_required, current_user
 from models import db, Ministro, Missa, Escala

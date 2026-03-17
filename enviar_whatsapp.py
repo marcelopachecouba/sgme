@@ -63,7 +63,7 @@ def main():
     for ministro in dados:
 
         mensagem = montar_mensagem(ministro)
-
+        
         if enviar(driver, ministro["telefone"], mensagem):
             print(f"✅ {ministro['nome']}")
         else:

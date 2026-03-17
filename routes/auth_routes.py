@@ -219,12 +219,68 @@ def salvar_token():
 from datetime import datetime
 
 def obter_saudacao():
+    from datetime import datetime
 
     hora = datetime.now().hour
 
-    if 5 <= hora < 12:
+    if hora < 12:
         return "Bom dia"
-    elif 12 <= hora < 18:
+    elif hora < 18:
         return "Boa tarde"
     else:
         return "Boa noite"
+
+
+def semana_do_mes(dia):
+    return ((dia - 1) // 7) + 1
+
+
+def montar_mensagem(ministro):
+
+    meses_nome = {
+        1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO",
+        4: "ABRIL", 5: "MAIO", 6: "JUNHO",
+        7: "JULHO", 8: "AGOSTO", 9: "SETEMBRO",
+        10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
+    }
+
+    dias_nome = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
+
+    from collections import defaultdict
+
+    por_mes = defaultdict(list)
+
+    for m in ministro["missas"]:
+        dia, mes, ano = map(int, m["data"].split("/"))
+        por_mes[mes].append(m)
+
+    mensagem = f"{obter_saudacao()} {ministro['nome']} 🙏\n\n"
+    mensagem += "📅 *Sua escala por mês:*\n\n"
+    mensagem += "━━━━━━━━━━━━━━━\n"
+
+    for mes in sorted(por_mes.keys()):
+
+        mensagem += f"📌 *{meses_nome[mes]}*\n"
+
+        lista = sorted(por_mes[mes], key=lambda x: int(x["data"].split("/")[0]))
+
+        for m in lista:
+
+            dia = int(m["data"].split("/")[0])
+            semana = semana_do_mes(dia)
+
+            mensagem += (
+                f"{m['data']} - "
+                f"{dias_nome[m['dia_semana']]} "
+                f"({semana}ª semana) - {m['horario']}\n"
+            )
+
+        mensagem += "\n"
+
+    if ministro["missas"]:
+        mensagem += "━━━━━━━━━━━━━━━\n"
+        mensagem += f"📍 Comunidade: {ministro['missas'][0]['comunidade']}\n\n"
+
+    mensagem += "Deus abençoe seu serviço 🙏"
+
+    return mensagem
