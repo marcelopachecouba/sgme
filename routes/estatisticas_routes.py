@@ -2,7 +2,7 @@ from datetime import datetime
 import io
 import urllib.parse
 from collections import defaultdict
-
+from services.whatsapp_selenium_service import iniciar_driver, enviar_mensagem
 from flask import Blueprint, render_template, request, url_for, send_file
 from flask_login import login_required, current_user
 from models import db, Ministro, Missa, Escala
@@ -283,3 +283,60 @@ def whatsapp_relatorio():
         })
 
     return render_template("whatsapp_lista.html", links=links)
+
+@estatisticas_bp.route("/estatisticas/whatsapp_auto", methods=["POST"])
+@login_required
+@admin_required
+def whatsapp_auto():
+
+    data_inicio = request.form.get("data_inicio")
+    data_fim = request.form.get("data_fim")
+
+    query = Escala.query.join(Missa).join(Ministro).filter(
+        Escala.id_paroquia == current_user.id_paroquia
+    )
+
+    if data_inicio:
+        data_inicio_date = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) >= data_inicio_date)
+
+    if data_fim:
+        data_fim_date = datetime.strptime(data_fim, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) <= data_fim_date)
+
+    escalas = query.order_by(Ministro.nome, Missa.data).all()
+
+    from collections import defaultdict
+    ministros_dict = defaultdict(list)
+
+    for e in escalas:
+        if e.ministro and e.ministro.telefone:
+            ministros_dict[e.ministro].append(e)
+
+    # inicia WhatsApp
+    iniciar_driver()
+
+    for ministro, lista_escalas in ministros_dict.items():
+
+        saudacao = auth.obter_saudacao()
+
+        mensagem = f"{saudacao} {ministro.nome} 🙏\n\n"
+        mensagem += "Segue sua escala do período:\n\n"
+
+        for escala in lista_escalas:
+            missa = escala.missa
+            semana = ((missa.data.day - 1) // 7) + 1
+
+            dias = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
+
+            mensagem += (
+                f"{missa.data.strftime('%d/%m')} - "
+                f"{dias[missa.data.weekday()]} ({semana}ª semana)\n"
+                f"{missa.horario} - {missa.comunidade}\n\n"
+            )
+
+        mensagem += "Deus abençoe seu serviço 🙏"
+
+        enviar_mensagem(ministro.telefone, mensagem)
+
+    return "Mensagens enviadas com sucesso!"
