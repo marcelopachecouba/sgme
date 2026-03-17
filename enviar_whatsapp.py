@@ -3,70 +3,9 @@ from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import urllib.parse
-from services.relatorio_service import montar_mensagem
 
-def semana_do_mes(dia):
-    return ((dia - 1) // 7) + 1
+from services.relatorio_service import montar_mensagem  # ✅ usa a correta
 
-
-def montar_mensagem(ministro):
-
-    from datetime import datetime
-    from collections import defaultdict
-
-    def saudacao():
-        h = datetime.now().hour
-        if h < 12:
-            return "Bom dia"
-        elif h < 18:
-            return "Boa tarde"
-        return "Boa noite"
-
-    def semana_do_mes(dia):
-        return ((dia - 1) // 7) + 1
-
-    meses_nome = {
-        1:"JANEIRO",2:"FEVEREIRO",3:"MARÇO",
-        4:"ABRIL",5:"MAIO",6:"JUNHO",
-        7:"JULHO",8:"AGOSTO",9:"SETEMBRO",
-        10:"OUTUBRO",11:"NOVEMBRO",12:"DEZEMBRO"
-    }
-
-    dias_nome = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
-
-    por_mes = defaultdict(list)
-
-    for m in ministro["missas"]:
-        dia, mes, ano = map(int, m["data"].split("/"))
-        por_mes[mes].append(m)
-
-    msg = f"{saudacao()} {ministro['nome']} 🙏\n\n"
-    msg += "📅 *ESCALA DO PERÍODO*\n\n"
-
-    for mes in sorted(por_mes.keys()):
-
-        msg += "━━━━━━━━━━━━━━━\n"
-        msg += f"📌 *{meses_nome[mes]}*\n"
-
-        lista = sorted(
-            por_mes[mes],
-            key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y")
-        )
-
-        for m in lista:
-
-            dia = int(m["data"].split("/")[0])
-            semana = semana_do_mes(dia)
-
-            msg += (
-                f"🗓 {m['data'][:2]} • {dias_nome[m['dia_semana']]} ({semana}ª semana)\n"
-                f"⏰ {m['horario']} | 📍 {m['comunidade']}\n\n"
-            )
-
-    msg += "━━━━━━━━━━━━━━━\n\n"
-    msg += "🙏 Deus abençoe seu serviço!"
-
-    return msg
 
 def enviar(driver, numero, mensagem):
 
@@ -87,7 +26,6 @@ def enviar(driver, numero, mensagem):
 
 def main():
 
-    # 🔥 arquivo exportado do sistema
     with open("dados_whatsapp.json", "r", encoding="utf-8") as f:
         dados = json.load(f)
 
@@ -98,8 +36,8 @@ def main():
 
     for ministro in dados:
 
-        mensagem = montar_mensagem(ministro)
-        
+        mensagem = montar_mensagem(ministro)  # ✅ aqui usa service
+
         if enviar(driver, ministro["telefone"], mensagem):
             print(f"✅ {ministro['nome']}")
         else:
