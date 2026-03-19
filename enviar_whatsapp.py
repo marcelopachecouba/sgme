@@ -29,7 +29,7 @@ def main():
     with open("dados_whatsapp.json", "r", encoding="utf-8") as f:
         dados = json.load(f)
 
-    driver = webdriver.Chrome()
+   
     driver.get("https://web.whatsapp.com")
 
     input("Escaneie QR Code e pressione ENTER...")

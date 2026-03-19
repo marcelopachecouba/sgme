@@ -1,10 +1,9 @@
+
 from datetime import datetime
 import io
 import urllib.parse
 from collections import defaultdict
 import os
-if os.getenv("RENDER") != "true":
- from services.whatsapp_selenium_service import iniciar_driver, enviar_mensagem
 from flask import Blueprint, render_template, request, url_for, send_file
 from flask_login import login_required, current_user
 from models import db, Ministro, Missa, Escala
@@ -14,7 +13,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from services.estatisticas_service import dados_confiabilidade
-
+from services.relatorio_service import montar_mensagem_unificada
 
 estatisticas_bp = Blueprint("estatisticas", __name__)
 
@@ -250,32 +249,7 @@ def whatsapp_relatorio():
 
     for ministro, lista_escalas in ministros_dict.items():
 
-        saudacao = obter_saudacao()
-
-        mensagem = f"{saudacao} {ministro.nome} 🙏\n\n"
-        mensagem += "Segue sua escala do período:\n\n"
-
-        for escala in lista_escalas:
-
-            missa = escala.missa
-
-            semana = ((missa.data.day - 1) // 7) + 1
-
-            dias_semana = [
-                "Segunda", "Terça", "Quarta", "Quinta",
-                "Sexta", "Sábado", "Domingo"
-            ]
-
-            dia_nome = dias_semana[missa.data.weekday()]
-
-            mensagem += (
-                f"{missa.data.strftime('%d/%m')} - "
-                f"{dia_nome} ({semana}ª semana)\n"
-                f"{missa.horario} - {missa.comunidade}\n\n"
-            )
-
-        mensagem += "Deus abençoe seu serviço 🙏"
-
+        mensagem = montar_mensagem_unificada(ministro, lista_escalas)
         mensagem_codificada = urllib.parse.quote(mensagem)
 
         link = f"https://wa.me/55{ministro.telefone}?text={mensagem_codificada}"

@@ -3,8 +3,10 @@ from models import Escala
 
 def obter_saudacao():
     from datetime import datetime
+    import pytz
 
-    hora = datetime.now().hour
+    fuso = pytz.timezone("America/Sao_Paulo")
+    hora = datetime.now(fuso).hour
 
     if hora < 12:
         return "Bom dia"
@@ -12,7 +14,6 @@ def obter_saudacao():
         return "Boa tarde"
     else:
         return "Boa noite"
-
 
 def semana_do_mes(data):
     return ((data.day - 1) // 7) + 1
@@ -110,3 +111,143 @@ def montar_mensagem_calendario(ministro, escalas):
     mensagem += "Deus abençoe seu serviço 🙏"
 
     return mensagem
+
+def montar_mensagem_json(ministro):
+
+    from datetime import datetime
+    from collections import defaultdict
+
+    def obter_saudacao():
+        from datetime import datetime, timedelta
+        hora = (datetime.utcnow() - timedelta(hours=3)).hour
+        if hora < 12:
+            return "Bom dia"
+        elif hora < 18:
+            return "Boa tarde"
+        return "Boa noite"
+
+    def semana_do_mes(dia):
+        return ((dia - 1) // 7) + 1
+
+    meses_nome = {
+        1:"JANEIRO",2:"FEVEREIRO",3:"MARÇO",
+        4:"ABRIL",5:"MAIO",6:"JUNHO",
+        7:"JULHO",8:"AGOSTO",9:"SETEMBRO",
+        10:"OUTUBRO",11:"NOVEMBRO",12:"DEZEMBRO"
+    }
+
+    dias_nome = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
+
+    por_mes = defaultdict(list)
+
+    for m in ministro["missas"]:
+        dia, mes, ano = map(int, m["data"].split("/"))
+        por_mes[mes].append(m)
+
+    msg = f"{obter_saudacao()} {ministro['nome']} 🙏\n\n"
+    msg += "📅 *ESCALA DO PERÍODO*\n\n"
+
+    for mes in sorted(por_mes.keys()):
+
+        msg += "━━━━━━━━━━━━━━━\n"
+        msg += f"📌 *{meses_nome[mes]}*\n"
+
+        lista = sorted(
+            por_mes[mes],
+            key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y")
+        )
+
+        for m in lista:
+
+            dia = int(m["data"].split("/")[0])
+            semana = semana_do_mes(dia)
+
+            msg += (
+                f"🗓 {m['data'][:2]} • "
+                f"{dias_nome[m['dia_semana']]} ({semana}ª semana)\n"
+                f"⏰ {m['horario']} | 📍 {m['comunidade']}\n\n"
+            )
+
+    msg += "━━━━━━━━━━━━━━━\n\n"
+    msg += "🙏 Deus abençoe seu serviço!"
+
+    return msg
+
+def montar_mensagem_unificada(ministro, lista_escalas=None):
+
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
+    # saudação com fuso Brasil
+    hora = (datetime.utcnow() - timedelta(hours=3)).hour
+
+    if hora < 12:
+        saudacao = "Bom dia"
+    elif hora < 18:
+        saudacao = "Boa tarde"
+    else:
+        saudacao = "Boa noite"
+
+    meses_nome = {
+        1:"JANEIRO",2:"FEVEREIRO",3:"MARÇO",
+        4:"ABRIL",5:"MAIO",6:"JUNHO",
+        7:"JULHO",8:"AGOSTO",9:"SETEMBRO",
+        10:"OUTUBRO",11:"NOVEMBRO",12:"DEZEMBRO"
+    }
+
+    dias_nome = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
+
+    por_mes = defaultdict(list)
+
+    # 🔥 CASO 1 → vindo do Flask (banco)
+    if lista_escalas:
+        for escala in lista_escalas:
+            missa = escala.missa
+            por_mes[missa.data.month].append({
+                "data": missa.data,
+                "dia_semana": missa.data.weekday(),
+                "horario": missa.horario,
+                "comunidade": missa.comunidade
+            })
+
+        nome = ministro.nome
+
+    # 🔥 CASO 2 → vindo do JSON
+    else:
+        for m in ministro["missas"]:
+            dia, mes, ano = map(int, m["data"].split("/"))
+
+            por_mes[mes].append({
+                "data": datetime(ano, mes, dia),
+                "dia_semana": m["dia_semana"],
+                "horario": m["horario"],
+                "comunidade": m["comunidade"]
+            })
+
+        nome = ministro["nome"]
+
+    # montagem da mensagem
+    msg = f"{saudacao} {nome} 🙏\n\n"
+    msg += "📅 *ESCALA DO PERÍODO*\n\n"
+
+    for mes in sorted(por_mes.keys()):
+
+        msg += "━━━━━━━━━━━━━━━\n"
+        msg += f"📌 *{meses_nome[mes]}*\n"
+
+        lista = sorted(por_mes[mes], key=lambda x: x["data"])
+
+        for m in lista:
+
+            semana = ((m["data"].day - 1) // 7) + 1
+
+            msg += (
+                f"🗓 {m['data'].strftime('%d')} • "
+                f"{dias_nome[m['dia_semana']]} ({semana}ª semana)\n"
+                f"⏰ {m['horario']} | 📍 {m['comunidade']}\n\n"
+            )
+
+    msg += "━━━━━━━━━━━━━━━\n\n"
+    msg += "🙏 Deus abençoe seu serviço!"
+
+    return msg
