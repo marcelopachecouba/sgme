@@ -149,25 +149,27 @@
                 <td class="calendar-a4-cell">
                     {% if dia != 0 %}
                         <div class="calendar-a4-day">{{ dia }}</div>
-                        {% for missa in estrutura.get(dia, []) %}
-                            <div class="calendar-a4-evento">
-                                <div class="calendar-a4-evento-topo">
-                                    <strong>{{ missa.horario }}</strong>
-                                    <span>{{ missa.comunidade }}</span>
-                                </div>
-                                {% if missa.ministros %}
-                                    <div class="calendar-a4-ministros">
-                                        {% for ministro in missa.ministros %}
-                                            <div>
-                                                {{ ministro.nome }}{% if ministro.eh_casal %} (casal){% endif %}
-                                            </div>
-                                        {% endfor %}
+                        <div class="calendar-a4-eventos">
+                            {% for missa in estrutura.get(dia, [])|sort(attribute='horario') %}
+                                <div class="calendar-a4-evento">
+                                    <div class="calendar-a4-evento-topo">
+                                        <strong>{{ missa.horario }}</strong>
+                                        <span>{{ missa.comunidade }}</span>
                                     </div>
-                                {% else %}
-                                    <div class="calendar-a4-ministros">Sem ministros</div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                                    {% if missa.ministros %}
+                                        <div class="calendar-a4-ministros">
+                                            {% for ministro in missa.ministros %}
+                                                <div>
+                                                    {{ ministro.nome }}{% if ministro.eh_casal %} (casal){% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="calendar-a4-ministros">Sem ministros</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
                     {% endif %}
                 </td>
             {% endfor %}
@@ -187,30 +189,30 @@
 }
 
 .calendar-a4-cell {
-    height: 38mm;
+    height: 34mm;
     vertical-align: top;
-    padding: 2mm !important;
+    padding: 1.4mm !important;
     text-align: left;
 }
 
 .calendar-a4-day {
     font-weight: 700;
-    font-size: 11px;
-    margin-bottom: 1.5mm;
+    font-size: 10px;
+    margin-bottom: 1mm;
 }
 
 .calendar-a4-evento {
     border: 1px solid #cfcfcf;
     border-radius: 4px;
-    padding: 1.2mm;
-    margin-bottom: 1.2mm;
-    font-size: 8px;
-    line-height: 1.15;
+    padding: 0.9mm;
+    margin-bottom: 0.9mm;
+    font-size: 7.2px;
+    line-height: 1.08;
     break-inside: avoid;
 }
 
 .calendar-a4-evento-topo {
-    margin-bottom: 1mm;
+    margin-bottom: 0.6mm;
 }
 
 .calendar-a4-evento-topo span {
@@ -218,13 +220,13 @@
 }
 
 .calendar-a4-ministros {
-    font-size: 7.3px;
+    font-size: 6.7px;
 }
 
 @media print {
     @page {
         size: A4 portrait;
-        margin: 6mm;
+        margin: 4mm;
     }
     .screen-only, .no-print { display: none !important; }
     .print-only {
@@ -262,9 +264,38 @@
         margin-bottom: 3mm;
     }
 
+    body.print-mode-calendar-a4 nav,
+    body.print-mode-calendar-a4 .offcanvas,
+    body.print-mode-calendar-a4 .sidebar,
+    body.print-mode-calendar-a4 form[action="/busca"],
+    body.print-mode-calendar-a4 #btnInstalar {
+        display: none !important;
+    }
+
+    body.print-mode-calendar-a4 .container-fluid,
+    body.print-mode-calendar-a4 .row,
+    body.print-mode-calendar-a4 .content-area {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body.print-mode-calendar-a4 [class*="col-md-10"],
+    body.print-mode-calendar-a4 [class*="col-md-2"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
     body.print-mode-calendar-a4 .calendar-a4-table th,
     body.print-mode-calendar-a4 .calendar-a4-table td {
         border-color: #999 !important;
+        padding: 1.2mm !important;
+    }
+
+    body.print-mode-calendar-a4 .calendar-a4-table th {
+        font-size: 8px;
+        padding: 1mm !important;
     }
 
     body:not(.print-mode-calendar-a4) .print-calendar-a4 {
