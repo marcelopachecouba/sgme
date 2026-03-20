@@ -17,7 +17,8 @@
             </form>
         </div>
         <div class="col-md-6 mt-2 mt-md-0 text-md-end">
-            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="prepararImpressaoPadrao()">Imprimir</button>
+            <button type="button" class="btn btn-outline-primary ms-2" onclick="prepararImpressaoCalendarioA4()">Imprimir Calendario A4</button>
         </div>
     </div>
 
@@ -123,8 +124,103 @@
     {% endfor %}
 </div>
 
+<div class="print-calendar-a4">
+    <div class="print-calendar-header">
+        <h4 class="mb-1">Escala de Missas</h4>
+        <small>{{ "%02d"|format(mes) }}/{{ ano }}</small>
+    </div>
+
+    <table class="table table-bordered text-center align-middle calendar-a4-table">
+        <thead>
+            <tr>
+                <th>Seg</th>
+                <th>Ter</th>
+                <th>Qua</th>
+                <th>Qui</th>
+                <th>Sex</th>
+                <th>Sab</th>
+                <th>Dom</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for semana in cal %}
+            <tr>
+            {% for dia in semana %}
+                <td class="calendar-a4-cell">
+                    {% if dia != 0 %}
+                        <div class="calendar-a4-day">{{ dia }}</div>
+                        {% for missa in estrutura.get(dia, []) %}
+                            <div class="calendar-a4-evento">
+                                <div class="calendar-a4-evento-topo">
+                                    <strong>{{ missa.horario }}</strong>
+                                    <span>{{ missa.comunidade }}</span>
+                                </div>
+                                {% if missa.ministros %}
+                                    <div class="calendar-a4-ministros">
+                                        {% for ministro in missa.ministros %}
+                                            <div>
+                                                {{ ministro.nome }}{% if ministro.eh_casal %} (casal){% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="calendar-a4-ministros">Sem ministros</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 <style>
 .print-only { display: none; }
+.print-calendar-a4 { display: none; }
+
+.calendar-a4-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.calendar-a4-cell {
+    height: 38mm;
+    vertical-align: top;
+    padding: 2mm !important;
+    text-align: left;
+}
+
+.calendar-a4-day {
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: 1.5mm;
+}
+
+.calendar-a4-evento {
+    border: 1px solid #cfcfcf;
+    border-radius: 4px;
+    padding: 1.2mm;
+    margin-bottom: 1.2mm;
+    font-size: 8px;
+    line-height: 1.15;
+    break-inside: avoid;
+}
+
+.calendar-a4-evento-topo {
+    margin-bottom: 1mm;
+}
+
+.calendar-a4-evento-topo span {
+    display: block;
+}
+
+.calendar-a4-ministros {
+    font-size: 7.3px;
+}
+
 @media print {
     @page {
         size: A4 portrait;
@@ -152,7 +248,54 @@
         page-break-inside: avoid;
         margin-bottom: 4px;
     }
+
+    body.print-mode-calendar-a4 .print-only {
+        display: none !important;
+    }
+
+    body.print-mode-calendar-a4 .print-calendar-a4 {
+        display: block !important;
+    }
+
+    body.print-mode-calendar-a4 .print-calendar-header {
+        text-align: center;
+        margin-bottom: 3mm;
+    }
+
+    body.print-mode-calendar-a4 .calendar-a4-table th,
+    body.print-mode-calendar-a4 .calendar-a4-table td {
+        border-color: #999 !important;
+    }
+
+    body:not(.print-mode-calendar-a4) .print-calendar-a4 {
+        display: none !important;
+    }
 }
 </style>
+
+<script>
+function definirModoImpressao(classe) {
+    document.body.classList.remove("print-mode-calendar-a4");
+    if (classe) {
+        document.body.classList.add(classe);
+    }
+}
+
+function finalizarModoImpressao() {
+    definirModoImpressao("");
+}
+
+function prepararImpressaoPadrao() {
+    definirModoImpressao("");
+    window.print();
+}
+
+function prepararImpressaoCalendarioA4() {
+    definirModoImpressao("print-mode-calendar-a4");
+    window.print();
+}
+
+window.addEventListener("afterprint", finalizarModoImpressao);
+</script>
 
 {% endblock %}
