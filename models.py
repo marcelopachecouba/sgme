@@ -113,6 +113,7 @@ class Escala(db.Model):
 
     confirmado = db.Column(db.Boolean, default=False)
     presente = db.Column(db.Boolean, default=False)
+    notificacao_enviada = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
     id_paroquia = db.Column(db.Integer, db.ForeignKey('paroquia.id'))
 

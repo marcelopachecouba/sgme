@@ -54,6 +54,12 @@
                     </td>
                     <td class="text-end">
                         <a
+                            href="{{ url_for('presencas.editar_presenca', reuniao_id=r.id) }}"
+                            class="btn btn-sm btn-outline-secondary"
+                        >
+                            Editar
+                        </a>
+                        <a
                             href="{{ url_for('presencas.links_confirmacao_reuniao', reuniao_id=r.id) }}"
                             class="btn btn-sm btn-outline-success"
                         >

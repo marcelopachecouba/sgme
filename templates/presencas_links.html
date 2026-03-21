@@ -26,26 +26,46 @@
                 <tr>
                     <th>Ministro</th>
                     <th>Link</th>
-                    <th class="text-end">Acao</th>
+                    <th class="text-end">Acoes</th>
                 </tr>
             </thead>
             <tbody>
-                {% for ministro in ministros %}
-                {% set link = url_for('presencas.checkin_reuniao_publico_localizacao', reuniao_id=reuniao.id, token_publico=ministro.token_publico, _external=True) %}
+                {% for item in links_ministros %}
                 <tr>
-                    <td>{{ ministro.nome }}</td>
+                    <td>{{ item.ministro.nome }}</td>
                     <td>
                         <input
                             type="text"
                             class="form-control form-control-sm"
-                            value="{{ link }}"
+                            value="{{ item.link }}"
                             readonly
                         >
                     </td>
                     <td class="text-end">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('{{ link }}')">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('{{ item.link }}')">
                             Copiar
                         </button>
+                        {% if item.whatsapp_link %}
+                        <a href="{{ item.whatsapp_link }}" class="btn btn-sm btn-outline-success" target="_blank" rel="noopener noreferrer">
+                            WhatsApp
+                        </a>
+                        {% else %}
+                        <button type="button" class="btn btn-sm btn-outline-success" disabled>
+                            WhatsApp
+                        </button>
+                        {% endif %}
+
+                        {% if item.tem_push %}
+                        <form method="POST" action="{{ url_for('presencas.enviar_push_confirmacao_reuniao', reuniao_id=reuniao.id, ministro_id=item.ministro.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-dark">
+                                Push
+                            </button>
+                        </form>
+                        {% else %}
+                        <button type="button" class="btn btn-sm btn-outline-dark" disabled>
+                            Push
+                        </button>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

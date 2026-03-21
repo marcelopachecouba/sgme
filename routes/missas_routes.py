@@ -5,6 +5,7 @@ from datetime import datetime, date
 import calendar
 from utils.auth import admin_required
 from services.paroquia_scope_service import get_missa_or_404
+from services.public_url_service import build_public_url
 
 missas_bp = Blueprint("missas", __name__)
 
@@ -67,6 +68,7 @@ def missas():
         data_inicial=data_inicial_str or hoje.strftime("%Y-%m-%d"),
         data_final=data_final_str,
         comunidade_filtro=comunidade_filtro,
+        link_publico_escala=build_public_url("publico.calendario_paroquia", id=current_user.id_paroquia),
     )
 
 

@@ -1,8 +1,7 @@
-import os
-
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, send_from_directory
 from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
 from extensions import db, login_manager
@@ -25,13 +24,12 @@ from routes.presencas_routes import presencas_bp
 from routes.publico_routes import publico_bp
 from routes.superadmin_routes import superadmin_bp
 from services.firebase_service import iniciar_firebase
-from services.lembrete_missa_service import enviar_lembretes_missa
+from services.agendamento_service import registrar_agendamentos
 from routes.push_routes import push_bp
 from routes.notificacoes_routes import notificacao_bp
-from services.notification_manager import NotificationManager
 
 
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
 migrate = Migrate()
 
 
@@ -87,35 +85,13 @@ def _configurar_login():
 
 
 def _iniciar_scheduler(app):
-
-    if scheduler.running:
-        return
-
-    with app.app_context():
-
-        scheduler.add_job(
-            enviar_lembretes_missa,
-            trigger="interval",
-            minutes=10,
-            args=[app],
-            max_instances=1,
-            replace_existing=True,
-            id="lembretes_missa",
-        )
-
-        scheduler.add_job(
-            NotificationManager.limpar_tokens_inativos,
-            trigger="interval",
-            hours=24,
-            id="limpar_tokens_push"
-        )
-
-        scheduler.start()
+    registrar_agendamentos(scheduler, app)
 
         
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     db.init_app(app)
     migrate.init_app(app, db)

@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from services.estatisticas_service import dados_confiabilidade
+from services.public_url_service import build_public_url
 from services.relatorio_service import montar_mensagem_unificada
 
 estatisticas_bp = Blueprint("estatisticas", __name__)
@@ -177,10 +178,9 @@ def whatsapp_periodo():
             mensagem += f"Comunidade: {missa.comunidade}\n\n"
 
         # 🔹 LINK ESCALA ESPECÍFICA
-        link_especifico = url_for(
+        link_especifico = build_public_url(
             "escala.escala_publica",
             token=lista_escalas[0].token,
-            _external=True
         )
 
         mensagem += "🔗 Acessar escala:\n"
@@ -188,10 +188,9 @@ def whatsapp_periodo():
 
         # 🔹 LINK CALENDÁRIO COMPLETO
         if ministro.token_publico:
-            link_calendario = url_for(
+            link_calendario = build_public_url(
                 "publico.calendario_publico",
                 token=ministro.token_publico,
-                _external=True
             )
 
             mensagem += "📅 Ver meu calendário completo:\n"

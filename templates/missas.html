@@ -9,6 +9,16 @@
     <a href="{{ url_for('missas.missas') }}" class="btn btn-primary">Lista</a>
     <a href="{{ url_for('missas.visao_missas') }}" class="btn btn-secondary">Visao Organizada</a>
     <a href="{{ url_for('missas.calendario_missas') }}" class="btn btn-success">Calendario</a>
+    <a href="{{ url_for('publico.calendario_paroquia', id=current_user.id_paroquia) }}" class="btn btn-dark" target="_blank" rel="noopener noreferrer">Escala Publica</a>
+</div>
+
+<div class="mb-3">
+    <button
+        type="button"
+        class="btn btn-outline-success"
+        data-copy-link="{{ link_publico_escala }}">
+        Copiar Link Publico da Escala
+    </button>
 </div>
 
 <form method="GET" class="row g-3 mb-3">

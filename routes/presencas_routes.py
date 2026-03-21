@@ -18,6 +18,9 @@ from models import (
 )
 
 from services.firebase_storage_service import upload_arquivo
+from services.firebase_service import enviar_push
+from services.public_url_service import build_public_url
+from services.whatsapp_service import gerar_link_whatsapp_telefone
 from utils.auth import admin_required
 
 
@@ -39,6 +42,32 @@ def _listar_ministros_paroquia():
     return Ministro.query.filter_by(
         id_paroquia=current_user.id_paroquia
     ).order_by(Ministro.nome.asc()).all()
+
+
+def _obter_reuniao_or_404(reuniao_id):
+    return ReuniaoFormacao.query.filter_by(
+        id=reuniao_id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+
+def _link_confirmacao_reuniao(reuniao, ministro):
+    return build_public_url(
+        "presencas.checkin_reuniao_publico_localizacao",
+        reuniao_id=reuniao.id,
+        token_publico=ministro.token_publico,
+    )
+
+
+def _mensagem_confirmacao_reuniao(reuniao, ministro, link_confirmacao):
+    tipo = "Formacao" if reuniao.tipo == "formacao" else "Reuniao"
+    return (
+        f"Olá {ministro.nome},\n\n"
+        f"Segue o link para confirmar sua presenca.\n\n"
+        f"{tipo}: {reuniao.assunto}\n"
+        f"Data: {reuniao.data.strftime('%d/%m/%Y')}\n\n"
+        f"Confirmar presenca:\n{link_confirmacao}"
+    )
 
 
 def _salvar_upload(campo_arquivo):
@@ -174,17 +203,31 @@ def listar_presencas():
 @admin_required
 def links_confirmacao_reuniao(reuniao_id):
 
-    reuniao = ReuniaoFormacao.query.filter_by(
-        id=reuniao_id,
-        id_paroquia=current_user.id_paroquia
-    ).first_or_404()
+    reuniao = _obter_reuniao_or_404(reuniao_id)
 
     ministros = _listar_ministros_paroquia()
+    links_ministros = []
+
+    for ministro in ministros:
+        link = _link_confirmacao_reuniao(reuniao, ministro)
+        whatsapp_link = None
+        if ministro.telefone:
+            whatsapp_link = gerar_link_whatsapp_telefone(
+                ministro.telefone,
+                _mensagem_confirmacao_reuniao(reuniao, ministro, link),
+            )
+
+        links_ministros.append({
+            "ministro": ministro,
+            "link": link,
+            "whatsapp_link": whatsapp_link,
+            "tem_push": bool(ministro.firebase_token),
+        })
 
     return render_template(
         "presencas_links.html",
         reuniao=reuniao,
-        ministros=ministros
+        links_ministros=links_ministros
     )
 
 
@@ -380,6 +423,104 @@ def nova_presenca():
     )
 
 
+@presencas_bp.route("/presencas/editar/<int:reuniao_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def editar_presenca(reuniao_id):
+
+    reuniao = _obter_reuniao_or_404(reuniao_id)
+    ministros = _listar_ministros_paroquia()
+
+    if request.method == "POST":
+        data_evento = _parse_data(request.form.get("data"))
+        assunto = (request.form.get("assunto") or "").strip()
+        tipo = (request.form.get("tipo") or "reuniao").strip()
+        observacao = (request.form.get("observacao") or "").strip() or None
+        video_url = (request.form.get("video_url") or "").strip() or None
+        latitude = (request.form.get("latitude") or "").strip() or None
+        longitude = (request.form.get("longitude") or "").strip() or None
+
+        presentes_ids = {
+            int(x)
+            for x in request.form.getlist("presentes")
+            if x.isdigit()
+        }
+
+        if not data_evento or not assunto:
+            flash("Informe data e assunto.")
+            return render_template(
+                "presenca_form.html",
+                ministros=ministros,
+                reuniao=reuniao,
+                presentes_ids=presentes_ids,
+            )
+
+        reuniao.data = data_evento
+        reuniao.assunto = assunto
+        reuniao.tipo = tipo if tipo in {"reuniao", "formacao"} else "reuniao"
+        reuniao.observacao = observacao
+        reuniao.video_url = None if request.form.get("remover_video_url") else video_url
+        reuniao.latitude = latitude
+        reuniao.longitude = longitude
+
+        if request.form.get("remover_foto"):
+            reuniao.foto_url = None
+
+        if request.form.get("remover_video_arquivo"):
+            reuniao.video_arquivo_url = None
+
+        try:
+            nova_foto = _salvar_upload("foto")
+            if nova_foto:
+                reuniao.foto_url = nova_foto
+
+            novo_video_arquivo = _salvar_upload("video_arquivo")
+            if novo_video_arquivo:
+                reuniao.video_arquivo_url = novo_video_arquivo
+        except Exception:
+            flash("Erro ao enviar arquivos para o Firebase.")
+            return render_template(
+                "presenca_form.html",
+                ministros=ministros,
+                reuniao=reuniao,
+                presentes_ids=presentes_ids,
+            )
+
+        ministros_validos = {m.id for m in ministros}
+        PresencaReuniao.query.filter_by(
+            id_reuniao=reuniao.id,
+            id_paroquia=current_user.id_paroquia
+        ).delete(synchronize_session=False)
+
+        for ministro_id in presentes_ids.intersection(ministros_validos):
+            db.session.add(
+                PresencaReuniao(
+                    id_reuniao=reuniao.id,
+                    id_ministro=ministro_id,
+                    id_paroquia=current_user.id_paroquia,
+                    presente=True
+                )
+            )
+
+        db.session.commit()
+
+        flash("Registro de presenca atualizado.")
+        return redirect(url_for("presencas.listar_presencas"))
+
+    presentes_ids = {
+        p.id_ministro
+        for p in reuniao.presencas
+        if p.presente
+    }
+
+    return render_template(
+        "presenca_form.html",
+        ministros=ministros,
+        reuniao=reuniao,
+        presentes_ids=presentes_ids,
+    )
+
+
 @presencas_bp.route("/presencas/checkin/<int:reuniao_id>/<token_publico>", methods=["GET", "POST"])
 def checkin_reuniao_publico_localizacao(reuniao_id, token_publico):
 
@@ -466,6 +607,38 @@ def checkin_reuniao_publico_localizacao(reuniao_id, token_publico):
         reuniao=reuniao,
         ministro=ministro
     )
+
+
+@presencas_bp.route("/presencas/links/<int:reuniao_id>/push/<int:ministro_id>", methods=["POST"])
+@login_required
+@admin_required
+def enviar_push_confirmacao_reuniao(reuniao_id, ministro_id):
+
+    reuniao = _obter_reuniao_or_404(reuniao_id)
+    ministro = Ministro.query.filter_by(
+        id=ministro_id,
+        id_paroquia=current_user.id_paroquia
+    ).first_or_404()
+
+    if not ministro.firebase_token:
+        flash(f"{ministro.nome} nao possui token de push cadastrado.")
+        return redirect(url_for("presencas.links_confirmacao_reuniao", reuniao_id=reuniao.id))
+
+    link = _link_confirmacao_reuniao(reuniao, ministro)
+    tipo = "Formacao" if reuniao.tipo == "formacao" else "Reuniao"
+
+    enviar_push(
+        ministro.firebase_token,
+        f"Confirmacao de Presenca - {tipo}",
+        (
+            f"{reuniao.assunto} em {reuniao.data.strftime('%d/%m/%Y')}. "
+            "Toque para abrir o link de confirmacao."
+        ),
+        url=link,
+    )
+
+    flash(f"Push enviado para {ministro.nome}.")
+    return redirect(url_for("presencas.links_confirmacao_reuniao", reuniao_id=reuniao.id))
 
 
 # ---------------------------------------------------------

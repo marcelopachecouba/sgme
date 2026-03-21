@@ -4,6 +4,7 @@ from models import db, Paroquia, Ministro, Missa, Escala, Indisponibilidade, Esc
 from datetime import datetime, date, timedelta
 import calendar, uuid, urllib.parse, base64, io
 from utils.auth import admin_required
+from services.public_url_service import build_public_url
 import qrcode
 from io import BytesIO
 
@@ -87,10 +88,9 @@ def qr_ministro(token):
 
     ministro = Ministro.query.filter_by(token_publico=token).first_or_404()
 
-    link = url_for(
+    link = build_public_url(
         "publico.calendario_publico",
         token=ministro.token_publico,
-        _external=True
     )
 
     qr = qrcode.make(link)
@@ -109,13 +109,23 @@ def qr_ministro(token):
 
 
 @publico_bp.route("/paroquia/<int:id>")
+@publico_bp.route("/escalas/publicas/<int:id>")
 def calendario_paroquia(id):
 
     paroquia = Paroquia.query.get_or_404(id)
 
     hoje = date.today()
-    mes = hoje.month
-    ano = hoje.year
+    try:
+        mes = int(request.args.get("mes", hoje.month))
+    except (TypeError, ValueError):
+        mes = hoje.month
+    try:
+        ano = int(request.args.get("ano", hoje.year))
+    except (TypeError, ValueError):
+        ano = hoje.year
+
+    if mes < 1 or mes > 12:
+        mes = hoje.month
 
     cal = calendar.monthcalendar(ano, mes)
 
@@ -123,7 +133,7 @@ def calendario_paroquia(id):
         Missa.id_paroquia == id,
         db.extract("month", Missa.data) == mes,
         db.extract("year", Missa.data) == ano
-    ).all()
+    ).order_by(Missa.data.asc(), Missa.horario.asc(), Missa.id.asc()).all()
 
     estrutura = {}
 
@@ -149,9 +159,19 @@ def calendario_paroquia(id):
             "ministros": nomes
         })
 
+    link_publico = build_public_url(
+        "publico.calendario_paroquia",
+        id=paroquia.id,
+        mes=mes,
+        ano=ano,
+    )
+
     return render_template(
         "calendario_paroquia.html",
         cal=cal,
         estrutura=estrutura,
-        paroquia=paroquia
+        paroquia=paroquia,
+        mes=mes,
+        ano=ano,
+        link_publico=link_publico,
     )

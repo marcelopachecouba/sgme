@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const mapaStatus = {
       disponivel: { texto: "✔", add: "disponivel", remove: ["indisponivel", "neutro"] },
       indisponivel: { texto: "", add: "indisponivel", remove: ["disponivel", "neutro"] },
-      neutro: { texto: "", add: "neutro", remove: ["disponivel", "indisponivel"] }
+      neutro: { texto: "✔", add: "neutro", remove: ["disponivel", "indisponivel"] }
     };
     const estado = mapaStatus[status] || mapaStatus.neutro;
 

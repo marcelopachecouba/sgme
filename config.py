@@ -24,6 +24,14 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     FIREBASE_VAPID_KEY = os.environ.get("FIREBASE_VAPID_KEY", "")
+    PUBLIC_BASE_URL = os.environ.get(
+        "PUBLIC_BASE_URL",
+        "https://sgme.onrender.com",
+    ).strip().rstrip("/")
+    WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "").strip()
+    PHONE_NUMBER_ID = os.environ.get("PHONE_NUMBER_ID", "").strip()
+    WHATSAPP_GRAPH_VERSION = os.environ.get("WHATSAPP_GRAPH_VERSION", "v19.0").strip()
+    SCHEDULER_TIMEZONE = os.environ.get("SCHEDULER_TIMEZONE", "America/Sao_Paulo").strip()
 
     # Escala inteligente
     ESCALA_SCORE_DIAS_SEM_SERVIR_PESO = float(os.environ.get("ESCALA_SCORE_DIAS_SEM_SERVIR_PESO", "2.8"))

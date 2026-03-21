@@ -69,7 +69,8 @@ font-weight:bold;
 <button class="btn btn-outline-light"
 type="button"
 data-bs-toggle="offcanvas"
-data-bs-target="#sidebarMenu">
+data-bs-target="#sidebarMenu"
+data-skip-confirm="true">
 
 Menu
 
@@ -129,7 +130,8 @@ data-bs-dismiss="offcanvas">
 
 <form action="/busca"
 method="GET"
-class="mb-3 position-relative">
+class="mb-3 position-relative"
+data-skip-confirm="true">
 
 <div class="input-group">
 
@@ -141,10 +143,8 @@ class="form-control"
 placeholder="Buscar ministro, missa, aviso..."
 autocomplete="off">
 
-<button class="btn btn-primary">
-
+<button class="btn btn-primary" data-skip-confirm="true">
 Buscar
-
 </button>
 
 </div>
@@ -164,6 +164,7 @@ style="z-index:1000">
 <button id="btnInstalar"
 onclick="instalarApp()"
 class="btn btn-success"
+data-skip-confirm="true"
 style="display:none; position:fixed; bottom:20px; right:20px; z-index:999;">
 
 Instalar App
@@ -195,6 +196,80 @@ vapidKey:"{{ config.get('FIREBASE_VAPID_KEY', '') }}"
 </script>
 <script type="module" src="{{ url_for('static', filename='js/firebase-init.js') }}"></script>
 {% endif %}
+<script>
+function obterTextoAcao(elemento) {
+    if (!elemento) {
+        return "Acao";
+    }
+    const texto = (elemento.getAttribute("data-confirm-action") || elemento.innerText || elemento.value || "").trim();
+    return texto || "Acao";
+}
+
+function montarMensagemConfirmacao(acao, tipo, destino) {
+    return "Deseja executar esta acao?\n\n"
+        + "Acao: " + acao + "\n"
+        + "Tipo: " + tipo + "\n"
+        + (destino ? "Destino: " + destino : "");
+}
+
+document.addEventListener("click", function (event) {
+    const copiar = event.target.closest("[data-copy-link]");
+    if (copiar) {
+        const link = copiar.getAttribute("data-copy-link");
+        if (!link) {
+            return;
+        }
+
+        navigator.clipboard.writeText(link).then(function () {
+            alert("Link copiado com sucesso.");
+        }).catch(function () {
+            alert("Nao foi possivel copiar o link automaticamente.");
+        });
+        return;
+    }
+
+    const linkBotao = event.target.closest("a.btn");
+    if (!linkBotao) {
+        return;
+    }
+    if (linkBotao.dataset.skipConfirm === "true" || linkBotao.hasAttribute("data-bs-toggle") || linkBotao.target === "_blank") {
+        return;
+    }
+
+    const acao = obterTextoAcao(linkBotao);
+    const destino = linkBotao.getAttribute("href") || "";
+    if (!window.confirm(montarMensagemConfirmacao(acao, "GET", destino))) {
+        event.preventDefault();
+    }
+}, true);
+
+document.addEventListener("submit", function (event) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+    if (form.dataset.skipConfirm === "true") {
+        return;
+    }
+
+    const inlineSubmit = (form.getAttribute("onsubmit") || "");
+    if (inlineSubmit.includes("confirm(")) {
+        return;
+    }
+
+    const submitter = event.submitter || form.querySelector("button[type='submit'], input[type='submit']");
+    if (submitter && submitter.dataset.skipConfirm === "true") {
+        return;
+    }
+
+    const acao = obterTextoAcao(submitter);
+    const tipo = (form.getAttribute("method") || "GET").toUpperCase();
+    const destino = form.getAttribute("action") || window.location.pathname;
+    if (!window.confirm(montarMensagemConfirmacao(acao, tipo, destino))) {
+        event.preventDefault();
+    }
+}, true);
+</script>
 
 </body>
 </html>
