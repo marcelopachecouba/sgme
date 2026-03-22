@@ -16,6 +16,7 @@ from routes.casais_routes import casais_bp
 from routes.dashboard_routes import dashboard_bp
 from routes.escala_routes import escala_bp
 from routes.estatisticas_routes import estatisticas_bp
+from financeiro import financeiro_bp, init_financeiro_dash
 from routes.indisponibilidade_routes import indisp_bp
 from routes.minhas_escalas_routes import minhas_escalas_bp
 from routes.ministros_routes import ministros_bp
@@ -41,6 +42,7 @@ def _registrar_blueprints(app):
         missas_bp,
         escala_bp,
         estatisticas_bp,
+        financeiro_bp,
         publico_bp,
         admin_bp,
         avisos_bp,
@@ -101,6 +103,7 @@ def create_app():
     iniciar_firebase()
     _registrar_rotas_internas(app)
     _registrar_blueprints(app)
+    init_financeiro_dash(app)
 
     
     _iniciar_scheduler(app)
@@ -113,3 +116,4 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(debug=True)
+

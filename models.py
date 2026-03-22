@@ -550,3 +550,242 @@ class Notificacao(db.Model):
     criada_em = db.Column(db.DateTime, default=datetime.utcnow)
 
     ministro = db.relationship("Ministro")
+
+
+class ContaCorrente(db.Model):
+    __tablename__ = "contas_correntes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    saldo_atual = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+
+class CentroCusto(db.Model):
+    __tablename__ = "centros_custo"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+
+class CategoriaFinanceira(db.Model):
+    __tablename__ = "categorias"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+    subcategorias = db.relationship(
+        "SubcategoriaFinanceira",
+        backref="categoria",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+
+class SubcategoriaFinanceira(db.Model):
+    __tablename__ = "subcategorias"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    categoria_id = db.Column(
+        db.Integer,
+        db.ForeignKey("categorias.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+
+class LancamentoFinanceiro(db.Model):
+    __tablename__ = "lancamentos_financeiros"
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False, index=True)
+    descricao = db.Column(db.String(255), nullable=False)
+    valor = db.Column(db.Numeric(12, 2), nullable=False)
+    tipo = db.Column(db.String(20), nullable=False, index=True)
+    conta_corrente_id = db.Column(
+        db.Integer,
+        db.ForeignKey("contas_correntes.id"),
+        nullable=False,
+        index=True,
+    )
+    categoria_id = db.Column(
+        db.Integer,
+        db.ForeignKey("categorias.id"),
+        nullable=False,
+        index=True,
+    )
+    subcategoria_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subcategorias.id"),
+        nullable=True,
+        index=True,
+    )
+    centro_custo_id = db.Column(
+        db.Integer,
+        db.ForeignKey("centros_custo.id"),
+        nullable=False,
+        index=True,
+    )
+    status = db.Column(db.String(20), nullable=False, default="ABERTO", index=True)
+    origem = db.Column(db.String(20), nullable=False, default="MANUAL", index=True)
+    duplicata_parcela_id = db.Column(
+        db.Integer,
+        db.ForeignKey("duplicatas_parcelas.id"),
+        nullable=True,
+        index=True,
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+    conta_corrente = db.relationship("ContaCorrente", lazy="joined")
+    categoria = db.relationship("CategoriaFinanceira", lazy="joined")
+    subcategoria = db.relationship("SubcategoriaFinanceira", lazy="joined")
+    centro_custo = db.relationship("CentroCusto", lazy="joined")
+    duplicata_parcela = db.relationship("DuplicataParcela", lazy="joined")
+
+
+class Duplicata(db.Model):
+    __tablename__ = "duplicatas"
+
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.String(255), nullable=False)
+    valor_total = db.Column(db.Numeric(12, 2), nullable=False)
+    quantidade_parcelas = db.Column(db.Integer, nullable=False)
+    tipo = db.Column(db.String(20), nullable=False, index=True)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+    parcelas = db.relationship(
+        "DuplicataParcela",
+        backref="duplicata",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+
+class DuplicataParcela(db.Model):
+    __tablename__ = "duplicatas_parcelas"
+
+    id = db.Column(db.Integer, primary_key=True)
+    duplicata_id = db.Column(
+        db.Integer,
+        db.ForeignKey("duplicatas.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    numero_parcela = db.Column(db.Integer, nullable=False)
+    data_vencimento = db.Column(db.Date, nullable=False, index=True)
+    valor = db.Column(db.Numeric(12, 2), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="ABERTO", index=True)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "duplicata_id",
+            "numero_parcela",
+            name="uq_duplicata_numero_parcela",
+        ),
+    )
+
+
+class ExtratoImportado(db.Model):
+    __tablename__ = "extrato_importado"
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Date, nullable=False, index=True)
+    descricao = db.Column(db.String(255), nullable=False)
+    valor = db.Column(db.Numeric(12, 2), nullable=False)
+    conta_corrente_id = db.Column(
+        db.Integer,
+        db.ForeignKey("contas_correntes.id"),
+        nullable=False,
+        index=True,
+    )
+    lancamento_financeiro_id = db.Column(
+        db.Integer,
+        db.ForeignKey("lancamentos_financeiros.id"),
+        nullable=True,
+        index=True,
+    )
+    conciliado = db.Column(db.String(5), nullable=False, default="NAO", index=True)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+    conta_corrente = db.relationship("ContaCorrente", lazy="joined")
+    lancamento_financeiro = db.relationship("LancamentoFinanceiro", lazy="joined")
+
+
+class ExtratoPadrao(db.Model):
+    __tablename__ = "extrato_padrao"
+
+    id = db.Column(db.Integer, primary_key=True)
+    descricao_padrao = db.Column(db.String(255), nullable=False)
+    categoria_id = db.Column(
+        db.Integer,
+        db.ForeignKey("categorias.id"),
+        nullable=False,
+        index=True,
+    )
+    subcategoria_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subcategorias.id"),
+        nullable=True,
+        index=True,
+    )
+    centro_custo_id = db.Column(
+        db.Integer,
+        db.ForeignKey("centros_custo.id"),
+        nullable=False,
+        index=True,
+    )
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )
+
+    categoria = db.relationship("CategoriaFinanceira", lazy="joined")
+    subcategoria = db.relationship("SubcategoriaFinanceira", lazy="joined")
+    centro_custo = db.relationship("CentroCusto", lazy="joined")
