@@ -30,6 +30,10 @@ INPUT_STYLE = {"width": "100%", "padding": "10px", "borderRadius": "8px", "borde
 _dash_app = None
 
 
+def get_financeiro_dash():
+    return _dash_app
+
+
 def _options():
     ctx = services.options_context()
     return {
@@ -450,6 +454,7 @@ def init_financeiro_dash(server):
 
     _dash_app = app
     return app
+
 
 
 
