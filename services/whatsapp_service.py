@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import urllib.parse
+from copy import deepcopy
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -180,7 +181,7 @@ def normalizar_numero_whatsapp(numero, codigo_pais="55"):
     return apenas_digitos
 
 
-def enviar_whatsapp_cloud(numero, mensagem):
+def _whatsapp_request_payload(numero_formatado, payload):
     token = _get_config_value("WHATSAPP_TOKEN")
     phone_number_id = _get_config_value("PHONE_NUMBER_ID")
     graph_version = _get_config_value("WHATSAPP_GRAPH_VERSION", "v19.0")
@@ -188,20 +189,7 @@ def enviar_whatsapp_cloud(numero, mensagem):
     if not token or not phone_number_id:
         raise RuntimeError("WHATSAPP_TOKEN e PHONE_NUMBER_ID precisam estar configurados.")
 
-    numero_formatado = normalizar_numero_whatsapp(numero)
-    if not numero_formatado:
-        raise ValueError("Numero de telefone invalido para envio via WhatsApp.")
-
     url = f"https://graph.facebook.com/{graph_version}/{phone_number_id}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": numero_formatado,
-        "type": "text",
-        "text": {
-            "preview_url": False,
-            "body": mensagem,
-        },
-    }
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -209,9 +197,10 @@ def enviar_whatsapp_cloud(numero, mensagem):
 
     response = requests.post(url, headers=headers, json=payload, timeout=30)
     logger.info(
-        "Resposta WhatsApp Cloud API. numero=%s status=%s",
+        "Resposta WhatsApp Cloud API. numero=%s status=%s tipo=%s",
         numero_formatado,
         response.status_code,
+        payload.get("type"),
     )
 
     try:
@@ -232,7 +221,109 @@ def enviar_whatsapp_cloud(numero, mensagem):
         "status_code": response.status_code,
         "body": response_body,
         "numero": numero_formatado,
+        "tipo_envio": payload.get("type", "text"),
     }
+
+
+def enviar_whatsapp_cloud(numero, mensagem):
+    numero_formatado = normalizar_numero_whatsapp(numero)
+    if not numero_formatado:
+        raise ValueError("Numero de telefone invalido para envio via WhatsApp.")
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": numero_formatado,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": mensagem,
+        },
+    }
+    return _whatsapp_request_payload(numero_formatado, payload)
+
+
+def _template_body_component(parametros):
+    return {
+        "type": "body",
+        "parameters": [
+            {"type": "text", "text": str(valor or "-")}
+            for valor in parametros
+        ],
+    }
+
+
+def montar_parametros_template_lembrete(ministro, escalas):
+    primeira_missa = escalas[0].missa if escalas else None
+    nome = (getattr(ministro, "nome", "") or "").strip().split()[0] if ministro else "Ministro"
+    data_label = _data_extenso(primeira_missa.data) if primeira_missa else ""
+    resumo = " | ".join(
+        f"{escala.missa.horario} - {escala.missa.comunidade}"
+        for escala in escalas
+        if getattr(escala, "missa", None)
+    )
+    link = _link_calendario_publico(ministro) or (_link_escala_publica(escalas[0]) if escalas else None) or ""
+    return [nome, data_label, resumo[:1024] or "Escala disponivel", link]
+
+
+def enviar_whatsapp_cloud_template(numero, template_name, parametros=None, language=None):
+    numero_formatado = normalizar_numero_whatsapp(numero)
+    if not numero_formatado:
+        raise ValueError("Numero de telefone invalido para envio via WhatsApp.")
+    if not template_name:
+        raise ValueError("Template do WhatsApp nao configurado.")
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": numero_formatado,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": language or _get_config_value("WHATSAPP_TEMPLATE_LANGUAGE", "pt_BR")},
+        },
+    }
+
+    componentes = []
+    if parametros:
+        componentes.append(_template_body_component(parametros))
+
+    button_url = (_get_config_value("WHATSAPP_TEMPLATE_BUTTON_URL") or "").strip()
+    if button_url:
+        componentes.append({
+            "type": "button",
+            "sub_type": "url",
+            "index": "0",
+            "parameters": [{"type": "text", "text": button_url}],
+        })
+
+    if componentes:
+        payload["template"]["components"] = componentes
+
+    return _whatsapp_request_payload(numero_formatado, payload)
+
+
+def enviar_whatsapp_lembrete(ministro, escalas):
+    modo = (_get_config_value("WHATSAPP_SEND_MODE", "template") or "template").strip().lower()
+    template_name = (_get_config_value("WHATSAPP_TEMPLATE_NAME") or "").strip()
+
+    if modo == "template":
+        if not template_name:
+            raise RuntimeError("WHATSAPP_TEMPLATE_NAME nao configurado para envio automatico por template.")
+        parametros = montar_parametros_template_lembrete(ministro, escalas)
+        resposta = enviar_whatsapp_cloud_template(
+            ministro.telefone,
+            template_name=template_name,
+            parametros=parametros,
+            language=_get_config_value("WHATSAPP_TEMPLATE_LANGUAGE", "pt_BR"),
+        )
+        resposta["modo"] = "template"
+        resposta["template_name"] = template_name
+        resposta["parametros_template"] = deepcopy(parametros)
+        return resposta
+
+    mensagem = montar_mensagem_unificada(ministro, escalas)
+    resposta = enviar_whatsapp_cloud(ministro.telefone, mensagem)
+    resposta["modo"] = "text"
+    return resposta
 
 
 def buscar_escalas_para_lembrete(data_alvo, id_paroquia=None, incluir_enviadas=False):
@@ -312,10 +403,8 @@ def enviar_lembretes_whatsapp(data_alvo=None, id_paroquia=None, forcar_envio=Fal
         if not pendentes:
             continue
 
-        mensagem = montar_mensagem_unificada(ministro, pendentes)
-
         try:
-            resposta_api = enviar_whatsapp_cloud(ministro.telefone, mensagem)
+            resposta_api = enviar_whatsapp_lembrete(ministro, pendentes)
         except Exception:
             logger.exception(
                 "Falha no envio do WhatsApp. ministro_id=%s nome=%s telefone=%s",
@@ -353,12 +442,13 @@ def enviar_lembretes_whatsapp(data_alvo=None, id_paroquia=None, forcar_envio=Fal
             continue
 
         logger.info(
-            "WhatsApp enviado com sucesso. ministro_id=%s nome=%s numero=%s status_api=%s escalas=%s",
+            "WhatsApp enviado com sucesso. ministro_id=%s nome=%s numero=%s status_api=%s escalas=%s modo=%s",
             ministro.id,
             ministro.nome,
             resposta_api["numero"],
             resposta_api["status_code"],
             len(pendentes),
+            resposta_api.get("modo", resposta_api.get("tipo_envio", "text")),
         )
         resultado["enviados"] += 1
         resultado["detalhes"].append({
@@ -368,6 +458,8 @@ def enviar_lembretes_whatsapp(data_alvo=None, id_paroquia=None, forcar_envio=Fal
             "status": "enviado",
             "status_api": resposta_api["status_code"],
             "escalas": len(pendentes),
+            "modo": resposta_api.get("modo", resposta_api.get("tipo_envio", "text")),
+            "template_name": resposta_api.get("template_name", ""),
         })
 
     return resultado

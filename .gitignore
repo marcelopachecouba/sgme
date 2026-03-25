@@ -19,3 +19,7 @@ Thumbs.db
 # Selenium / Chrome
 chromedriver*
 chrome-win64*
+# Ambiente local
+.env
+.env.*
+!.env.example

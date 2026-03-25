@@ -1,4 +1,5 @@
 from datetime import datetime
+from collections import defaultdict
 from models import Escala
 
 def obter_saudacao():
@@ -55,10 +56,6 @@ def gerar_relatorio_ministro(ministro, data_inicio, data_fim):
     mensagem += "\nDeus abençoe seu serviço 🙏"
 
     return mensagem
-
-from collections import defaultdict
-from datetime import datetime
-
 
 def semana_do_mes(data):
     return ((data.day - 1) // 7) + 1
@@ -250,4 +247,70 @@ def montar_mensagem_unificada(ministro, lista_escalas=None):
     msg += "━━━━━━━━━━━━━━━\n\n"
     msg += "🙏 Deus abençoe seu serviço!"
 
+    return msg
+
+
+def montar_mensagem_com_escala_dia(ministro, lista_escalas):
+    if not lista_escalas:
+        return None
+
+    saudacao = obter_saudacao()
+    meses_nome = {
+        1: "JANEIRO", 2: "FEVEREIRO", 3: "MARCO",
+        4: "ABRIL", 5: "MAIO", 6: "JUNHO",
+        7: "JULHO", 8: "AGOSTO", 9: "SETEMBRO",
+        10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"
+    }
+    dias_nome = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"]
+
+    missa_ids = [escala.id_missa for escala in lista_escalas if escala.id_missa]
+    colegas_por_missa = defaultdict(list)
+
+    if missa_ids:
+        escalas_mesma_missa = (
+            Escala.query
+            .join(Escala.ministro)
+            .filter(Escala.id_missa.in_(missa_ids))
+            .order_by(Escala.id_missa)
+            .all()
+        )
+
+        for escala in escalas_mesma_missa:
+            if escala.ministro:
+                colegas_por_missa[escala.id_missa].append(escala.ministro.nome)
+
+        for missa_id in colegas_por_missa:
+            colegas_por_missa[missa_id] = sorted(colegas_por_missa[missa_id])
+
+    por_mes = defaultdict(list)
+    for escala in lista_escalas:
+        por_mes[escala.missa.data.month].append(escala)
+
+    msg = f"{saudacao} {ministro.nome}!\n\n"
+    msg += "*RELATORIO COMPLETO DA SUA ESCALA*\n"
+    msg += "Calendario do periodo com os ministros que servem com voce em cada missa.\n\n"
+
+    for mes in sorted(por_mes.keys()):
+        msg += "------------------------------\n"
+        msg += f"*{meses_nome[mes]}*\n\n"
+
+        lista = sorted(por_mes[mes], key=lambda escala: (escala.missa.data, escala.missa.horario or "", escala.missa.comunidade or ""))
+
+        for escala in lista:
+            missa = escala.missa
+            semana = semana_do_mes(missa.data)
+            colegas = [
+                nome for nome in colegas_por_missa.get(escala.id_missa, [])
+                if nome != ministro.nome
+            ]
+            colegas_texto = ", ".join(colegas) if colegas else "Nenhum outro ministro nesta missa"
+
+            msg += (
+                f"{missa.data.strftime('%d/%m')} - {dias_nome[missa.data.weekday()]} ({semana}a semana)\n"
+                f"Horario: {missa.horario}\n"
+                f"Comunidade: {missa.comunidade}\n"
+                f"Serve com: {colegas_texto}\n\n"
+            )
+
+    msg += "Deus abencoe seu servico!"
     return msg

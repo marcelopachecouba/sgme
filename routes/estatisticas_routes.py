@@ -14,7 +14,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from services.estatisticas_service import dados_confiabilidade
 from services.public_url_service import build_public_url
-from services.relatorio_service import montar_mensagem_unificada
+from services.relatorio_service import montar_mensagem_unificada, montar_mensagem_com_escala_dia
 
 estatisticas_bp = Blueprint("estatisticas", __name__)
 
@@ -68,7 +68,8 @@ def estatisticas():
         "estatisticas.html",
         dados=dados,
         data_inicio=data_inicio,
-        data_fim=data_fim
+        data_fim=data_fim,
+        saudacao=saudacao
     )
 
 
@@ -260,6 +261,57 @@ def whatsapp_relatorio():
         })
 
     return render_template("whatsapp_lista.html", links=links)
+
+
+@estatisticas_bp.route("/estatisticas/whatsapp_relatorio_escala", methods=["POST"])
+@login_required
+@admin_required
+def whatsapp_relatorio_escala():
+
+    data_inicio = request.form.get("data_inicio")
+    data_fim = request.form.get("data_fim")
+
+    query = Escala.query.join(Missa).join(Ministro).filter(
+        Escala.id_paroquia == current_user.id_paroquia
+    )
+
+    if data_inicio:
+        data_inicio_date = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) >= data_inicio_date)
+
+    if data_fim:
+        data_fim_date = datetime.strptime(data_fim, "%Y-%m-%d").date()
+        query = query.filter(db.func.date(Missa.data) <= data_fim_date)
+
+    escalas = query.order_by(Ministro.nome, Missa.data).all()
+
+    ministros_dict = defaultdict(list)
+    for e in escalas:
+        if e.ministro and e.ministro.telefone:
+            ministros_dict[e.ministro].append(e)
+
+    links = []
+    for ministro, lista_escalas in ministros_dict.items():
+        mensagem = montar_mensagem_com_escala_dia(ministro, lista_escalas)
+        if not mensagem:
+            continue
+
+        mensagem_codificada = urllib.parse.quote(mensagem)
+        link = f"https://wa.me/55{ministro.telefone}?text={mensagem_codificada}"
+
+        links.append({
+            "nome": ministro.nome,
+            "qtd": len(lista_escalas),
+            "link": link
+        })
+
+    return render_template(
+        "whatsapp_lista.html",
+        links=links,
+        titulo="WhatsApp Relatorio com Escala do Dia",
+        mensagem_topo="Cada mensagem inclui o calendario do periodo e os ministros que servem com a pessoa na mesma missa.",
+        voltar_url=url_for("estatisticas.estatisticas")
+    )
 
 @estatisticas_bp.route("/estatisticas/whatsapp_auto", methods=["POST"])
 @login_required

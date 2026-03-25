@@ -1,5 +1,6 @@
 from dash import Dash, Input, Output, State, callback_context, dash_table, dcc, html, no_update
-from flask import session
+from flask import has_request_context, request
+from urllib.parse import urlparse
 
 from financeiro import services
 
@@ -233,24 +234,50 @@ def _padroes_page():
     ])
 
 
+def _resolve_request_path():
+    if not has_request_context():
+        return "/financeiro/dashboard"
+
+    path = (request.path or "").strip() or "/financeiro/dashboard"
+    if path.startswith("/financeiro/") and "/_dash-" not in path and "/_dash-component-suites/" not in path:
+        return path
+
+    referer = (request.headers.get("Referer") or "").strip()
+    if referer:
+        parsed = urlparse(referer)
+        ref_path = (parsed.path or "").strip()
+        if ref_path.startswith("/financeiro/") and "/_dash-" not in ref_path and "/_dash-component-suites/" not in ref_path:
+            return ref_path
+
+    return "/financeiro/dashboard"
+
+
 def _page_content(pathname):
-    page = pathname or "/financeiro/dashboard"
-    session["last_fin_page"] = page
-    if page in {"/financeiro", "/financeiro/", "/financeiro/dashboard"}:
+    page = (pathname or "/financeiro/dashboard").strip()
+    if not page.startswith("/"):
+        page = "/" + page
+
+    page_sem_prefixo = page
+    if page_sem_prefixo.startswith("/financeiro"):
+        page_sem_prefixo = page_sem_prefixo[len("/financeiro"):]
+        if not page_sem_prefixo:
+            page_sem_prefixo = "/"
+
+    if page in {"/financeiro", "/financeiro/", "/financeiro/dashboard"} or page_sem_prefixo in {"/", "/dashboard"}:
         return _dashboard_page()
-    if page == "/financeiro/contas":
+    if page == "/financeiro/contas" or page_sem_prefixo == "/contas":
         return _contas_page()
-    if page == "/financeiro/lancamentos":
+    if page == "/financeiro/lancamentos" or page_sem_prefixo == "/lancamentos":
         return _lancamentos_page()
-    if page == "/financeiro/duplicatas":
+    if page == "/financeiro/duplicatas" or page_sem_prefixo == "/duplicatas":
         return _duplicatas_page()
-    if page == "/financeiro/importacao":
+    if page == "/financeiro/importacao" or page_sem_prefixo == "/importacao":
         return _importacao_page()
-    if page == "/financeiro/conciliacao":
+    if page == "/financeiro/conciliacao" or page_sem_prefixo == "/conciliacao":
         return _conciliacao_page()
-    if page == "/financeiro/padroes":
+    if page == "/financeiro/padroes" or page_sem_prefixo == "/padroes":
         return _padroes_page()
-    return html.Div([html.H3("Pagina nao encontrada")])
+    return html.Div([html.H3("Pagina nao encontrada"), html.Div(f"Rota recebida: {page}")])
 
 
 def init_financeiro_dash(server):
@@ -259,26 +286,39 @@ def init_financeiro_dash(server):
         return _dash_app
 
     app = Dash(__name__, server=server, url_base_pathname="/financeiro/", suppress_callback_exceptions=True, title="Financeiro SGME")
-    app.layout = html.Div([
-        dcc.Location(id="fin-url"),
-        html.Div([
+
+    def _shell_layout():
+        pathname = _resolve_request_path()
+        return html.Div([
+            dcc.Location(id="fin-url", pathname=pathname, refresh=False),
             html.Div([
-                html.H2("Financeiro", style={"fontSize": "22px", "marginBottom": "18px"}),
-                dcc.Link("Dashboard", href="/financeiro/dashboard", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-                dcc.Link("Contas Correntes", href="/financeiro/contas", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-                dcc.Link("Lancamentos", href="/financeiro/lancamentos", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-                dcc.Link("Duplicatas", href="/financeiro/duplicatas", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-                dcc.Link("Importacao de Extrato", href="/financeiro/importacao", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-                dcc.Link("Conciliacao", href="/financeiro/conciliacao", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-                dcc.Link("Extrato Padrao", href="/financeiro/padroes", style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
-            ], style=SIDEBAR_STYLE),
-            html.Div(id="fin-page", style=CONTENT_STYLE),
-        ], style={"display": "flex"}),
-    ])
+                html.Div([
+                    html.H2("Financeiro", style={"fontSize": "22px", "marginBottom": "18px"}),
+                    dcc.Link("Dashboard", href="/financeiro/dashboard", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                    dcc.Link("Contas Correntes", href="/financeiro/contas", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                    dcc.Link("Lancamentos", href="/financeiro/lancamentos", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                    dcc.Link("Duplicatas", href="/financeiro/duplicatas", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                    dcc.Link("Importacao de Extrato", href="/financeiro/importacao", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                    dcc.Link("Conciliacao", href="/financeiro/conciliacao", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                    dcc.Link("Extrato Padrao", href="/financeiro/padroes", refresh=False, style={"display": "block", "color": "white", "padding": "10px 12px", "textDecoration": "none"}),
+                ], style=SIDEBAR_STYLE),
+                html.Div(_page_content(pathname), id="fin-page", style=CONTENT_STYLE),
+            ], style={"display": "flex"}),
+        ])
+
+    app.layout = _shell_layout
 
     @app.callback(Output("fin-page", "children"), Input("fin-url", "pathname"))
     def render_page(pathname):
-        return _page_content(pathname)
+        try:
+            return _page_content(pathname)
+        except Exception as exc:
+            return html.Div([
+                html.H3("Erro ao carregar modulo financeiro"),
+                html.P("A tela do financeiro falhou durante o carregamento."),
+                html.Pre(str(exc), style={"whiteSpace": "pre-wrap", "background": "#fee2e2", "padding": "12px", "borderRadius": "8px"}),
+                html.Div(f"Rota recebida: {pathname}"),
+            ], style=CARD_STYLE)
 
     @app.callback(Output("conta-id", "value"), Output("conta-nome", "value"), Output("conta-saldo", "value"), Input("contas-table", "selected_rows"), State("contas-table", "data"), prevent_initial_call=True)
     def select_conta(rows, data):
