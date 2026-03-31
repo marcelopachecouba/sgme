@@ -2,7 +2,78 @@
 
 {% block content %}
 {% set dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"] %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<style>
+.ministros-calendario {
+    margin: 0.5rem 0 0;
+    padding-left: 1rem;
+}
+
+.ministros-calendario li {
+    line-height: 1.25;
+    margin-bottom: 0.15rem;
+}
+
+@media print {
+    .sidebar,
+    .navbar,
+    #btnInstalar,
+    .content-area > *:not(#calendario-impressao),
+    .no-print {
+        display: none !important;
+    }
+
+    #calendario-impressao,
+    #calendario-impressao * {
+        visibility: visible !important;
+    }
+
+    #calendario-impressao {
+        display: block !important;
+        position: static;
+        margin: 0 !important;
+        width: 100%;
+    }
+
+    #calendario-impressao .table-responsive {
+        overflow: visible !important;
+    }
+
+    #calendario-impressao table {
+        display: table !important;
+        width: 100% !important;
+        table-layout: fixed;
+    }
+
+    #calendario-impressao thead {
+        display: table-header-group !important;
+    }
+
+    #calendario-impressao tbody {
+        display: table-row-group !important;
+    }
+
+    #calendario-impressao tr {
+        display: table-row !important;
+    }
+
+    #calendario-impressao th,
+    #calendario-impressao td {
+        display: table-cell !important;
+        vertical-align: top;
+    }
+
+    #calendario-impressao .card,
+    #calendario-impressao .border {
+        box-shadow: none !important;
+        border: 1px solid #d0d0d0 !important;
+    }
+
+    body {
+        background: #fff !important;
+    }
+}
+</style>
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <div>
         <h2 class="mb-1">Dashboard de {{ ministro.nome }}</h2>
         <small class="text-muted">
@@ -17,7 +88,7 @@
     </a>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4 no-print">
     <div class="col-md-3">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -52,23 +123,28 @@
     </div>
 </div>
 
-<div class="card shadow-sm border-0 mb-4">
+<div class="card shadow-sm border-0 mb-4" id="calendario-impressao">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">Calendario de Missas - {{ "%02d"|format(mes_ref) }}/{{ ano_ref }}</h5>
-            <form method="GET" class="row g-2 align-items-end">
-                <input type="hidden" name="inicio" value="{{ inicio }}">
-                <input type="hidden" name="fim" value="{{ fim }}">
-                <div class="col-auto">
-                    <input type="number" name="mes" min="1" max="12" value="{{ mes_ref }}" class="form-control">
-                </div>
-                <div class="col-auto">
-                    <input type="number" name="ano" min="2020" max="2100" value="{{ ano_ref }}" class="form-control">
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-outline-primary">Atualizar calendario</button>
-                </div>
-            </form>
+            <div class="d-flex gap-2 align-items-end flex-wrap no-print">
+                <form method="GET" class="row g-2 align-items-end mb-0">
+                    <input type="hidden" name="inicio" value="{{ inicio }}">
+                    <input type="hidden" name="fim" value="{{ fim }}">
+                    <div class="col-auto">
+                        <input type="number" name="mes" min="1" max="12" value="{{ mes_ref }}" class="form-control">
+                    </div>
+                    <div class="col-auto">
+                        <input type="number" name="ano" min="2020" max="2100" value="{{ ano_ref }}" class="form-control">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-primary">Atualizar calendario</button>
+                    </div>
+                </form>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                    Imprimir
+                </button>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="table table-bordered align-middle mb-0">
@@ -88,8 +164,20 @@
                             <div class="fw-bold mb-2">{{ dia }}</div>
                             {% for item in calendario.get(dia, []) %}
                             <div class="border rounded p-2 mb-2 bg-light">
-                                <div>{{ item.horario or "-" }}</div>
+                                <div class="fw-semibold">{{ item.horario or "-" }}</div>
                                 <div class="small text-muted">{{ item.comunidade or "-" }}</div>
+                                <div class="small mt-2">
+                                    {% if item.ministros %}
+                                        <strong>Ministros</strong>
+                                        <ul class="ministros-calendario">
+                                            {% for ministro_nome in item.ministros %}
+                                            <li>{{ ministro_nome }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <span class="text-muted">Sem ministros escalados.</span>
+                                    {% endif %}
+                                </div>
                             </div>
                             {% endfor %}
                             {% else %}
@@ -111,7 +199,7 @@
     </div>
 </div>
 
-<div class="card shadow-sm border-0 mb-4">
+<div class="card shadow-sm border-0 mb-4 no-print">
     <div class="card-body">
         <h5 class="mb-3">Missas e Acoes</h5>
         <div class="table-responsive">
@@ -129,7 +217,7 @@
                 <tbody>
                     {% for m in missas %}
                     <tr id="detalhe-row-{{ m.escala_id }}">
-                        <td>{{ m.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ dias_semana[m.data.weekday()] }}, {{ m.data.strftime('%d/%m/%Y') }}</td>
                         <td>{{ m.horario or '-' }}</td>
                         <td>{{ m.comunidade or '-' }}</td>
                         <td class="text-center">{{ "Sim" if m.confirmado else "Nao" }}</td>
@@ -202,7 +290,7 @@
     </div>
 </div>
 
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-4 no-print">
     <div class="col-lg-6">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body">
@@ -259,7 +347,7 @@
     </div>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 no-print">
     <div class="col-lg-6">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body">

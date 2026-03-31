@@ -28,7 +28,11 @@ from services.notificacao_service import (
     notificar_escala_criada,
     notificar_escala_removida
 )
-from services.disponibilidade_service import esta_indisponivel, esta_disponivel
+from services.disponibilidade_service import (
+    esta_disponivel,
+    esta_indisponivel,
+    listar_ministros_indisponiveis,
+)
 from services.participacao_service import (
     obter_estatisticas_participacao,
     obter_missas_ministro_periodo,
@@ -307,10 +311,15 @@ def visualizar_escala(missa_id):
         ~Ministro.id.in_(ministros_ocupados)
     ).all()
 
-    # remove indisponíveis
+    ministros_indisponiveis = listar_ministros_indisponiveis(
+        [m.id for m in ministros],
+        missa,
+        current_user.id_paroquia,
+    )
+
     ministros = [
         m for m in ministros
-        if not esta_indisponivel(m.id, missa, current_user.id_paroquia)
+        if m.id not in ministros_indisponiveis
     ]
 
     # contar missas no mês

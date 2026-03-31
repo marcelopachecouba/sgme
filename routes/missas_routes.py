@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash
+from flask import Blueprint, render_template, redirect, request, send_file, url_for, flash
 from flask_login import login_required, current_user
 from models import CasalMinisterio, db, Missa, Escala
 from datetime import datetime, date
 import calendar
 from utils.auth import admin_required
 from services.paroquia_scope_service import get_missa_or_404
+from services.escala_imagem_service import gerar_imagem_calendario_escala
 from services.public_url_service import build_public_url
 
 missas_bp = Blueprint("missas", __name__)
@@ -137,6 +138,7 @@ def calendario_missas():
         periodo_exibicao = _normalizar_periodo(missa.periodo, missa.horario) or "-"
 
         estrutura[dia].append({
+            "id": missa.id,
             "horario": missa.horario,
             "periodo": periodo_exibicao,
             "comunidade": missa.comunidade,
@@ -176,6 +178,52 @@ def calendario_missas():
         mes=mes,
         ano=ano
     )
+
+
+@missas_bp.route("/missas/calendario/imagem")
+@login_required
+@admin_required
+def calendario_missas_imagem():
+    hoje = date.today()
+    mes = int(request.args.get("mes", hoje.month))
+    ano = int(request.args.get("ano", hoje.year))
+    cal = calendar.monthcalendar(ano, mes)
+
+    missas = Missa.query.filter(
+        Missa.id_paroquia == current_user.id_paroquia,
+        db.extract("month", Missa.data) == mes,
+        db.extract("year", Missa.data) == ano
+    ).all()
+    missas_ids = [m.id for m in missas]
+
+    escalas_por_missa = {}
+    if missas_ids:
+        escalas = Escala.query.filter(
+            Escala.id_paroquia == current_user.id_paroquia,
+            Escala.id_missa.in_(missas_ids)
+        ).all()
+        for e in escalas:
+            escalas_por_missa.setdefault(e.id_missa, []).append(e)
+
+    estrutura = {}
+    for missa in missas:
+        dia = missa.data.day
+        estrutura.setdefault(dia, [])
+        estrutura[dia].append({
+            "id": missa.id,
+            "horario": missa.horario,
+            "periodo": _normalizar_periodo(missa.periodo, missa.horario) or "-",
+            "comunidade": missa.comunidade,
+            "ministros": [
+                {"nome": e.ministro.nome}
+                for e in escalas_por_missa.get(missa.id, [])
+                if e.ministro and e.ministro.nome
+            ],
+        })
+
+    arquivo = gerar_imagem_calendario_escala(mes=mes, ano=ano, cal=cal, estrutura=estrutura)
+    nome_arquivo = f"calendario-escala-{ano:04d}-{mes:02d}.png"
+    return send_file(arquivo, mimetype="image/png", download_name=nome_arquivo, as_attachment=False)
 
 from utils.auth import admin_required
 @missas_bp.route("/missas/nova", methods=["GET", "POST"])

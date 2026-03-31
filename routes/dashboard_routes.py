@@ -1,11 +1,12 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, flash, redirect, render_template, request, url_for
+from flask import Blueprint, jsonify, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 from services.relatorio_service import obter_saudacao
 
-from models import Escala, Missa, Ministro, Substituicao
+from models import Escala, Missa, Ministro, Paroquia, Substituicao
 from services.dashboard_service import construir_dashboard
+from services.escala_imagem_service import gerar_imagem_escala_missa
 from services.firebase_service import enviar_push
 from services.substituicao_dashboard_service import (
     buscar_ministros_disponiveis,
@@ -178,6 +179,23 @@ def whatsapp_sem_token_missa(missa_id):
         return redirect(url_for("dashboard.home"))
 
     return render_template("whatsapp_lista.html", links=links)
+
+
+@dashboard_bp.route("/dashboard/escala_imagem/<int:missa_id>.png")
+@login_required
+@admin_required
+def escala_imagem_missa(missa_id):
+    missa, escalas = _escala_missa_da_paroquia(missa_id)
+    paroquia = Paroquia.query.filter_by(id=current_user.id_paroquia).first()
+    nome_paroquia = getattr(paroquia, "nome", "") if paroquia else ""
+
+    arquivo = gerar_imagem_escala_missa(
+        missa=missa,
+        escalas=escalas,
+        nome_paroquia=nome_paroquia,
+    )
+    nome_arquivo = f"escala-missa-{missa.data.strftime('%Y%m%d')}-{(missa.horario or 'sem-horario').replace(':', 'h')}.png"
+    return send_file(arquivo, mimetype="image/png", download_name=nome_arquivo, as_attachment=False)
 
 
 @dashboard_bp.route("/buscar_ministros_disponiveis")

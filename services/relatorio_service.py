@@ -288,7 +288,7 @@ def montar_mensagem_com_escala_dia(ministro, lista_escalas):
 
     msg = f"{saudacao} {ministro.nome}!\n\n"
     msg += "*RELATORIO COMPLETO DA SUA ESCALA*\n"
-    msg += "Calendario do periodo com os ministros que servem com voce em cada missa.\n\n"
+    msg += "Calendario do periodo com a escala completa de ministros em cada missa.\n\n"
 
     for mes in sorted(por_mes.keys()):
         msg += "------------------------------\n"
@@ -299,17 +299,13 @@ def montar_mensagem_com_escala_dia(ministro, lista_escalas):
         for escala in lista:
             missa = escala.missa
             semana = semana_do_mes(missa.data)
-            colegas = [
-                nome for nome in colegas_por_missa.get(escala.id_missa, [])
-                if nome != ministro.nome
-            ]
-            colegas_texto = ", ".join(colegas) if colegas else "Nenhum outro ministro nesta missa"
+            ministros_escala = colegas_por_missa.get(escala.id_missa, [])
+            escala_texto = ", ".join(ministros_escala) if ministros_escala else "Nenhum ministro nesta missa"
 
             msg += (
                 f"{missa.data.strftime('%d/%m')} - {dias_nome[missa.data.weekday()]} ({semana}a semana)\n"
                 f"Horario: {missa.horario}\n"
-                f"Comunidade: {missa.comunidade}\n"
-                f"Serve com: {colegas_texto}\n\n"
+                f"Escala: {escala_texto}\n\n"
             )
 
     msg += "Deus abencoe seu servico!"

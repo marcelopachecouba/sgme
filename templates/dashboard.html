@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+.dashboard-share-hint {
+    font-size: 0.86rem;
+    color: #6c757d;
+}
+</style>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -171,6 +177,17 @@
                         <a href="{{ url_for('dashboard.whatsapp_sem_token_missa', missa_id=item.missa_id) }}" class="btn btn-outline-success btn-sm" target="_blank">
                             Lembrete WhatsApp
                         </a>
+                        <button
+                            type="button"
+                            class="btn btn-outline-warning btn-sm btn-compartilhar-escala"
+                            data-skip-confirm="true"
+                            data-imagem-url="{{ url_for('dashboard.escala_imagem_missa', missa_id=item.missa_id) }}"
+                            data-arquivo="escala-missa-{{ item.missa.data.strftime('%d-%m-%Y') }}.png">
+                            Enviar figura
+                        </button>
+                    </div>
+                    <div class="dashboard-share-hint mt-2">
+                        Gera a arte da escala pronta para compartilhar no grupo.
                     </div>
                     {% else %}
                     <span class="text-muted">-</span>
@@ -181,5 +198,58 @@
         </tbody>
     </table>
 </div>
+
+<script>
+async function compartilharEscalaComoImagem(botao) {
+    const imagemUrl = botao.dataset.imagemUrl;
+    const nomeArquivo = botao.dataset.arquivo || "escala-missa.png";
+    const textoOriginal = botao.innerHTML;
+
+    botao.disabled = true;
+    botao.innerHTML = "Gerando...";
+
+    try {
+        const resposta = await fetch(imagemUrl, { credentials: "same-origin" });
+        if (!resposta.ok) {
+            throw new Error("Nao foi possivel gerar a imagem da escala.");
+        }
+
+        const blob = await resposta.blob();
+        const arquivo = new File([blob], nomeArquivo, { type: "image/png" });
+
+        if (navigator.canShare && navigator.share && navigator.canShare({ files: [arquivo] })) {
+            await navigator.share({
+                title: "Escala da missa",
+                text: "Segue a escala do dia.",
+                files: [arquivo]
+            });
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = nomeArquivo;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        alert("A figura foi baixada. Agora e so enviar no grupo de ministros.");
+    } catch (erro) {
+        alert(erro.message || "Falha ao preparar a figura da escala.");
+    } finally {
+        botao.disabled = false;
+        botao.innerHTML = textoOriginal;
+    }
+}
+
+document.addEventListener("click", function (event) {
+    const botao = event.target.closest(".btn-compartilhar-escala");
+    if (!botao) {
+        return;
+    }
+    compartilharEscalaComoImagem(botao);
+});
+</script>
 
 {% endblock %}

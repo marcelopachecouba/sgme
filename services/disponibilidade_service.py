@@ -77,6 +77,65 @@ def resolver_status_missa(ministro_id, missa, id_paroquia):
     return "neutro"
 
 
+def listar_ministros_indisponiveis(ministro_ids, missa, id_paroquia):
+    if not ministro_ids:
+        return set()
+
+    semana_ref = semana_do_mes(missa.data)
+    dia_semana = missa.data.weekday()
+
+    indisponibilidades_fixas = IndisponibilidadeFixa.query.filter(
+        IndisponibilidadeFixa.id_ministro.in_(ministro_ids),
+        IndisponibilidadeFixa.id_paroquia == id_paroquia,
+        IndisponibilidadeFixa.dia_semana == dia_semana,
+    ).all()
+    disponibilidades_fixas = DisponibilidadeFixa.query.filter(
+        DisponibilidadeFixa.id_ministro.in_(ministro_ids),
+        DisponibilidadeFixa.id_paroquia == id_paroquia,
+        DisponibilidadeFixa.dia_semana == dia_semana,
+    ).all()
+    indisponibilidades_data = Indisponibilidade.query.filter(
+        Indisponibilidade.id_ministro.in_(ministro_ids),
+        Indisponibilidade.id_paroquia == id_paroquia,
+        Indisponibilidade.data == missa.data,
+    ).all()
+    disponibilidades_data = Disponibilidade.query.filter(
+        Disponibilidade.id_ministro.in_(ministro_ids),
+        Disponibilidade.id_paroquia == id_paroquia,
+        Disponibilidade.data == missa.data,
+    ).all()
+
+    melhor_indisponivel = {ministro_id: -1 for ministro_id in ministro_ids}
+    melhor_disponivel = {ministro_id: -1 for ministro_id in ministro_ids}
+
+    for regra in indisponibilidades_fixas:
+        score = _score_regra_fixa(regra, semana_ref, missa.horario)
+        if score > melhor_indisponivel.get(regra.id_ministro, -1):
+            melhor_indisponivel[regra.id_ministro] = score
+
+    for regra in disponibilidades_fixas:
+        score = _score_regra_fixa(regra, semana_ref, missa.horario)
+        if score > melhor_disponivel.get(regra.id_ministro, -1):
+            melhor_disponivel[regra.id_ministro] = score
+
+    for regra in indisponibilidades_data:
+        score = _score_regra_data(regra, missa.horario)
+        if score > melhor_indisponivel.get(regra.id_ministro, -1):
+            melhor_indisponivel[regra.id_ministro] = score
+
+    for regra in disponibilidades_data:
+        score = _score_regra_data(regra, missa.horario)
+        if score > melhor_disponivel.get(regra.id_ministro, -1):
+            melhor_disponivel[regra.id_ministro] = score
+
+    return {
+        ministro_id
+        for ministro_id in ministro_ids
+        if melhor_indisponivel.get(ministro_id, -1) >= melhor_disponivel.get(ministro_id, -1)
+        and melhor_indisponivel.get(ministro_id, -1) >= 0
+    }
+
+
 def esta_indisponivel(ministro_id, missa, id_paroquia):
     return resolver_status_missa(ministro_id, missa, id_paroquia) == "indisponivel"
 

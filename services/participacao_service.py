@@ -1,3 +1,6 @@
+from collections import defaultdict
+from types import SimpleNamespace
+
 from sqlalchemy import case, func
 
 from models import Escala, Ministro, Missa, db
@@ -113,4 +116,40 @@ def obter_missas_ministro_periodo(ministro_id, id_paroquia, data_inicio=None, da
         Missa.horario.asc()
     )
 
-    return query.all()
+    resultados = query.all()
+    if not resultados:
+        return []
+
+    missa_ids = [item.missa_id for item in resultados]
+    ministros_por_missa = defaultdict(list)
+
+    escalas_missa = db.session.query(
+        Escala.id_missa.label("missa_id"),
+        Ministro.nome.label("nome"),
+    ).join(
+        Ministro,
+        Ministro.id == Escala.id_ministro
+    ).filter(
+        Escala.id_paroquia == id_paroquia,
+        Escala.id_missa.in_(missa_ids),
+    ).order_by(
+        Escala.id_missa.asc(),
+        Ministro.nome.asc()
+    ).all()
+
+    for escala in escalas_missa:
+        ministros_por_missa[escala.missa_id].append(escala.nome)
+
+    return [
+        SimpleNamespace(
+            escala_id=item.escala_id,
+            missa_id=item.missa_id,
+            data=item.data,
+            horario=item.horario,
+            comunidade=item.comunidade,
+            confirmado=item.confirmado,
+            presente=item.presente,
+            ministros=ministros_por_missa.get(item.missa_id, []),
+        )
+        for item in resultados
+    ]

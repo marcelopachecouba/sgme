@@ -19,6 +19,15 @@
         <div class="col-md-6 mt-2 mt-md-0 text-md-end">
             <button type="button" class="btn btn-outline-secondary" onclick="prepararImpressaoPadrao()">Imprimir</button>
             <button type="button" class="btn btn-outline-primary ms-2" onclick="prepararImpressaoCalendarioA4()">Imprimir Calendario A4</button>
+            {% if current_user.is_admin() %}
+            <a
+                href="{{ url_for('missas.calendario_missas_imagem', mes=mes, ano=ano) }}"
+                target="_blank"
+                class="btn btn-outline-success ms-2"
+                data-skip-confirm="true">
+                Imprimir escala em imagem
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -63,6 +72,17 @@
                                             {% endif %}
                                         </div>
                                     {% endfor %}
+                                    {% if current_user.is_admin() %}
+                                    <div class="mt-2 d-grid">
+                                        <a
+                                            href="{{ url_for('dashboard.escala_imagem_missa', missa_id=missa.id) }}"
+                                            target="_blank"
+                                            class="btn btn-outline-primary btn-sm"
+                                            data-skip-confirm="true">
+                                            Imprimir escala em imagem
+                                        </a>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             {% endfor %}
                         {% endif %}
