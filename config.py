@@ -3,6 +3,9 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
+DEFAULT_DEV_SECRET_KEY = 'dev-secret-key-change-me'
+
+
 def _load_local_env():
     base_dir = Path(__file__).resolve().parent
     env_paths = [base_dir / '.env', base_dir / 'instance' / '.env']
@@ -33,6 +36,9 @@ def _normalize_database_url(database_url: str) -> str:
     parts = urlsplit(database_url)
     query = dict(parse_qsl(parts.query, keep_blank_values=True))
     query.setdefault('sslmode', os.environ.get('DATABASE_SSLMODE', 'require'))
+    database_hostaddr = os.environ.get('DATABASE_HOSTADDR', '').strip()
+    if database_hostaddr:
+        query['hostaddr'] = database_hostaddr
     query_string = urlencode(query)
     return urlunsplit((parts.scheme, parts.netloc, parts.path, query_string, parts.fragment))
 
@@ -41,10 +47,10 @@ class Config:
 
     SECRET_KEY = os.environ.get(
         'SECRET_KEY',
-        'y2dnh9XfXRHDlqNz6WzRmMF1orwuX7QZQtMyaI2_ZLgjvx9CqUyXS_hDGj6EjHZj5VwN2V6eHqjGGBFSc94IjQ'
+        DEFAULT_DEV_SECRET_KEY
     )
     REQUIRE_SECRET_KEY = os.environ.get('REQUIRE_SECRET_KEY', '0') == '1'
-    if REQUIRE_SECRET_KEY and SECRET_KEY == 'y2dnh9XfXRHDlqNz6WzRmMF1orwuX7QZQtMyaI2_ZLgjvx9CqUyXS_hDGj6EjHZj5VwN2V6eHqjGGBFSc94IjQ':
+    if REQUIRE_SECRET_KEY and SECRET_KEY == DEFAULT_DEV_SECRET_KEY:
         raise RuntimeError('SECRET_KEY nao configurada e REQUIRE_SECRET_KEY=1.')
 
     DATABASE_URL = os.environ.get('DATABASE_URL')
