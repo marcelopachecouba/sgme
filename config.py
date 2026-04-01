@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 def _load_local_env():
@@ -22,6 +23,20 @@ def _load_local_env():
 _load_local_env()
 
 
+def _normalize_database_url(database_url: str) -> str:
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+    if not database_url.startswith('postgresql://'):
+        return database_url
+
+    parts = urlsplit(database_url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query.setdefault('sslmode', os.environ.get('DATABASE_SSLMODE', 'require'))
+    query_string = urlencode(query)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query_string, parts.fragment))
+
+
 class Config:
 
     SECRET_KEY = os.environ.get(
@@ -36,16 +51,16 @@ class Config:
     if not DATABASE_URL:
         raise RuntimeError('DATABASE_URL nao configurado. Configure para usar PostgreSQL.')
 
-    if DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    DATABASE_URL = _normalize_database_url(DATABASE_URL)
 
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     FIREBASE_VAPID_KEY = os.environ.get('FIREBASE_VAPID_KEY', '')
-    PUBLIC_BASE_URL = os.environ.get(
-        'PUBLIC_BASE_URL',
-        'https://sgme.onrender.com',
-    ).strip().rstrip('/')
+    PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').strip().rstrip('/')
+    if not PUBLIC_BASE_URL:
+        PUBLIC_BASE_URL = os.environ.get('RENDER_EXTERNAL_URL', '').strip().rstrip('/')
+    if not PUBLIC_BASE_URL:
+        PUBLIC_BASE_URL = 'http://localhost:5000'
     WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '').strip()
     PHONE_NUMBER_ID = os.environ.get('PHONE_NUMBER_ID', '').strip()
     WHATSAPP_GRAPH_VERSION = os.environ.get('WHATSAPP_GRAPH_VERSION', 'v19.0').strip()
@@ -72,7 +87,13 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {}
     if SQLALCHEMY_DATABASE_URI.startswith('postgresql://'):
         SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': int(os.environ.get('DATABASE_POOL_RECYCLE', '300')),
             'connect_args': {
-                'sslmode': os.environ.get('DATABASE_SSLMODE', 'require')
+                'connect_timeout': int(os.environ.get('DATABASE_CONNECT_TIMEOUT', '10')),
+                'keepalives': 1,
+                'keepalives_idle': int(os.environ.get('DATABASE_KEEPALIVES_IDLE', '30')),
+                'keepalives_interval': int(os.environ.get('DATABASE_KEEPALIVES_INTERVAL', '10')),
+                'keepalives_count': int(os.environ.get('DATABASE_KEEPALIVES_COUNT', '5')),
             }
         }

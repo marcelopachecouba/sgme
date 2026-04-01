@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: sgme-web
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && flask db upgrade
+    startCommand: gunicorn app:app
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.2"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSLMODE
+        value: require
+      - key: SECRET_KEY
+        generateValue: true
+      - key: REQUIRE_SECRET_KEY
+        value: "1"
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: SCHEDULER_TIMEZONE
+        value: America/Sao_Paulo
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_GRAPH_VERSION
+        value: v19.0
+      - key: WHATSAPP_SEND_MODE
+        value: template
+      - key: WHATSAPP_TEMPLATE_NAME
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: pt_BR
+      - key: WHATSAPP_TEMPLATE_BUTTON_URL
+        sync: false
+      - key: FIREBASE_CREDENTIALS
+        sync: false
+      - key: FIREBASE_VAPID_KEY
+        sync: false
