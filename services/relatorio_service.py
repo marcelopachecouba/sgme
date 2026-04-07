@@ -1,6 +1,7 @@
 from datetime import datetime
 from collections import defaultdict
 from models import Escala
+from services.observacao_lembrete_service import anexar_observacoes_ativas
 
 def obter_saudacao():
     from datetime import datetime
@@ -247,7 +248,14 @@ def montar_mensagem_unificada(ministro, lista_escalas=None):
     msg += "━━━━━━━━━━━━━━━\n\n"
     msg += "🙏 Deus abençoe seu serviço!"
 
-    return msg
+    id_paroquia = None
+    if lista_escalas:
+        primeira_escala = lista_escalas[0]
+        id_paroquia = getattr(primeira_escala, "id_paroquia", None)
+        if id_paroquia is None and getattr(primeira_escala, "missa", None):
+            id_paroquia = getattr(primeira_escala.missa, "id_paroquia", None)
+
+    return anexar_observacoes_ativas(msg, id_paroquia=id_paroquia)
 
 
 def montar_mensagem_com_escala_dia(ministro, lista_escalas):

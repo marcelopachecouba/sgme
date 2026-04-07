@@ -789,3 +789,18 @@ class ExtratoPadrao(db.Model):
     categoria = db.relationship("CategoriaFinanceira", lazy="joined")
     subcategoria = db.relationship("SubcategoriaFinanceira", lazy="joined")
     centro_custo = db.relationship("CentroCusto", lazy="joined")
+
+
+class ObservacaoLembrete(db.Model):
+    __tablename__ = "OBSERVACOES_LEMBRETE"
+
+    id = db.Column("ID", db.Integer, primary_key=True)
+    descricao = db.Column("DESCRICAO", db.Text, nullable=False)
+    ativo = db.Column("ATIVO", db.Boolean, nullable=False, default=True, index=True)
+    data_cadastro = db.Column("DATA_CADASTRO", db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    id_paroquia = db.Column(
+        db.Integer,
+        db.ForeignKey("paroquia.id"),
+        nullable=False,
+        index=True,
+    )

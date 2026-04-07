@@ -14,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
 from models import Escala, Missa
+from services.observacao_lembrete_service import anexar_observacoes_ativas, listar_textos_observacoes_ativas
 from services.public_url_service import build_public_url
 from services.relatorio_service import montar_mensagem_unificada, obter_saudacao
 
@@ -69,7 +70,28 @@ def _link_calendario_publico(ministro):
     return build_public_url("publico.calendario_publico", token=ministro.token_publico)
 
 
-def montar_mensagem_lembrete(ministro, missa, escala=None):
+def _linhas_escala_do_dia(escalas):
+    if not escalas:
+        return []
+
+    linhas = [
+        "Escala do dia:",
+    ]
+    for item in escalas:
+        ministro = getattr(item, "ministro", None)
+        nome = (getattr(ministro, "nome", "") or "").strip() if ministro else ""
+        if not nome:
+            continue
+        linhas.append(f"- {nome}")
+
+    if len(linhas) == 1:
+        return []
+
+    linhas.append("")
+    return linhas
+
+
+def montar_mensagem_lembrete(ministro, missa, escala=None, escalas_missa=None, incluir_observacoes=False):
     saudacao = obter_saudacao()
     linhas = [
         f"{saudacao} {ministro.nome.upper()},",
@@ -81,6 +103,8 @@ def montar_mensagem_lembrete(ministro, missa, escala=None):
         f"Comunidade: {missa.comunidade}",
         "",
     ]
+
+    linhas.extend(_linhas_escala_do_dia(escalas_missa))
 
     link_escala = _link_escala_publica(escala)
     if link_escala:
@@ -97,7 +121,10 @@ def montar_mensagem_lembrete(ministro, missa, escala=None):
             link_calendario,
         ])
 
-    return "\n".join(linhas)
+    mensagem = "\n".join(linhas)
+    if not incluir_observacoes:
+        return mensagem
+    return anexar_observacoes_ativas(mensagem, id_paroquia=getattr(missa, "id_paroquia", None))
 
 
 def montar_mensagem_escala(ministro, missa, escala=None):
@@ -304,8 +331,16 @@ def enviar_whatsapp_cloud_template(numero, template_name, parametros=None, langu
 def enviar_whatsapp_lembrete(ministro, escalas):
     modo = (_get_config_value("WHATSAPP_SEND_MODE", "template") or "template").strip().lower()
     template_name = (_get_config_value("WHATSAPP_TEMPLATE_NAME") or "").strip()
+    id_paroquia = None
+    if escalas:
+        primeira_escala = escalas[0]
+        id_paroquia = getattr(primeira_escala, "id_paroquia", None)
+        if id_paroquia is None and getattr(primeira_escala, "missa", None):
+            id_paroquia = getattr(primeira_escala.missa, "id_paroquia", None)
 
-    if modo == "template":
+    observacoes_ativas = listar_textos_observacoes_ativas(id_paroquia=id_paroquia)
+
+    if modo == "template" and not observacoes_ativas:
         if not template_name:
             raise RuntimeError("WHATSAPP_TEMPLATE_NAME nao configurado para envio automatico por template.")
         parametros = montar_parametros_template_lembrete(ministro, escalas)
@@ -323,6 +358,8 @@ def enviar_whatsapp_lembrete(ministro, escalas):
     mensagem = montar_mensagem_unificada(ministro, escalas)
     resposta = enviar_whatsapp_cloud(ministro.telefone, mensagem)
     resposta["modo"] = "text"
+    if observacoes_ativas:
+        resposta["observacoes_aplicadas"] = len(observacoes_ativas)
     return resposta
 
 

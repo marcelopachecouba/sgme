@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h3 class="mb-1">Observacoes de Lembrete</h3>
+            <p class="text-muted mb-0">As observacoes ativas serao adicionadas automaticamente ao final dos lembretes enviados por WhatsApp.</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-info">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ "Editar observacao" if observacao_em_edicao else "Nova observacao" }}</h5>
+
+                    <form method="POST" action="{% if observacao_em_edicao %}{{ url_for('observacoes_lembrete.editar_observacao', id=observacao_em_edicao.id) }}{% else %}{{ url_for('observacoes_lembrete.listar_criar_observacoes') }}{% endif %}">
+                        <div class="mb-3">
+                            <label for="descricao" class="form-label">Observacao</label>
+                            <textarea id="descricao" name="descricao" class="form-control" rows="6" maxlength="5000" placeholder="Digite a observacao do lembrete..." required>{{ form_data.descricao }}</textarea>
+                        </div>
+
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" role="switch" id="ativo" name="ativo" {% if form_data.ativo %}checked{% endif %}>
+                            <label class="form-check-label" for="ativo">Ativo</label>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                {{ "Salvar alteracoes" if observacao_em_edicao else "Salvar" }}
+                            </button>
+                            {% if observacao_em_edicao %}
+                            <a href="{{ url_for('observacoes_lembrete.listar_criar_observacoes') }}" class="btn btn-outline-secondary">Cancelar</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title">Observacoes cadastradas</h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Observacao</th>
+                                    <th style="width: 140px;">Status</th>
+                                    <th style="width: 220px;">Acoes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in observacoes %}
+                                <tr>
+                                    <td style="white-space: pre-line;">{{ item.descricao }}</td>
+                                    <td>
+                                        <span class="badge {% if item.ativo %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ "Ativo" if item.ativo else "Inativo" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <a href="{{ url_for('observacoes_lembrete.editar_observacao', id=item.id) }}" class="btn btn-sm btn-warning">Editar</a>
+                                            <form method="POST" action="{{ url_for('observacoes_lembrete.excluir_observacao', id=item.id) }}" onsubmit="return confirm('Deseja excluir esta observacao?');">
+                                                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">Nenhuma observacao cadastrada.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

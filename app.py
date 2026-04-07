@@ -28,6 +28,7 @@ from services.firebase_service import iniciar_firebase
 from services.agendamento_service import registrar_agendamentos
 from routes.push_routes import push_bp
 from routes.notificacoes_routes import notificacao_bp
+from routes.observacoes_lembrete_routes import observacoes_lembrete_bp
 
 
 scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
@@ -55,7 +56,8 @@ def _registrar_blueprints(app):
         superadmin_bp,
         minhas_escalas_bp,
         push_bp,
-        notificacao_bp
+        notificacao_bp,
+        observacoes_lembrete_bp,
     ]
 
     for blueprint in blueprints:

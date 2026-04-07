@@ -12,6 +12,12 @@ CANVAS_WIDTH = 1080
 CANVAS_HEIGHT = 1350
 CALENDAR_WIDTH = 1800
 CALENDAR_HEIGHT = 1350
+CALENDAR_MARGIN_X = 52
+CALENDAR_COL_GAP = 10
+CALENDAR_ROW_GAP = 10
+CALENDAR_TOP_Y = 210
+CALENDAR_HEADER_H = 58
+CALENDAR_CELL_PADDING_TOP = 44
 
 MESES_PT = {
     1: "Janeiro",
@@ -187,6 +193,136 @@ def _background_calendar(height=CALENDAR_HEIGHT):
     return bg
 
 
+def _calcular_bloco_calendario(cal, estrutura, colunas_visiveis=None, largura_total=CALENDAR_WIDTH):
+    title_font = _load_font("title", 54)
+    subtitle_font = _load_font("text_bold", 28)
+    weekday_font = _load_font("text_bold", 24)
+    day_font = _load_font("text_bold", 24)
+    event_font = _load_font("text", 18)
+    event_bold_font = _load_font("text_bold", 18)
+
+    if not colunas_visiveis:
+        colunas_visiveis = list(range(7))
+
+    measure = ImageDraw.Draw(Image.new("RGBA", (largura_total, 100), (0, 0, 0, 0)))
+    rows = max(1, len(cal))
+    total_colunas = max(1, len(colunas_visiveis))
+    cell_w = int((largura_total - (CALENDAR_MARGIN_X * 2) - (CALENDAR_COL_GAP * max(0, total_colunas - 1))) / total_colunas)
+
+    calendar_blocks = {}
+    row_heights = []
+    for row_idx, semana in enumerate(cal or [[]]):
+        max_row_height = 180
+        for dia in semana:
+            if not dia:
+                continue
+            eventos = sorted(estrutura.get(dia, []), key=lambda item: item.get("horario") or "")
+            blocks = []
+            content_height = CALENDAR_CELL_PADDING_TOP
+            for missa in eventos:
+                lines = []
+                cabecalho = f"{missa.get('horario') or '-'} - {missa.get('comunidade') or '-'}"
+                lines.extend(_wrap_text(measure, cabecalho, event_bold_font, cell_w - 26))
+                ministros = [m.get("nome", "").strip() for m in missa.get("ministros", []) if m.get("nome")]
+                if ministros:
+                    for ministro in ministros:
+                        lines.extend(_wrap_text(measure, f"- {ministro}", event_font, cell_w - 26))
+                else:
+                    lines.append("- Sem ministros")
+
+                block_h = 12
+                for idx, line in enumerate(lines):
+                    font = event_bold_font if idx == 0 else event_font
+                    bbox = measure.textbbox((0, 0), line, font=font)
+                    block_h += (bbox[3] - bbox[1]) + 1
+
+                blocks.append({"lines": lines, "height": block_h})
+                content_height += block_h + 6
+
+            if not eventos:
+                content_height = max(content_height, 88)
+
+            calendar_blocks[(row_idx, dia)] = blocks
+            max_row_height = max(max_row_height, content_height + 12)
+        row_heights.append(max_row_height)
+
+    bloco_altura = CALENDAR_HEADER_H + 14 + sum(row_heights) + (CALENDAR_ROW_GAP * max(0, rows - 1))
+    return {
+        "fonts": {
+            "title": title_font,
+            "subtitle": subtitle_font,
+            "weekday": weekday_font,
+            "day": day_font,
+            "event": event_font,
+            "event_bold": event_bold_font,
+        },
+        "calendar_blocks": calendar_blocks,
+        "row_heights": row_heights,
+        "cell_w": cell_w,
+        "bloco_altura": bloco_altura,
+        "colunas_visiveis": colunas_visiveis,
+    }
+
+
+def _desenhar_bloco_calendario(bg, draw, *, topo_y, titulo, subtitulo, cal, estrutura, colunas_visiveis=None, largura_total=CALENDAR_WIDTH):
+    calculo = _calcular_bloco_calendario(cal, estrutura, colunas_visiveis=colunas_visiveis, largura_total=largura_total)
+    weekday_font = calculo["fonts"]["weekday"]
+    day_font = calculo["fonts"]["day"]
+    event_font = calculo["fonts"]["event"]
+    event_bold_font = calculo["fonts"]["event_bold"]
+    subtitle_font = calculo["fonts"]["subtitle"]
+    title_font = calculo["fonts"]["title"]
+    cell_w = calculo["cell_w"]
+
+    title_box = _rounded_box((780, 92), 42, (251, 245, 231, 250), outline=(202, 164, 103, 255), outline_width=4)
+    bg.alpha_composite(title_box, (90, topo_y))
+    _draw_centered_multiline(draw, [titulo], 480, topo_y + 16, title_font, "#4f331d", spacing=4)
+    draw.text((94, topo_y + 112), subtitulo, font=subtitle_font, fill="#6a4a26")
+
+    dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"]
+    header_y = topo_y + 170
+    for col, indice_semana in enumerate(calculo["colunas_visiveis"]):
+        nome = dias_semana[indice_semana]
+        x = CALENDAR_MARGIN_X + col * (cell_w + CALENDAR_COL_GAP)
+        header = _rounded_box((cell_w, CALENDAR_HEADER_H), 18, (132, 92, 49, 230))
+        bg.alpha_composite(header, (x, header_y))
+        bbox = draw.textbbox((0, 0), nome, font=weekday_font)
+        tx = x + (cell_w - (bbox[2] - bbox[0])) / 2
+        ty = header_y + (CALENDAR_HEADER_H - (bbox[3] - bbox[1])) / 2 - 2
+        draw.text((tx, ty), nome, font=weekday_font, fill="#fff8ee")
+
+    start_y = header_y + CALENDAR_HEADER_H + 14
+    current_row_y = start_y
+    for row_idx, semana in enumerate(cal or [[]]):
+        cell_h = calculo["row_heights"][row_idx]
+        y = current_row_y
+        for col_idx, dia in enumerate(semana):
+            x = CALENDAR_MARGIN_X + col_idx * (cell_w + CALENDAR_COL_GAP)
+            cell = _rounded_box((cell_w, cell_h), 22, (255, 251, 244, 220), outline=(210, 184, 143, 255), outline_width=2)
+            bg.alpha_composite(cell, (x, y))
+            if not dia:
+                continue
+
+            draw.text((x + 14, y + 10), str(dia), font=day_font, fill="#5a3a18")
+            inner_y = y + CALENDAR_CELL_PADDING_TOP
+            for bloco in calculo["calendar_blocks"].get((row_idx, dia), []):
+                event_box = _rounded_box((cell_w - 18, bloco["height"]), 14, (248, 239, 221, 255), outline=(223, 203, 170, 255), outline_width=1)
+                bg.alpha_composite(event_box, (x + 9, inner_y))
+                text_y = inner_y + 7
+                first = True
+                for line in bloco["lines"]:
+                    font = event_bold_font if first else event_font
+                    fill = "#3f2915" if first else "#2c2219"
+                    draw.text((x + 18, text_y), line, font=font, fill=fill)
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    text_y += (bbox[3] - bbox[1]) + 1
+                    first = False
+                inner_y += bloco["height"] + 6
+        current_row_y += cell_h + CALENDAR_ROW_GAP
+
+    return topo_y + 170 + calculo["bloco_altura"]
+
+
 def gerar_imagem_escala_missa(missa, escalas, nome_paroquia=""):
     ministros = [escala.ministro.nome.strip() for escala in escalas if getattr(escala, "ministro", None) and getattr(escala.ministro, "nome", None)]
 
@@ -278,65 +414,35 @@ def gerar_imagem_escala_missa(missa, escalas, nome_paroquia=""):
     return buffer
 
 
-def gerar_imagem_calendario_escala(mes, ano, cal, estrutura):
-    title_font = _load_font("title", 54)
-    subtitle_font = _load_font("text_bold", 28)
-    weekday_font = _load_font("text_bold", 24)
-    day_font = _load_font("text_bold", 24)
-    event_font = _load_font("text", 18)
-    event_bold_font = _load_font("text_bold", 18)
+def gerar_imagem_calendario_escala(mes, ano, cal, estrutura, calendarios_periodo=None, titulo_periodo=None):
+    if calendarios_periodo:
+        secoes = []
+        for calendario_periodo in calendarios_periodo:
+            subtitulo = f"{MESES_PT.get(calendario_periodo['mes'], str(calendario_periodo['mes']))} de {calendario_periodo['ano']}"
+            secoes.append({
+                "titulo": "CALENDARIO DA ESCALA",
+                "subtitulo": subtitulo,
+                "cal": calendario_periodo["cal"],
+                "estrutura": calendario_periodo["estrutura"],
+                "colunas_visiveis": calendario_periodo.get("colunas_visiveis") or list(range(7)),
+            })
+    else:
+        secoes = [{
+            "titulo": "CALENDARIO DA ESCALA",
+            "subtitulo": f"{MESES_PT.get(mes, str(mes))} de {ano}",
+            "cal": cal,
+            "estrutura": estrutura,
+            "colunas_visiveis": list(range(7)),
+        }]
 
-    measure = ImageDraw.Draw(Image.new("RGBA", (CALENDAR_WIDTH, 100), (0, 0, 0, 0)))
-
-    margin_x = 52
-    top_y = 210
-    header_h = 58
-    rows = max(1, len(cal))
-    col_gap = 10
-    row_gap = 10
-    cell_w = int((CALENDAR_WIDTH - (margin_x * 2) - (col_gap * 6)) / 7)
-    cell_padding_top = 44
-
-    calendar_blocks = {}
-    row_heights = []
-    for row_idx, semana in enumerate(cal):
-        max_row_height = 180
-        for dia in semana:
-            if not dia:
-                continue
-            eventos = sorted(estrutura.get(dia, []), key=lambda item: item.get("horario") or "")
-            blocks = []
-            content_height = cell_padding_top
-            for missa in eventos:
-                lines = []
-                cabecalho = f"{missa.get('horario') or '-'} - {missa.get('comunidade') or '-'}"
-                lines.extend(_wrap_text(measure, cabecalho, event_bold_font, cell_w - 26))
-                ministros = [m.get("nome", "").strip() for m in missa.get("ministros", []) if m.get("nome")]
-                if ministros:
-                    for ministro in ministros:
-                        lines.extend(_wrap_text(measure, f"- {ministro}", event_font, cell_w - 26))
-                else:
-                    lines.append("- Sem ministros")
-
-                block_h = 12
-                for idx, line in enumerate(lines):
-                    font = event_bold_font if idx == 0 else event_font
-                    bbox = measure.textbbox((0, 0), line, font=font)
-                    block_h += (bbox[3] - bbox[1]) + 1
-
-                blocks.append({"lines": lines, "height": block_h})
-                content_height += block_h + 6
-
-            if not eventos:
-                content_height = max(content_height, 88)
-
-            calendar_blocks[(row_idx, dia)] = blocks
-            max_row_height = max(max_row_height, content_height + 12)
-        row_heights.append(max_row_height)
-
-    total_height = top_y + header_h + 14 + sum(row_heights) + (row_gap * max(0, rows - 1)) + 48
-    total_height = max(total_height, CALENDAR_HEIGHT)
-    bg = _background_calendar(total_height)
+    altura_total = 70
+    if titulo_periodo:
+        altura_total += 80
+    for secao in secoes:
+        calculo = _calcular_bloco_calendario(secao["cal"], secao["estrutura"], colunas_visiveis=secao["colunas_visiveis"])
+        altura_total += 170 + calculo["bloco_altura"] + 60
+    altura_total = max(altura_total, CALENDAR_HEIGHT)
+    bg = _background_calendar(altura_total)
 
     if LOGO_PATH.exists():
         try:
@@ -354,49 +460,26 @@ def gerar_imagem_calendario_escala(mes, ano, cal, estrutura):
             pass
 
     draw = ImageDraw.Draw(bg)
-    title_box = _rounded_box((780, 92), 42, (251, 245, 231, 250), outline=(202, 164, 103, 255), outline_width=4)
-    bg.alpha_composite(title_box, (90, 40))
-    _draw_centered_multiline(draw, ["CALENDARIO DA ESCALA"], 480, 56, title_font, "#4f331d", spacing=4)
-    draw.text((94, 152), f"{MESES_PT.get(mes, str(mes))} de {ano}", font=subtitle_font, fill="#6a4a26")
+    subtitle_top_font = _load_font("text_bold", 30)
+    current_top = 40
+    if titulo_periodo:
+        inicio, fim = titulo_periodo
+        topo = f"Periodo: {inicio.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}"
+        draw.text((94, current_top), topo, font=subtitle_top_font, fill="#6a4a26")
+        current_top += 80
 
-    dias_semana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"]
-    for col, nome in enumerate(dias_semana):
-        x = margin_x + col * (cell_w + col_gap)
-        header = _rounded_box((cell_w, header_h), 18, (132, 92, 49, 230))
-        bg.alpha_composite(header, (x, top_y))
-        bbox = draw.textbbox((0, 0), nome, font=weekday_font)
-        tx = x + (cell_w - (bbox[2] - bbox[0])) / 2
-        ty = top_y + (header_h - (bbox[3] - bbox[1])) / 2 - 2
-        draw.text((tx, ty), nome, font=weekday_font, fill="#fff8ee")
-
-    start_y = top_y + header_h + 14
-    current_row_y = start_y
-    for row_idx, semana in enumerate(cal):
-        cell_h = row_heights[row_idx]
-        y = current_row_y
-        for col_idx, dia in enumerate(semana):
-            x = margin_x + col_idx * (cell_w + col_gap)
-            cell = _rounded_box((cell_w, cell_h), 22, (255, 251, 244, 220), outline=(210, 184, 143, 255), outline_width=2)
-            bg.alpha_composite(cell, (x, y))
-            if not dia:
-                continue
-
-            draw.text((x + 14, y + 10), str(dia), font=day_font, fill="#5a3a18")
-            inner_y = y + cell_padding_top
-            for bloco in calendar_blocks.get((row_idx, dia), []):
-                event_box = _rounded_box((cell_w - 18, bloco["height"]), 14, (248, 239, 221, 255), outline=(223, 203, 170, 255), outline_width=1)
-                bg.alpha_composite(event_box, (x + 9, inner_y))
-                text_y = inner_y + 7
-                first = True
-                for line in bloco["lines"]:
-                    font = event_bold_font if first else event_font
-                    fill = "#3f2915" if first else "#2c2219"
-                    draw.text((x + 18, text_y), line, font=font, fill=fill)
-                    bbox = draw.textbbox((0, 0), line, font=font)
-                    text_y += (bbox[3] - bbox[1]) + 1
-                    first = False
-                inner_y += bloco["height"] + 6
-        current_row_y += cell_h + row_gap
+    for secao in secoes:
+        final_bloco = _desenhar_bloco_calendario(
+            bg,
+            draw,
+            topo_y=current_top,
+            titulo=secao["titulo"],
+            subtitulo=secao["subtitulo"],
+            cal=secao["cal"],
+            estrutura=secao["estrutura"],
+            colunas_visiveis=secao["colunas_visiveis"],
+        )
+        current_top = final_bloco + 60
 
     buffer = BytesIO()
     bg.convert("RGB").save(buffer, format="PNG", optimize=True)

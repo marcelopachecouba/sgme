@@ -212,6 +212,28 @@ function montarMensagemConfirmacao(acao, tipo, destino) {
         + (destino ? "Destino: " + destino : "");
 }
 
+function normalizarTextoConfirmacao(valor) {
+    return (valor || "")
+        .toString()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
+function precisaConfirmacao(acao, destino) {
+    const acaoNormalizada = normalizarTextoConfirmacao(acao);
+    const destinoNormalizado = normalizarTextoConfirmacao(destino);
+
+    return acaoNormalizada.includes("excluir")
+        || acaoNormalizada.includes("editar")
+        || acaoNormalizada.includes("gerar escala")
+        || destinoNormalizado.includes("excluir")
+        || destinoNormalizado.includes("editar")
+        || destinoNormalizado.includes("gerar_escala")
+        || destinoNormalizado.includes("gerar-escala");
+}
+
 document.addEventListener("click", function (event) {
     const copiar = event.target.closest("[data-copy-link]");
     if (copiar) {
@@ -238,6 +260,9 @@ document.addEventListener("click", function (event) {
 
     const acao = obterTextoAcao(linkBotao);
     const destino = linkBotao.getAttribute("href") || "";
+    if (!precisaConfirmacao(acao, destino)) {
+        return;
+    }
     if (!window.confirm(montarMensagemConfirmacao(acao, "GET", destino))) {
         event.preventDefault();
     }
@@ -265,6 +290,9 @@ document.addEventListener("submit", function (event) {
     const acao = obterTextoAcao(submitter);
     const tipo = (form.getAttribute("method") || "GET").toUpperCase();
     const destino = form.getAttribute("action") || window.location.pathname;
+    if (!precisaConfirmacao(acao, destino)) {
+        return;
+    }
     if (!window.confirm(montarMensagemConfirmacao(acao, tipo, destino))) {
         event.preventDefault();
     }

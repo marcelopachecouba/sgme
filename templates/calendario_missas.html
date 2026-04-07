@@ -2,24 +2,58 @@
 {% block content %}
 
 {% set dias_semana = ["Segunda-feira", "Terca-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sabado", "Domingo"] %}
+{% set nomes_meses = ["", "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"] %}
 
 <div class="screen-only">
-    <h3 class="mb-4">Calendario de Missas - {{ mes }}/{{ ano }}</h3>
+    <h3 class="mb-4">
+        Calendario de Missas
+        {% if modo_periodo %}
+            - Periodo de {{ data_inicio[8:10] }}/{{ data_inicio[5:7] }}/{{ data_inicio[0:4] }} a {{ data_fim[8:10] }}/{{ data_fim[5:7] }}/{{ data_fim[0:4] }}
+        {% else %}
+            - {{ mes }}/{{ ano }}
+        {% endif %}
+    </h3>
 
     <div class="row mb-3 no-print">
-        <div class="col-md-6">
+        <div class="col-lg-8">
             <form method="get">
-                <div class="input-group">
-                    <input type="number" name="mes" min="1" max="12" value="{{ mes }}" class="form-control">
-                    <input type="number" name="ano" value="{{ ano }}" class="form-control">
-                    <button class="btn btn-primary">Atualizar</button>
+                <div class="row g-2">
+                    <div class="col-sm-3">
+                        <input type="number" name="mes" min="1" max="12" value="{{ mes }}" class="form-control" placeholder="Mes">
+                    </div>
+                    <div class="col-sm-3">
+                        <input type="number" name="ano" value="{{ ano }}" class="form-control" placeholder="Ano">
+                    </div>
+                    <div class="col-sm-3">
+                        <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
+                    </div>
+                    <div class="col-sm-3">
+                        <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary">Atualizar</button>
+                        {% if modo_periodo %}
+                        <a href="{{ url_for('missas.calendario_missas', mes=mes, ano=ano) }}" class="btn btn-outline-secondary">Voltar para mes</a>
+                        {% endif %}
+                    </div>
                 </div>
             </form>
         </div>
-        <div class="col-md-6 mt-2 mt-md-0 text-md-end">
+        <div class="col-lg-4 mt-3 mt-lg-0 text-lg-end">
             <button type="button" class="btn btn-outline-secondary" onclick="prepararImpressaoPadrao()">Imprimir</button>
+            {% if not modo_periodo %}
             <button type="button" class="btn btn-outline-primary ms-2" onclick="prepararImpressaoCalendarioA4()">Imprimir Calendario A4</button>
-            {% if current_user.is_admin() %}
+            {% endif %}
+            {% if current_user.is_admin() and modo_periodo %}
+            <a
+                href="{{ url_for('missas.calendario_missas_imagem_periodo', data_inicio=data_inicio, data_fim=data_fim) }}"
+                target="_blank"
+                class="btn btn-outline-success ms-2"
+                data-skip-confirm="true">
+                Imprimir escala em imagem
+            </a>
+            {% endif %}
+            {% if current_user.is_admin() and not modo_periodo %}
             <a
                 href="{{ url_for('missas.calendario_missas_imagem', mes=mes, ano=ano) }}"
                 target="_blank"
@@ -31,6 +65,82 @@
         </div>
     </div>
 
+    {% if modo_periodo %}
+    {% for calendario_periodo in calendarios_periodo %}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-dark text-white">
+                {{ nomes_meses[calendario_periodo.mes] }} / {{ calendario_periodo.ano }}
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-bordered text-center align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            {% for indice_coluna in calendario_periodo.colunas_visiveis %}
+                            <th>{{ ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"][indice_coluna] }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for semana in calendario_periodo.cal %}
+                        <tr>
+                        {% for dia in semana %}
+                            <td style="height:150px; vertical-align:top;">
+                                {% if dia != 0 %}
+                                    <div class="fw-bold mb-2">{{ dia }}</div>
+                                    {% if dia in calendario_periodo.estrutura %}
+                                        {% for missa in calendario_periodo.estrutura[dia] %}
+                                            <div class="card mb-2 shadow-sm p-1">
+                                                <small>
+                                                    <strong>{{ missa.horario }}</strong><br>
+                                                    <span class="text-muted">
+                                                        {% if missa.periodo == "manha" %}Manha{% elif missa.periodo == "tarde" %}Tarde{% elif missa.periodo == "noite" %}Noite{% else %}-{% endif %}
+                                                    </span><br>
+                                                    {{ missa.comunidade }}
+                                                </small>
+                                                <hr class="m-1">
+                                                {% for ministro in missa.ministros %}
+                                                    <div style="font-size:12px;">
+                                                        {% if ministro.eh_casal %}
+                                                        <span class="badge" style="background-color:#fff3cd; color:#7a5200;">
+                                                            * {{ ministro.nome }} (casal)
+                                                        </span>
+                                                        {% else %}
+                                                        * {{ ministro.nome }}
+                                                        {% endif %}
+                                                    </div>
+                                                {% endfor %}
+                                                {% if not missa.ministros %}
+                                                <div style="font-size:12px;" class="text-muted">Sem ministros</div>
+                                                {% endif %}
+                                                {% if current_user.is_admin() %}
+                                                <div class="mt-2 d-grid">
+                                                    <a
+                                                        href="{{ url_for('dashboard.escala_imagem_missa', missa_id=missa.id) }}"
+                                                        target="_blank"
+                                                        class="btn btn-outline-primary btn-sm"
+                                                        data-skip-confirm="true">
+                                                        Imprimir escala em imagem
+                                                    </a>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-secondary mb-0">Nenhuma missa encontrada neste periodo.</div>
+        </div>
+    {% endfor %}
+    {% else %}
     <table class="table table-bordered text-center align-middle">
         <thead class="table-dark">
             <tr>
@@ -93,12 +203,60 @@
         {% endfor %}
         </tbody>
     </table>
+    {% endif %}
 </div>
 
 <div class="print-only">
     <h4 class="mb-0">Escala dos Ministros</h4>
-    <small>{{ mes }}/{{ ano }}</small>
+    <small>
+        {% if modo_periodo %}
+            Periodo de {{ data_inicio[8:10] }}/{{ data_inicio[5:7] }}/{{ data_inicio[0:4] }} a {{ data_fim[8:10] }}/{{ data_fim[5:7] }}/{{ data_fim[0:4] }}
+        {% else %}
+            {{ mes }}/{{ ano }}
+        {% endif %}
+    </small>
 
+    {% if modo_periodo %}
+        {% for calendario_periodo in calendarios_periodo %}
+        <div class="bloco-print">
+            <h5>{{ nomes_meses[calendario_periodo.mes] }} / {{ calendario_periodo.ano }}</h5>
+            <table class="table table-bordered text-center align-middle">
+                <thead>
+                    <tr>
+                        {% for indice_coluna in calendario_periodo.colunas_visiveis %}
+                        <th>{{ ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"][indice_coluna] }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                {% for semana in calendario_periodo.cal %}
+                    <tr>
+                    {% for dia in semana %}
+                        <td style="height:120px; vertical-align:top;">
+                            {% if dia != 0 %}
+                                <div class="fw-bold mb-1">{{ dia }}</div>
+                                {% for missa in calendario_periodo.estrutura.get(dia, []) %}
+                                    <div style="font-size:11px; margin-bottom:4px;">
+                                        <strong>{{ missa.horario }}</strong> {{ missa.comunidade }}<br>
+                                        {% if missa.ministros %}
+                                            {{ missa.ministros | map(attribute='nome') | join(', ') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>Nenhuma missa encontrada neste periodo.</p>
+        {% endfor %}
+    {% else %}
     {% for g in grupos_impressao %}
         <div class="bloco-print">
             <h5>{{ dias_semana[g.dia_semana] }} -> Horario: {{ g.horario }} ({{ g.periodo|title }})</h5>
@@ -142,8 +300,10 @@
     {% else %}
         <p>Nenhuma missa encontrada para este mes.</p>
     {% endfor %}
+    {% endif %}
 </div>
 
+{% if not modo_periodo %}
 <div class="print-calendar-a4">
     <div class="print-calendar-header">
         <h4 class="mb-1">Escala de Missas</h4>
@@ -198,6 +358,7 @@
         </tbody>
     </table>
 </div>
+{% endif %}
 
 <style>
 .print-only { display: none; }
@@ -241,6 +402,11 @@
 
 .calendar-a4-ministros {
     font-size: 6.7px;
+    line-height: 1.22;
+}
+
+.calendar-a4-ministros > div + div {
+    margin-top: 0.45mm;
 }
 
 @media print {
@@ -316,6 +482,19 @@
     body.print-mode-calendar-a4 .calendar-a4-table th {
         font-size: 8px;
         padding: 1mm !important;
+    }
+
+    body.print-mode-calendar-a4 .calendar-a4-evento {
+        padding-top: 1.1mm;
+        padding-bottom: 1.1mm;
+    }
+
+    body.print-mode-calendar-a4 .calendar-a4-ministros {
+        line-height: 1.28;
+    }
+
+    body.print-mode-calendar-a4 .calendar-a4-ministros > div + div {
+        margin-top: 0.6mm;
     }
 
     body:not(.print-mode-calendar-a4) .print-calendar-a4 {
