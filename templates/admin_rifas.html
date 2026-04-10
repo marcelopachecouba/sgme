@@ -1,0 +1,46 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Rifas</h1>
+        <p class="text-secondary mb-0">Painel administrativo do modulo de rifas.</p>
+    </div>
+    <a class="btn btn-outline-primary" href="/rifas" target="_blank" rel="noreferrer">Abrir pagina publica</a>
+</div>
+
+{% if schema_message %}
+<div class="alert alert-warning">{{ schema_message }}</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Disponiveis</div><div class="display-6">{{ stats.disponiveis }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Reservadas</div><div class="display-6">{{ stats.reservadas }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Pagas</div><div class="display-6">{{ stats.pagas }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Faturado</div><div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div></div></div></div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Numero</th>
+                    <th>Status</th>
+                    <th>Cliente</th>
+                    <th>Pagamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rifa in rifas[:200] %}
+                <tr>
+                    <td>{{ "%04d"|format(rifa.numero) }}</td>
+                    <td>{{ rifa.status }}</td>
+                    <td>{{ rifa.cliente.nome if rifa.cliente else "-" }}</td>
+                    <td>{{ rifa.pagamento_id or "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

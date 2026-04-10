@@ -1,0 +1,19 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-4">Relatorio de Rifas</h1>
+{% if schema_message %}
+<div class="alert alert-warning">{{ schema_message }}</div>
+{% endif %}
+<div class="row g-3">
+    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Clientes</div><div class="display-6">{{ stats.clientes }}</div></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Pagamentos</div><div class="display-6">{{ stats.pagamentos }}</div></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Receita Confirmada</div><div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div></div></div></div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h2 class="h5">Preparado para WhatsApp</h2>
+        <p class="mb-0">Os registros de clientes, pagamentos e numeros vendidos ja ficam centralizados, facilitando notificacoes futuras por WhatsApp.</p>
+    </div>
+</div>
+{% endblock %}

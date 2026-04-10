@@ -804,3 +804,53 @@ class ObservacaoLembrete(db.Model):
         nullable=False,
         index=True,
     )
+
+
+def _uuid_str():
+    return str(uuid.uuid4())
+
+
+class ClienteRifa(db.Model):
+    __tablename__ = "clientes"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    nome = db.Column(db.String(150), nullable=False, index=True)
+    telefone = db.Column(db.String(30), nullable=False, index=True)
+    email = db.Column(db.String(150), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    pagamentos = db.relationship("PagamentoRifa", back_populates="cliente", lazy="select")
+    rifas = db.relationship("Rifa", back_populates="cliente", lazy="select")
+
+
+class PagamentoRifa(db.Model):
+    __tablename__ = "pagamentos"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    cliente_id = db.Column(db.String(36), db.ForeignKey("clientes.id"), nullable=False, index=True)
+    valor_total = db.Column(db.Numeric(12, 2), nullable=False)
+    quantidade_rifas = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="pendente", index=True)
+    qr_code_base64 = db.Column(db.Text)
+    copia_cola_pix = db.Column(db.Text)
+    external_id = db.Column(db.String(120), unique=True, index=True)
+    pdf_path = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    pago_em = db.Column(db.DateTime, index=True)
+
+    cliente = db.relationship("ClienteRifa", back_populates="pagamentos", lazy="joined")
+    rifas = db.relationship("Rifa", back_populates="pagamento", lazy="select")
+
+
+class Rifa(db.Model):
+    __tablename__ = "rifas"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    numero = db.Column(db.Integer, nullable=False, index=True, unique=True)
+    status = db.Column(db.String(20), nullable=False, default="disponivel", index=True)
+    cliente_id = db.Column(db.String(36), db.ForeignKey("clientes.id"), index=True)
+    pagamento_id = db.Column(db.String(36), db.ForeignKey("pagamentos.id"), index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    cliente = db.relationship("ClienteRifa", back_populates="rifas", lazy="joined")
+    pagamento = db.relationship("PagamentoRifa", back_populates="rifas", lazy="joined")

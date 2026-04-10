@@ -17,6 +17,8 @@ from routes.dashboard_routes import dashboard_bp
 from routes.escala_routes import escala_bp
 from routes.estatisticas_routes import estatisticas_bp
 from financeiro import financeiro_bp, init_financeiro_dash
+from rifas.routes_admin import rifas_admin_bp
+from rifas.routes_public import rifas_public_bp
 from routes.indisponibilidade_routes import indisp_bp
 from routes.minhas_escalas_routes import minhas_escalas_bp
 from routes.ministros_routes import ministros_bp
@@ -58,6 +60,8 @@ def _registrar_blueprints(app):
         push_bp,
         notificacao_bp,
         observacoes_lembrete_bp,
+        rifas_public_bp,
+        rifas_admin_bp,
     ]
 
     for blueprint in blueprints:
@@ -92,9 +96,11 @@ def _iniciar_scheduler(app):
     registrar_agendamentos(scheduler, app)
 
         
-def create_app():
+def create_app(config_override=None):
     app = Flask(__name__)
     app.config.from_object(Config)
+    if config_override:
+        app.config.update(config_override)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     db.init_app(app)
@@ -102,13 +108,14 @@ def create_app():
     login_manager.init_app(app)
     _configurar_login()
 
-    iniciar_firebase()
+    if not app.config.get("TESTING"):
+        iniciar_firebase()
     _registrar_rotas_internas(app)
     _registrar_blueprints(app)
     init_financeiro_dash(app)
 
-    
-    _iniciar_scheduler(app)
+    if not app.config.get("TESTING"):
+        _iniciar_scheduler(app)
 
     return app
 

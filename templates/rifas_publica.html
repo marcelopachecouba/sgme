@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rifas Online</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --rifa-bg: linear-gradient(135deg, #f3ede2 0%, #f8f9fb 50%, #dfe9f7 100%);
+            --rifa-card: rgba(255, 255, 255, 0.9);
+            --rifa-ink: #1f2937;
+            --rifa-accent: #0f766e;
+            --rifa-accent-soft: #ccfbf1;
+            --rifa-warm: #9a3412;
+        }
+        body {
+            min-height: 100vh;
+            background: var(--rifa-bg);
+            color: var(--rifa-ink);
+        }
+        .hero {
+            padding: 56px 0 24px;
+        }
+        .hero-card, .result-card {
+            background: var(--rifa-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(15, 118, 110, 0.12);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+        }
+        .accent-pill {
+            display: inline-block;
+            background: var(--rifa-accent-soft);
+            color: var(--rifa-accent);
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .qr-box {
+            background: white;
+            border-radius: 18px;
+            padding: 18px;
+            display: inline-block;
+            border: 1px solid rgba(15, 118, 110, 0.15);
+        }
+        .pix-code {
+            font-family: Consolas, monospace;
+            font-size: 0.92rem;
+            word-break: break-all;
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4 py-md-5">
+        <div class="row align-items-center g-4 hero">
+            <div class="col-lg-6">
+                <div class="hero-card p-4 p-md-5">
+                    <span class="accent-pill">Compra publica e segura</span>
+                    <h1 class="display-6 fw-bold mb-3">Participe da rifa online do SGME</h1>
+                    <p class="lead mb-4">Escolha a quantidade, receba o PIX na hora e acompanhe o status do pagamento sem precisar fazer login.</p>
+                    <form id="rifa-form" class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Nome</label>
+                            <input class="form-control form-control-lg" name="nome" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefone</label>
+                            <input class="form-control form-control-lg" name="telefone" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control form-control-lg" name="email" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Quantidade de rifas</label>
+                            <input type="number" min="1" class="form-control form-control-lg" name="quantidade_rifas" required>
+                        </div>
+                        <div class="col-12 d-grid">
+                            <button class="btn btn-lg text-white" style="background:#0f766e;">Gerar PIX</button>
+                        </div>
+                    </form>
+                    <div id="form-feedback" class="mt-3"></div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="result-card p-4 p-md-5 h-100" id="resultado">
+                    <h2 class="h4 fw-bold mb-3">Seu pagamento aparece aqui</h2>
+                    <p class="text-secondary mb-0">Depois do envio, vamos mostrar o QR Code, o codigo PIX copia e cola e os numeros reservados para voce.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("rifa-form");
+        const resultado = document.getElementById("resultado");
+        const feedback = document.getElementById("form-feedback");
+
+        function renderError(message) {
+            feedback.innerHTML = `<div class="alert alert-danger mb-0">${message}</div>`;
+        }
+
+        function renderSuccess(data) {
+            feedback.innerHTML = `<div class="alert alert-success mb-0">Pagamento gerado com sucesso.</div>`;
+            resultado.innerHTML = `
+                <span class="accent-pill">Pagamento ${data.status}</span>
+                <h2 class="h4 fw-bold mb-3">Escaneie o QR Code para pagar</h2>
+                <div class="qr-box mb-3">
+                    <img class="img-fluid" alt="QR Code PIX" src="data:image/png;base64,${data.qr_code_base64}" />
+                </div>
+                <p class="mb-2"><strong>Pagamento:</strong> ${data.pagamento_id}</p>
+                <p class="mb-2"><strong>Numeros reservados:</strong> ${data.numeros.join(", ")}</p>
+                <p class="mb-3"><strong>Valor total:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
+                <div class="pix-code mb-3">${data.copia_cola_pix}</div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button id="copiar-pix" class="btn btn-outline-dark" data-pix="${data.copia_cola_pix.replace(/"/g, "&quot;")}">Copiar codigo PIX</button>
+                    <a class="btn btn-outline-success" href="/rifas/pagamento/${data.pagamento_id}" target="_blank" rel="noreferrer">Ja paguei</a>
+                </div>
+            `;
+            const botaoCopiar = document.getElementById("copiar-pix");
+            if (botaoCopiar) {
+                botaoCopiar.addEventListener("click", () => {
+                    navigator.clipboard.writeText(botaoCopiar.dataset.pix || "");
+                });
+            }
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            feedback.innerHTML = "";
+            const payload = Object.fromEntries(new FormData(form).entries());
+            payload.quantidade_rifas = Number(payload.quantidade_rifas || 0);
+
+            try {
+                const response = await fetch("/rifas/comprar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    renderError(data.erro || "Nao foi possivel gerar o pagamento.");
+                    return;
+                }
+                renderSuccess(data);
+            } catch (error) {
+                renderError("Falha ao comunicar com o servidor.");
+            }
+        });
+    </script>
+</body>
+</html>

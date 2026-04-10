@@ -21,6 +21,22 @@ services:
         value: "1"
       - key: PUBLIC_BASE_URL
         sync: false
+      - key: PIX_PROVIDER
+        value: mock
+      - key: PIX_API_KEY
+        sync: false
+      - key: PIX_ACCESS_TOKEN
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: RIFA_VALOR_UNITARIO
+        value: "10"
+      - key: RIFA_TOTAL_NUMEROS
+        value: "1000"
+      - key: RIFA_RESERVA_MINUTOS
+        value: "30"
+      - key: RIFA_PDF_DIR
+        value: instance/rifas
       - key: SCHEDULER_TIMEZONE
         value: America/Sao_Paulo
       - key: WHATSAPP_TOKEN
