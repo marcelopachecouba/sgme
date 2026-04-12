@@ -99,6 +99,16 @@ def _iniciar_scheduler(app):
 def create_app(config_override=None):
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    @app.template_filter('telefone')
+    def telefone_filter(tel):
+        tel = ''.join(filter(str.isdigit, tel or ''))
+        if len(tel) == 11:
+            return f"({tel[:2]}) {tel[2:7]}-{tel[7:]}"
+        elif len(tel) == 10:
+            return f"({tel[:2]}) {tel[2:6]}-{tel[6:]}"
+        return tel
+
     if config_override:
         app.config.update(config_override)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)

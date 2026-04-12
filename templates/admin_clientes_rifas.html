@@ -22,7 +22,7 @@
                     {% for cliente in clientes %}
                     <tr>
                         <td>{{ cliente.nome }}</td>
-                        <td>{{ cliente.telefone }}</td>
+                        <td>{{ cliente.telefone  | telefone }}</td>
                         <td>{{ cliente.email }}</td>
                         <td>{{ cliente.pagamentos|length }}</td>
                         <td>{{ cliente.created_at.strftime("%d/%m/%Y %H:%M") if cliente.created_at else "-" }}</td>

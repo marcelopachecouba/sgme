@@ -262,18 +262,24 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Telefone</label>
-                                <input class="form-control" name="telefone" required>
+                                <input class="form-control" name="telefone" id="telefone" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email</label>
-                                <input type="email" class="form-control" name="email" required>
+                                <input type="email" class="form-control" name="email">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Vendedor</label>
+                                <input class="form-control" name="vendedor">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Quantidade de rifas</label>
                                 <input type="number" min="1" class="form-control" name="quantidade_rifas" required>
                             </div>
                             <div class="col-12 d-grid">
-                                <button class="btn btn-rifa" type="submit">Gerar PIX e reservar numeros</button>
+                                <button id="btnComprar" class="btn btn-rifa" type="submit">
+                                    Gerar PIX e reservar numeros
+                                </button>
                             </div>
                         </form>
                         {% else %}
@@ -304,6 +310,7 @@
         const form = document.getElementById("rifa-form");
         const resultado = document.getElementById("resultado");
         const feedback = document.getElementById("form-feedback");
+        const btn = form ? form.querySelector("button[type='submit']") : null;
 
         function renderError(message) {
             feedback.innerHTML = `<div class="alert alert-danger mb-0">${message}</div>`;
@@ -315,17 +322,22 @@
                 alert("Selecione o comprovante antes de enviar.");
                 return;
             }
+
             const formData = new FormData();
             formData.append("comprovante", campo.files[0]);
+
             const response = await fetch(`/rifas/pagamento/${pagamentoId}/comprovante`, {
                 method: "POST",
                 body: formData,
             });
+
             const data = await response.json();
+
             if (!response.ok) {
                 alert(data.erro || "Nao foi possivel enviar o comprovante.");
                 return;
             }
+
             const status = document.getElementById("status-comprovante");
             if (status) {
                 status.innerHTML = `<div class="alert alert-success mb-0">Comprovante enviado com sucesso. Aguarde a confirmacao manual.</div>`;
@@ -334,52 +346,56 @@
 
         function renderSuccess(data) {
             feedback.innerHTML = `<div class="alert alert-success mb-0">Pagamento gerado com sucesso.</div>`;
+
             resultado.innerHTML = `
                 <div class="result-banner">
                     <div class="tag-status">Pagamento ${data.status}</div>
                     <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Escaneie o QR Code e envie o comprovante</h2>
                     <p class="mb-0"><strong>Campanha:</strong> ${data.campanha_titulo}</p>
                 </div>
+
                 <div class="row g-4 align-items-start mt-1">
                     <div class="col-md-5">
                         <div class="qr-box">
-                            <img class="img-fluid" alt="QR Code PIX" src="data:image/png;base64,${data.qr_code_base64}" />
+                            <img class="img-fluid" src="data:image/png;base64,${data.qr_code_base64}" />
                         </div>
                     </div>
+
                     <div class="col-md-7">
-                        <p class="mb-2"><strong>Pagamento:</strong> ${data.pagamento_id}</p>
-                        <p class="mb-2"><strong>Numeros reservados:</strong> ${data.numeros.map((n) => String(n).padStart(4, "0")).join(", ")}</p>
-                        <p class="mb-3"><strong>Valor total:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
+                        <p><strong>Pagamento:</strong> ${data.pagamento_id}</p>
+                        <p><strong>Numeros:</strong> ${data.numeros.map(n => String(n).padStart(4,"0")).join(", ")}</p>
+                        <p><strong>Valor:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
+
                         <div class="pix-box mb-3">${data.copia_cola_pix}</div>
-                        <div class="d-flex gap-2 flex-wrap mb-4">
-                            <button id="copiar-pix" class="btn btn-outline-dark" data-pix="${data.copia_cola_pix.replace(/"/g, "&quot;")}">Copiar codigo PIX</button>
-                            <a class="btn btn-outline-primary" href="/rifas/pagamento/${data.pagamento_id}" target="_blank" rel="noreferrer">Consultar pagamento</a>
-                        </div>
+
+                        <button id="copiar-pix" class="btn btn-dark mb-3">Copiar PIX</button>
+
                         <div class="file-box">
-                            <h3 class="h5 fw-bold text-uppercase">Enviar comprovante</h3>
-                            <input id="comprovante-arquivo" type="file" class="form-control mb-3" accept=".png,.jpg,.jpeg,.pdf,.webp">
-                            <div class="d-flex gap-2 flex-wrap align-items-center">
-                                <button id="enviar-comprovante" class="btn btn-primary">Enviar comprovante</button>
-                                <small class="muted-note">Aceita imagem ou PDF.</small>
-                            </div>
-                            <div id="status-comprovante" class="mt-3"></div>
+                            <input id="comprovante-arquivo" type="file" class="form-control mb-2">
+                            <button id="enviar-comprovante" class="btn btn-primary">Enviar comprovante</button>
+                            <div id="status-comprovante" class="mt-2"></div>
                         </div>
                     </div>
                 </div>
             `;
-            const botaoCopiar = document.getElementById("copiar-pix");
-            if (botaoCopiar) {
-                botaoCopiar.addEventListener("click", () => navigator.clipboard.writeText(botaoCopiar.dataset.pix || ""));
-            }
-            const botaoComprovante = document.getElementById("enviar-comprovante");
-            if (botaoComprovante) {
-                botaoComprovante.addEventListener("click", () => enviarComprovante(data.pagamento_id));
-            }
+
+            document.getElementById("copiar-pix")
+                ?.addEventListener("click", () => navigator.clipboard.writeText(data.copia_cola_pix));
+
+            document.getElementById("enviar-comprovante")
+                ?.addEventListener("click", () => enviarComprovante(data.pagamento_id));
         }
 
         if (form) {
-           form.addEventListener("submit", async (event) => {
+            form.addEventListener("submit", async (event) => {
                 event.preventDefault();
+
+                // 🔒 BLOQUEIA CLIQUE DUPLO
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = "Gerando PIX...";
+                }
+
                 feedback.innerHTML = "";
 
                 const formData = new FormData(form);
@@ -393,17 +409,69 @@
                     const data = await response.json();
 
                     if (!response.ok) {
-                        renderError(data.erro || "Nao foi possivel gerar o pagamento.");
+                        renderError(data.erro || "Erro ao gerar pagamento");
+                        
+                        // 🔓 libera botão se erro
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = "Gerar PIX e reservar numeros";
+                        }
+
                         return;
                     }
 
                     renderSuccess(data);
 
+                    // 🔥 NÃO libera botão (evita duplicidade)
+
                 } catch (error) {
                     renderError("Falha ao comunicar com o servidor.");
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "Gerar PIX e reservar numeros";
+                    }
                 }
             });
         }
+        const telefoneInput = document.getElementById("telefone");
+
+        telefoneInput.addEventListener("input", (e) => {
+            let v = e.target.value.replace(/\D/g, "");
+
+            if (v.length > 11) v = v.slice(0, 11);
+
+            if (v.length > 6) {
+                v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
+            } else if (v.length > 2) {
+                v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+            } else {
+                v = v.replace(/^(\d*)/, "($1");
+            }
+
+            e.target.value = v;
+        });
+
+        function validarTelefone(tel) {
+            tel = tel.replace(/\D/g, "");
+
+            if (tel.length < 10 || tel.length > 11) {
+                return "Telefone deve ter 10 ou 11 dígitos";
+            }
+
+            const ddd = tel.substring(0, 2);
+            if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+                return "DDD inválido";
+            }
+
+            if (tel.length === 11 && tel[2] !== "9") {
+                return "Celular deve começar com 9";
+            }
+
+            return null;
+        }
+
     </script>
+
 </body>
 </html>

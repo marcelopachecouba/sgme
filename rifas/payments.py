@@ -21,11 +21,22 @@ class PixCharge:
     raw_response: dict
 
 
-def _gerar_qr_code_base64(conteudo: str) -> str:
-    imagem = qrcode.make(conteudo)
+def _gerar_qr_code_base64(conteudo):
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(conteudo)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
     buffer = io.BytesIO()
-    imagem.save(buffer, format="PNG")
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    img.save(buffer, format="PNG")
+
+    return base64.b64encode(buffer.getvalue()).decode()
 
 
 def _pix_field(field_id: str, value: str) -> str:
@@ -46,52 +57,53 @@ def _crc16(payload: str) -> str:
     return f"{result:04X}"
 
 
-def generate_pix_payload(*, key: str, amount: float, txid: str) -> str:
+def generate_pix_payload(key, amount, txid):
     from decimal import Decimal, ROUND_HALF_UP
 
-    key = key.strip()
+    def f(id, value):
+        return f"{id}{len(value):02}{value}"
 
-    def f(id, v):
-        return f"{id}{len(v):02}{v}"
+    key = ''.join(key.strip().split())
 
-    # 🔧 DADOS
-    merchant_name = "PAROQUIA NS APARECIDA"[:25]
+    merchant_name = "PAROQUIA NOSSA SENHORA APARECIDA"[:25]
     merchant_city = "PALMAS"[:15]
-    amount = f"{Decimal(str(amount)).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)}"
 
-    # 🔧 TXID LIMPO (SEM mock!)
-    txid = ''.join(filter(str.isalnum, txid))[:25]
-    if not txid:
-        txid = "SGME123456789"
+    amount = Decimal(str(amount)).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP)
 
-    # 🔧 CAMPOS
-    gui = "0013br.gov.bcb.pix"
-    chave = f"01{len(key):02}{key}"
+    if amount <= 0:
+        raise ValueError("Valor do PIX deve ser maior que zero")
 
-    merchant_account_info = gui + chave
+    amount_str = f"{amount:.2f}"
 
-    # 🔥 FORÇANDO TAMANHO CORRETO
-    tamanho = len(merchant_account_info)
+    # ✅ FUNÇÃO CORRETA
+    def build_merchant_account(key):
+        gui = f("00", "br.gov.bcb.pix")
+        chave = f("01", key)
 
-    merchant_account = f"26{tamanho:02}{merchant_account_info}"
+        conteudo = gui + chave
+        return f"26{len(conteudo):02}{conteudo}"
 
-    additional_data = f("62", f("05", txid))
+    # ✅ AGORA SIM USANDO
+    merchant_account = build_merchant_account(key)
+
+    # ✅ FORA da função (CORRETO)
+    txid = ''.join(filter(str.isalnum, txid)).upper()[:25]
+    additional = f("62", f("05", txid))
 
     payload = (
         f("00", "01") +
-        f("01", "11") +
+        f("01", "12") +
         merchant_account +
         f("52", "0000") +
         f("53", "986") +
-        f("54", amount) +
+        f("54", amount_str) +
         f("58", "BR") +
         f("59", merchant_name) +
         f("60", merchant_city) +
-        additional_data +
+        additional +
         "6304"
     )
 
-    # 🔐 CRC
     def crc16(payload):
         polinomio = 0x1021
         resultado = 0xFFFF
@@ -110,12 +122,14 @@ def generate_pix_payload(*, key: str, amount: float, txid: str) -> str:
 class MockPixGateway:
     def create_charge(self, *, amount: float, payer_name: str, payer_email: str, description: str) -> PixCharge:
         external_id = uuid.uuid4().hex
-        chave_pix = current_app.config.get("PIX_CHAVE", "63999430482")
+        chave_pix = current_app.config.get("PIX_CHAVE", "01172466000480")
         copia_cola = generate_pix_payload(
             key=chave_pix,
             amount=amount,
             txid=external_id
-        )        
+        )       
+        print("PIX REAL GERADO >>>", copia_cola)
+
         return PixCharge(
             external_id=external_id,
             qr_code_base64=_gerar_qr_code_base64(copia_cola),

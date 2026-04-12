@@ -17,7 +17,6 @@ from rifas.services import (
     payment_detail_data,
 )
 
-
 rifas_admin_bp = Blueprint("rifas_admin", __name__)
 
 

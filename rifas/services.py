@@ -119,6 +119,7 @@ def create_or_update_campaign(*, campanha_id: str | None, titulo: str, descricao
     campanha.titulo = titulo
     campanha.descricao = descricao or None
     campanha.data_sorteio = data_sorteio
+    valor_rifa = float(str(valor_rifa).replace(",", "."))
     campanha.valor_rifa = Decimal(str(valor_rifa))
     campanha.quantidade_total = quantidade_total
     campanha.ativa = bool(ativa)
@@ -179,17 +180,45 @@ def _release_expired_reservations():
 def _validate_purchase_input(nome: str, telefone: str, email: str, quantidade_rifas: int):
     if not nome:
         raise RifaError("Nome e obrigatorio.")
+
     if not telefone:
         raise RifaError("Telefone e obrigatorio.")
-    if not email or "@" not in email:
-        raise RifaError("Email invalido.")
+
+    # 🔒 LIMPA TELEFONE
+    telefone_limpo = ''.join(filter(str.isdigit, telefone))
+
+    # 🔒 VALIDA TAMANHO
+    if len(telefone_limpo) not in (10, 11):
+        raise RifaError("Telefone invalido. Deve ter 10 ou 11 digitos.")
+
+    # 🔒 VALIDA DDD
+    ddd = int(telefone_limpo[:2])
+    if ddd < 11 or ddd > 99:
+        raise RifaError("DDD invalido.")
+
+    # 🔒 VALIDA CELULAR (11 dígitos)
+    if len(telefone_limpo) == 11 and telefone_limpo[2] != "9":
+        raise RifaError("Celular deve começar com 9.")
+
+    # 🔒 BLOQUEIO DE NUMERO FAKE
+    if telefone_limpo == telefone_limpo[0] * len(telefone_limpo):
+        raise RifaError("Telefone invalido.")
+
+    # 🔒 EMAIL
+    if email:
+        if "@" not in email:
+           raise RifaError("Email invalido.")
+    
+    # 🔒 QUANTIDADE
     if quantidade_rifas <= 0:
         raise RifaError("Quantidade de rifas deve ser maior que zero.")
+
+    return telefone_limpo  # 🔥 IMPORTANTE
 
 
 def _buscar_ou_criar_cliente(*, nome: str, telefone: str, email: str, endereco: str = None) -> ClienteRifa:
     cliente = db.session.execute(
-        db.select(ClienteRifa).where(ClienteRifa.email == email)
+        db.select(ClienteRifa).where(ClienteRifa.email == email, ClienteRifa.telefone == telefone,ClienteRifa.nome == nome)
     ).scalar_one_or_none()
 
     if cliente is None:
@@ -228,14 +257,15 @@ def get_public_page_data() -> dict:
     }
 
 
-def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, quantidade_rifas: int):
+def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vendedor: str, quantidade_rifas: int):
     ensure_rifas_schema()
     nome = _normalizar_texto(nome)
     email = _normalizar_texto(email).lower()
-    telefone = _normalize_phone(telefone)
+    telefone = _validate_purchase_input(nome, telefone, email, quantidade_rifas)
     endereco = _normalizar_texto(endereco).lower()
-    _validate_purchase_input(nome, telefone, email, quantidade_rifas)
-
+    #_validate_purchase_input(nome, telefone, email, quantidade_rifas)
+    
+    
     gateway = get_pix_gateway()
 
     campanha = db.session.execute(
@@ -246,7 +276,8 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, quant
         raise RifaError("Nenhuma campanha de rifa ativa foi cadastrada.")
 
     valor_unitario = Decimal(str(campanha.valor_rifa))
-    valor_total = valor_unitario * quantidade_rifas
+    valor_total = (valor_unitario * quantidade_rifas).quantize(Decimal("0.00"))
+
 
     _ensure_inventory(campanha=campanha)
     _release_expired_reservations()
@@ -269,7 +300,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, quant
         raise RifaError("Nao ha quantidade suficiente de rifas disponiveis.")
 
     charge = gateway.create_charge(
-        amount=float(valor_total),
+        amount = Decimal(valor_total),
         payer_name=nome,
         payer_email=email,
         description=f"{campanha.titulo} - {quantidade_rifas} rifa(s)",
@@ -284,6 +315,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, quant
         qr_code_base64=charge.qr_code_base64,
         copia_cola_pix=charge.copia_cola_pix,
         external_id=charge.external_id,
+        vendedor=vendedor,  # ✅ NOVO
     )
 
     db.session.add(pagamento)
@@ -541,5 +573,15 @@ def admin_dashboard_data() -> dict:
             "pagamentos": len(pagamentos),
         },
     }
+
+def formatar_telefone(tel):
+    tel = ''.join(filter(str.isalnum, tel or ''))
+    tel = ''.join(filter(str.isdigit, tel))
+
+    if len(tel) == 11:
+        return f"({tel[:2]}) {tel[2:7]}-{tel[7:]}"
+    elif len(tel) == 10:
+        return f"({tel[:2]}) {tel[2:6]}-{tel[6:]}"
+    return tel
 
 

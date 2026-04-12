@@ -1,6 +1,8 @@
 ﻿from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request, send_file
+from models import PagamentoRifa, ClienteRifa
+
 
 from rifas.services import (
     RifaError,
@@ -30,37 +32,52 @@ def rifas_home():
 def comprar_rifa():
     data = request.get_json(silent=True) or request.form
 
+    from extensions import db
+
     try:
         quantidade = int(data.get("quantidade_rifas", 0))
+        telefone = data.get("telefone", "")
+
+        # 🔒 ANTI DUPLICIDADE (MESMO TELEFONE + PENDENTE)
+        pagamento_existente = db.session.execute(
+            db.select(PagamentoRifa)
+            .join(ClienteRifa)
+            .where(
+                ClienteRifa.telefone == telefone,
+                PagamentoRifa.status == "pendente"
+            )
+        ).scalar_one_or_none()
+
+        if pagamento_existente:
+            return jsonify({
+                "erro": "Você já possui um pagamento pendente. Finalize antes de gerar outro."
+            }), 400
 
         resultado = purchase_rifas(
             nome=data.get("nome", ""),
-            telefone=data.get("telefone", ""),
+            telefone=telefone,
             endereco=data.get("endereco", ""),
-            email=data.get("email", ""),
+            email = data.get("email") or None,
+            vendedor=data.get("vendedor", ""),  # ✅ NOVO
             quantidade_rifas=quantidade,
         )
 
-        from extensions import db
-        db.session.commit()  # ✅ ESSENCIAL
+        db.session.commit()
 
         return jsonify(resultado.asdict()), 201
 
     except ValueError:
-        from extensions import db
         db.session.rollback()
         return jsonify({"erro": "Quantidade de rifas invalida."}), 400
 
     except RifaSchemaMissingError as exc:
-        from extensions import db
         db.session.rollback()
         return jsonify({"erro": str(exc)}), 503
 
     except RifaError as exc:
-        from extensions import db
         db.session.rollback()
         return jsonify({"erro": str(exc)}), 400
-
+    
 @rifas_public_bp.route("/rifas/pagamento/<payment_id>", methods=["GET"])
 def pagamento_publico(payment_id):
     try:

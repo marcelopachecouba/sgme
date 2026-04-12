@@ -859,6 +859,7 @@ class PagamentoRifa(db.Model):
     observacoes_admin = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     pago_em = db.Column(db.DateTime, index=True)
+    vendedor = db.Column(db.String(120))
 
     cliente = db.relationship("ClienteRifa", back_populates="pagamentos", lazy="joined")
     campanha = db.relationship("RifaCampanha", back_populates="pagamentos", lazy="joined")
