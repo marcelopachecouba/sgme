@@ -23,6 +23,12 @@ services:
         sync: false
       - key: PIX_PROVIDER
         value: mock
+      - key: PIX_CHAVE
+        value: "01172466000480"
+      - key: PIX_MERCHANT_NAME
+        value: SGME
+      - key: PIX_MERCHANT_CITY
+        value: SAO PAULO
       - key: PIX_API_KEY
         sync: false
       - key: PIX_ACCESS_TOKEN
@@ -37,6 +43,8 @@ services:
         value: "30"
       - key: RIFA_PDF_DIR
         value: instance/rifas
+      - key: RIFA_UPLOAD_DIR
+        value: static/uploads/rifas
       - key: SCHEDULER_TIMEZONE
         value: America/Sao_Paulo
       - key: WHATSAPP_TOKEN

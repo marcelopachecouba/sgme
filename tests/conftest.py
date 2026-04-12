@@ -1,4 +1,5 @@
 ﻿import os
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,7 @@ os.environ.setdefault("PIX_PROVIDER", "mock")
 
 from app import create_app
 from extensions import db
-from models import Ministro, Paroquia
+from models import Ministro, Paroquia, RifaCampanha
 
 
 @pytest.fixture
@@ -48,6 +49,16 @@ def app():
         )
         admin.set_senha("123456")
         db.session.add(admin)
+        db.session.add(
+            RifaCampanha(
+                titulo="Rifa Teste",
+                descricao="Campanha de teste",
+                data_sorteio=date(2026, 12, 25),
+                valor_rifa=5,
+                quantidade_total=30,
+                ativa=True,
+            )
+        )
         db.session.commit()
         yield app
         db.session.remove()

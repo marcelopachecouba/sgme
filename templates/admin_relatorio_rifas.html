@@ -1,19 +1,48 @@
 ﻿{% extends "base.html" %}
 {% block content %}
+{% include "rifas_menu.html" %}
 <h1 class="h3 mb-4">Relatorio de Rifas</h1>
 {% if schema_message %}
 <div class="alert alert-warning">{{ schema_message }}</div>
 {% endif %}
-<div class="row g-3">
+<div class="row g-3 mb-4">
     <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Clientes</div><div class="display-6">{{ stats.clientes }}</div></div></div></div>
     <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Pagamentos</div><div class="display-6">{{ stats.pagamentos }}</div></div></div></div>
     <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Receita Confirmada</div><div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div></div></div></div>
 </div>
-
-<div class="card mt-4">
+<div class="card mb-4">
     <div class="card-body">
-        <h2 class="h5">Preparado para WhatsApp</h2>
-        <p class="mb-0">Os registros de clientes, pagamentos e numeros vendidos ja ficam centralizados, facilitando notificacoes futuras por WhatsApp.</p>
+        <h2 class="h5 mb-3">Campanhas cadastradas</h2>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Titulo</th>
+                        <th>Sorteio</th>
+                        <th>Valor</th>
+                        <th>Quantidade</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for campanha in campanhas %}
+                    <tr>
+                        <td>{{ campanha.titulo }}</td>
+                        <td>{{ campanha.data_sorteio.strftime("%d/%m/%Y") }}</td>
+                        <td>R$ {{ "%.2f"|format(campanha.valor_rifa|float) }}</td>
+                        <td>{{ campanha.quantidade_total }}</td>
+                        <td>{{ 'Ativa' if campanha.ativa else 'Inativa' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5">Pronto para aprovacao manual e WhatsApp</h2>
+        <p class="mb-0">A tela de detalhe do pagamento permite conferir o comprovante, marcar como pago, gerar PDF e abrir o envio das rifas no WhatsApp do cliente.</p>
     </div>
 </div>
 {% endblock %}

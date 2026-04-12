@@ -1,50 +1,74 @@
-import logging
-from pathlib import Path
-
-from flask import current_app
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
-
-
-logger = logging.getLogger(__name__)
+from reportlab.lib.utils import ImageReader
+from reportlab.lib.pagesizes import A4
+from pathlib import Path
+from flask import current_app
 
 
 def generate_tickets_pdf(*, pagamento, rifas, cliente) -> str:
     output_dir = Path(current_app.config["RIFA_PDF_DIR"])
     output_dir.mkdir(parents=True, exist_ok=True)
+
     output_path = output_dir / f"canhotos-{pagamento.id}.pdf"
 
+    bg_path = Path(current_app.root_path) / "static/img/rifas/modelo.png"
+    background = ImageReader(str(bg_path))
+
+    page_width, page_height = A4
+
+    # 🔥 TAMANHO DO BILHETE
+    ticket_width = page_width
+    ticket_height = 160  # ajustado para caber 5
+
     pdf = canvas.Canvas(str(output_path), pagesize=A4)
-    largura, altura = A4
-    box_width = 90 * mm
-    box_height = 45 * mm
-    margin_x = 15 * mm
-    margin_y = 15 * mm
-    columns = 2
-    rows = 5
 
-    for index, rifa in enumerate(rifas):
-        col = index % columns
-        row = (index // columns) % rows
-        page_index = index // (columns * rows)
+    nome = (cliente.nome or "").upper()
+    telefone = cliente.telefone or ""
+    endereco = (cliente.endereco or "").upper()
+    data = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
 
-        if index > 0 and index % (columns * rows) == 0:
+    for i, rifa in enumerate(rifas):
+
+        pos_y = page_height - ((i % 5 + 1) * ticket_height)
+
+        # NOVA PÁGINA A CADA 5
+        if i > 0 and i % 5 == 0:
             pdf.showPage()
 
-        x = margin_x + col * (box_width + 10 * mm)
-        y = altura - margin_y - ((row + 1) * box_height) - row * 8 * mm
+        # FUNDO
+        pdf.drawImage(background, 0, pos_y, width=ticket_width, height=ticket_height)
 
-        pdf.roundRect(x, y, box_width, box_height, 4 * mm)
-        pdf.setFont("Helvetica-Bold", 16)
-        pdf.drawString(x + 8 * mm, y + box_height - 12 * mm, "Canhoto da Rifa")
-        pdf.setFont("Helvetica-Bold", 18)
-        pdf.drawString(x + 8 * mm, y + box_height - 24 * mm, f"Numero: {rifa.numero:04d}")
-        pdf.setFont("Helvetica", 11)
-        pdf.drawString(x + 8 * mm, y + box_height - 34 * mm, f"Comprador: {cliente.nome}")
-        pdf.drawString(x + 8 * mm, y + box_height - 41 * mm, f"Telefone: {cliente.telefone}")
-        pdf.drawString(x + 8 * mm, y + 6 * mm, f"Pagamento: {pagamento.id}")
+        numero = f"{rifa.numero:04d}"
+
+        # =========================
+        # AJUSTE RELATIVO AO BLOCO
+        # =========================
+
+        base_y = pos_y
+
+        # NOME
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(150 + 60+50+30, base_y + 120 + 20, nome[:42])
+
+        # TELEFONE
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(190 + 20+20+20, base_y + 95, telefone[:20])
+
+        # ENDEREÇO
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(150 + 40+120, base_y + 75 + 50, endereco[:50])
+
+        # NUMERO
+        pdf.setFont("Helvetica-Bold", 20)
+        pdf.drawRightString(page_width - 20, base_y + 120 + 25, numero)
+
+        # DATA
+        pdf.setFont("Helvetica-Bold", 8)
+        pdf.drawRightString(page_width - 20, base_y + 10, f"Sorteio: {data}")
+
+        # ID
+        pdf.setFont("Helvetica", 6)
+        pdf.drawString(20, base_y + 5, f"ID: {pagamento.id[:10]}")
 
     pdf.save()
-    logger.info("PDF de canhotos gerado em %s", output_path)
     return str(output_path)

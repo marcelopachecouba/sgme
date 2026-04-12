@@ -1,0 +1,65 @@
+﻿{% extends "base.html" %}
+{% block content %}
+{% include "rifas_menu.html" %}
+<h1 class="h3 mb-4">Cadastro da Rifa</h1>
+{% if schema_message %}
+<div class="alert alert-warning">{{ schema_message }}</div>
+{% endif %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" class="row g-3">
+                    <input type="hidden" name="campanha_id" value="{{ campanha_form.id if campanha_form else '' }}">
+                    <div class="col-12">
+                        <label class="form-label">Titulo da rifa</label>
+                        <input class="form-control" name="titulo" value="{{ campanha_form.titulo if campanha_form else '' }}" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Descricao</label>
+                        <textarea class="form-control" name="descricao" rows="3">{{ campanha_form.descricao if campanha_form and campanha_form.descricao else '' }}</textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Data do sorteio</label>
+                        <input type="date" class="form-control" name="data_sorteio" value="{{ campanha_form.data_sorteio.isoformat() if campanha_form and campanha_form.data_sorteio else '' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Valor da rifa</label>
+                        <input type="number" step="0.01" min="0.01" class="form-control" name="valor_rifa" value="{{ campanha_form.valor_rifa|float if campanha_form else '' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quantidade disponivel</label>
+                        <input type="number" min="1" class="form-control" name="quantidade_total" value="{{ campanha_form.quantidade_total if campanha_form else '' }}" required>
+                    </div>
+                    <div class="col-12 form-check ms-1">
+                        <input class="form-check-input" type="checkbox" name="ativa" id="ativa" {% if not campanha_form or campanha_form.ativa %}checked{% endif %}>
+                        <label class="form-check-label" for="ativa">Deixar esta campanha ativa</label>
+                    </div>
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-primary">Salvar campanha</button>
+                        <a class="btn btn-outline-secondary" href="{{ url_for('rifas_admin.admin_rifas') }}">Voltar ao painel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Campanhas cadastradas</h2>
+                <div class="list-group">
+                    {% for campanha in campanhas %}
+                    <a class="list-group-item list-group-item-action" href="{{ url_for('rifas_admin.admin_rifas_cadastro', campanha_id=campanha.id) }}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <strong>{{ campanha.titulo }}</strong>
+                            <span class="badge text-bg-{% if campanha.ativa %}success{% else %}secondary{% endif %}">{{ 'Ativa' if campanha.ativa else 'Inativa' }}</span>
+                        </div>
+                        <div class="small text-secondary">Sorteio {{ campanha.data_sorteio.strftime("%d/%m/%Y") }} | R$ {{ "%.2f"|format(campanha.valor_rifa|float) }}</div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

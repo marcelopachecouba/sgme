@@ -1,31 +1,36 @@
 ﻿{% extends "base.html" %}
 {% block content %}
+{% include "rifas_menu.html" %}
 <h1 class="h3 mb-4">Clientes de Rifas</h1>
 {% if schema_message %}
 <div class="alert alert-warning">{{ schema_message }}</div>
 {% endif %}
 <div class="card">
     <div class="card-body">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Telefone</th>
-                    <th>Email</th>
-                    <th>Cadastro</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cliente in clientes %}
-                <tr>
-                    <td>{{ cliente.nome }}</td>
-                    <td>{{ cliente.telefone }}</td>
-                    <td>{{ cliente.email }}</td>
-                    <td>{{ cliente.created_at.strftime("%d/%m/%Y %H:%M") if cliente.created_at else "-" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Email</th>
+                        <th>Pagamentos</th>
+                        <th>Cadastro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td>{{ cliente.nome }}</td>
+                        <td>{{ cliente.telefone }}</td>
+                        <td>{{ cliente.email }}</td>
+                        <td>{{ cliente.pagamentos|length }}</td>
+                        <td>{{ cliente.created_at.strftime("%d/%m/%Y %H:%M") if cliente.created_at else "-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

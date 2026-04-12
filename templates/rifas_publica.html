@@ -3,94 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rifas Online</title>
+    <title>Acao Entre Fieis</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
-            --rifa-bg: linear-gradient(135deg, #f3ede2 0%, #f8f9fb 50%, #dfe9f7 100%);
-            --rifa-card: rgba(255, 255, 255, 0.9);
-            --rifa-ink: #1f2937;
-            --rifa-accent: #0f766e;
-            --rifa-accent-soft: #ccfbf1;
-            --rifa-warm: #9a3412;
+            --rifa-blue-900: #08285f;
+            --rifa-blue-700: #0b57b6;
+            --rifa-blue-500: #13a9e7;
+            --rifa-yellow: #ffd63d;
+            --rifa-red: #ff372f;
+            --rifa-paper: #ffffff;
+            --rifa-ink: #102033;
         }
+
+        * { box-sizing: border-box; }
         body {
+            margin: 0;
             min-height: 100vh;
-            background: var(--rifa-bg);
             color: var(--rifa-ink);
+            background:
+                radial-gradient(circle at top, rgba(19, 169, 231, 0.35), transparent 30%),
+                linear-gradient(180deg, #071a43 0%, #0a347d 24%, #f2f5fb 24%, #f7f8fc 100%);
+            font-family: "Arial Narrow", Arial, sans-serif;
         }
-        .hero {
-            padding: 56px 0 24px;
+
+        .page-shell {
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
+            padding: 24px 0 40px;
         }
-        .hero-card, .result-card {
-            background: var(--rifa-card);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(15, 118, 110, 0.12);
-            border-radius: 24px;
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+
+        .hero-panel,
+        .content-card,
+        .result-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 28px;
+            box-shadow: 0 22px 70px rgba(3, 15, 39, 0.22);
         }
-        .accent-pill {
+
+        .hero-panel {
+            overflow: hidden;
+            border: 4px solid rgba(255, 214, 61, 0.15);
+        }
+
+        .hero-panel img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .content-wrap {
+            margin-top: -22px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .content-card,
+        .result-card {
+            padding: 24px;
+            border: 1px solid rgba(8, 40, 95, 0.08);
+        }
+
+        .section-pill {
             display: inline-block;
-            background: var(--rifa-accent-soft);
-            color: var(--rifa-accent);
+            padding: 8px 16px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--rifa-yellow), #ffe78a);
+            color: #4b3200;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .campaign-board {
+            margin: 18px 0 20px;
+            padding: 18px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, rgba(8, 40, 95, 0.98), rgba(19, 169, 231, 0.96));
+            color: white;
+        }
+
+        .campaign-board h1 {
+            margin: 0 0 8px;
+            font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+            line-height: 1.05;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .campaign-stats {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            margin-top: 18px;
+        }
+
+        .campaign-stat {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .campaign-stat strong {
+            display: block;
+            font-size: 1.25rem;
+            color: var(--rifa-yellow);
+        }
+
+        .form-label {
+            margin-bottom: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.04em;
+            color: #304258;
+        }
+
+        .form-control {
+            min-height: 52px;
+            border-radius: 16px;
+            border: 2px solid rgba(8, 40, 95, 0.12);
+            padding: 12px 16px;
+        }
+
+        .form-control:focus {
+            border-color: var(--rifa-blue-500);
+            box-shadow: 0 0 0 0.2rem rgba(19, 169, 231, 0.18);
+        }
+
+        .btn-rifa {
+            min-height: 56px;
+            border: 0;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #ffde47, #f7b100);
+            color: #15243d;
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 16px 30px rgba(247, 177, 0, 0.28);
+        }
+
+        .result-card {
+            min-height: 100%;
+            background:
+                linear-gradient(180deg, rgba(8, 40, 95, 0.04), rgba(8, 40, 95, 0)),
+                #fff;
+        }
+
+        .result-banner {
+            padding: 16px 18px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #08285f, #0d5fc5);
+            color: white;
+        }
+
+        .tag-status {
+            display: inline-block;
             padding: 8px 14px;
             border-radius: 999px;
-            font-weight: 600;
-            margin-bottom: 14px;
+            background: rgba(255, 214, 61, 0.18);
+            color: var(--rifa-yellow);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
+
+        .pix-box {
+            padding: 16px;
+            border-radius: 20px;
+            background: #eef5ff;
+            border: 2px dashed rgba(8, 40, 95, 0.16);
+            font-family: Consolas, monospace;
+            word-break: break-all;
+        }
+
         .qr-box {
             background: white;
-            border-radius: 18px;
+            border-radius: 24px;
             padding: 18px;
-            display: inline-block;
-            border: 1px solid rgba(15, 118, 110, 0.15);
+            border: 2px solid rgba(8, 40, 95, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(19, 169, 231, 0.08);
         }
-        .pix-code {
-            font-family: Consolas, monospace;
-            font-size: 0.92rem;
-            word-break: break-all;
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 14px;
+
+        .file-box {
+            padding: 18px;
+            border-radius: 22px;
+            background: #f7f9fd;
+            border: 1px solid rgba(8, 40, 95, 0.08);
+        }
+
+        .muted-note {
+            color: #5d6e82;
+        }
+
+        @media (max-width: 991px) {
+            body {
+                background:
+                    linear-gradient(180deg, #071a43 0%, #0a347d 14%, #f2f5fb 14%, #f7f8fc 100%);
+            }
+
+            .page-shell {
+                width: min(100% - 16px, 1180px);
+                padding-top: 16px;
+            }
+
+            .content-wrap {
+                margin-top: 16px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container py-4 py-md-5">
-        <div class="row align-items-center g-4 hero">
-            <div class="col-lg-6">
-                <div class="hero-card p-4 p-md-5">
-                    <span class="accent-pill">Compra publica e segura</span>
-                    <h1 class="display-6 fw-bold mb-3">Participe da rifa online do SGME</h1>
-                    <p class="lead mb-4">Escolha a quantidade, receba o PIX na hora e acompanhe o status do pagamento sem precisar fazer login.</p>
-                    <form id="rifa-form" class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label">Nome</label>
-                            <input class="form-control form-control-lg" name="nome" required>
+    <div class="page-shell">
+        <div class="hero-panel">
+            <img src="{{ url_for('static', filename='img/rifas/acao_entre_fieis_capa.png') }}" alt="Arte da campanha Acao Entre Fieis">
+        </div>
+
+        <div class="content-wrap">
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-5">
+                    <div class="content-card h-100">
+                        <span class="section-pill">Compra online</span>
+                        {% if schema_message %}
+                        <div class="alert alert-warning mt-3 mb-0">{{ schema_message }}</div>
+                        {% elif campanha %}
+                        <div class="campaign-board">
+                            <h1>{{ campanha.titulo }}</h1>
+                            <div class="fs-5 fw-bold">Sorteio em {{ campanha.data_sorteio.strftime("%d/%m/%Y") }}</div>
+                            {% if campanha.descricao %}
+                            <div class="mt-2">{{ campanha.descricao }}</div>
+                            {% endif %}
+                            <div class="campaign-stats">
+                                <div class="campaign-stat">
+                                    <span>Valor por numero</span>
+                                    <strong>R$ {{ "%.2f"|format(campanha.valor_rifa|float) }}</strong>
+                                </div>
+                                <div class="campaign-stat">
+                                    <span>Disponiveis</span>
+                                    <strong>{{ disponiveis }}</strong>
+                                </div>
+                                <div class="campaign-stat">
+                                    <span>Vendidas</span>
+                                    <strong>{{ vendidos }}</strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Telefone</label>
-                            <input class="form-control form-control-lg" name="telefone" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control form-control-lg" name="email" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Quantidade de rifas</label>
-                            <input type="number" min="1" class="form-control form-control-lg" name="quantidade_rifas" required>
-                        </div>
-                        <div class="col-12 d-grid">
-                            <button class="btn btn-lg text-white" style="background:#0f766e;">Gerar PIX</button>
-                        </div>
-                    </form>
-                    <div id="form-feedback" class="mt-3"></div>
+                        <form id="rifa-form" class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Nome completo</label>
+                                <input class="form-control" name="nome" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Endereço completo</label>
+                                <input class="form-control" name="endereco" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Telefone</label>
+                                <input class="form-control" name="telefone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Quantidade de rifas</label>
+                                <input type="number" min="1" class="form-control" name="quantidade_rifas" required>
+                            </div>
+                            <div class="col-12 d-grid">
+                                <button class="btn btn-rifa" type="submit">Gerar PIX e reservar numeros</button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <div class="alert alert-warning mt-3 mb-0">Nenhuma campanha de rifa esta ativa no momento.</div>
+                        {% endif %}
+                        <div id="form-feedback" class="mt-3"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="result-card p-4 p-md-5 h-100" id="resultado">
-                    <h2 class="h4 fw-bold mb-3">Seu pagamento aparece aqui</h2>
-                    <p class="text-secondary mb-0">Depois do envio, vamos mostrar o QR Code, o codigo PIX copia e cola e os numeros reservados para voce.</p>
+
+                <div class="col-lg-7">
+                    <div class="result-card" id="resultado">
+                        <div class="result-banner">
+                            <div class="tag-status">Pagamento</div>
+                            <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Envie o comprovante para liberar os canhotos</h2>
+                            <p class="mb-0">Depois da compra, mostramos o QR Code, o PIX copia e cola, os numeros reservados e o link para os canhotos quando o pagamento for confirmado.</p>
+                        </div>
+                        <div class="mt-4">
+                            <img src="{{ url_for('static', filename='img/rifas/acao_entre_fieis_canhoto_base.png') }}" alt="Modelo do canhoto da rifa" class="img-fluid rounded-4 border">
+                            <p class="muted-note mb-0 mt-3">O canhoto em PDF segue o mesmo formato horizontal do anexo enviado.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -105,53 +309,101 @@
             feedback.innerHTML = `<div class="alert alert-danger mb-0">${message}</div>`;
         }
 
+        async function enviarComprovante(pagamentoId) {
+            const campo = document.getElementById("comprovante-arquivo");
+            if (!campo || !campo.files.length) {
+                alert("Selecione o comprovante antes de enviar.");
+                return;
+            }
+            const formData = new FormData();
+            formData.append("comprovante", campo.files[0]);
+            const response = await fetch(`/rifas/pagamento/${pagamentoId}/comprovante`, {
+                method: "POST",
+                body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                alert(data.erro || "Nao foi possivel enviar o comprovante.");
+                return;
+            }
+            const status = document.getElementById("status-comprovante");
+            if (status) {
+                status.innerHTML = `<div class="alert alert-success mb-0">Comprovante enviado com sucesso. Aguarde a confirmacao manual.</div>`;
+            }
+        }
+
         function renderSuccess(data) {
             feedback.innerHTML = `<div class="alert alert-success mb-0">Pagamento gerado com sucesso.</div>`;
             resultado.innerHTML = `
-                <span class="accent-pill">Pagamento ${data.status}</span>
-                <h2 class="h4 fw-bold mb-3">Escaneie o QR Code para pagar</h2>
-                <div class="qr-box mb-3">
-                    <img class="img-fluid" alt="QR Code PIX" src="data:image/png;base64,${data.qr_code_base64}" />
+                <div class="result-banner">
+                    <div class="tag-status">Pagamento ${data.status}</div>
+                    <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Escaneie o QR Code e envie o comprovante</h2>
+                    <p class="mb-0"><strong>Campanha:</strong> ${data.campanha_titulo}</p>
                 </div>
-                <p class="mb-2"><strong>Pagamento:</strong> ${data.pagamento_id}</p>
-                <p class="mb-2"><strong>Numeros reservados:</strong> ${data.numeros.join(", ")}</p>
-                <p class="mb-3"><strong>Valor total:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
-                <div class="pix-code mb-3">${data.copia_cola_pix}</div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <button id="copiar-pix" class="btn btn-outline-dark" data-pix="${data.copia_cola_pix.replace(/"/g, "&quot;")}">Copiar codigo PIX</button>
-                    <a class="btn btn-outline-success" href="/rifas/pagamento/${data.pagamento_id}" target="_blank" rel="noreferrer">Ja paguei</a>
+                <div class="row g-4 align-items-start mt-1">
+                    <div class="col-md-5">
+                        <div class="qr-box">
+                            <img class="img-fluid" alt="QR Code PIX" src="data:image/png;base64,${data.qr_code_base64}" />
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <p class="mb-2"><strong>Pagamento:</strong> ${data.pagamento_id}</p>
+                        <p class="mb-2"><strong>Numeros reservados:</strong> ${data.numeros.map((n) => String(n).padStart(4, "0")).join(", ")}</p>
+                        <p class="mb-3"><strong>Valor total:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
+                        <div class="pix-box mb-3">${data.copia_cola_pix}</div>
+                        <div class="d-flex gap-2 flex-wrap mb-4">
+                            <button id="copiar-pix" class="btn btn-outline-dark" data-pix="${data.copia_cola_pix.replace(/"/g, "&quot;")}">Copiar codigo PIX</button>
+                            <a class="btn btn-outline-primary" href="/rifas/pagamento/${data.pagamento_id}" target="_blank" rel="noreferrer">Consultar pagamento</a>
+                        </div>
+                        <div class="file-box">
+                            <h3 class="h5 fw-bold text-uppercase">Enviar comprovante</h3>
+                            <input id="comprovante-arquivo" type="file" class="form-control mb-3" accept=".png,.jpg,.jpeg,.pdf,.webp">
+                            <div class="d-flex gap-2 flex-wrap align-items-center">
+                                <button id="enviar-comprovante" class="btn btn-primary">Enviar comprovante</button>
+                                <small class="muted-note">Aceita imagem ou PDF.</small>
+                            </div>
+                            <div id="status-comprovante" class="mt-3"></div>
+                        </div>
+                    </div>
                 </div>
             `;
             const botaoCopiar = document.getElementById("copiar-pix");
             if (botaoCopiar) {
-                botaoCopiar.addEventListener("click", () => {
-                    navigator.clipboard.writeText(botaoCopiar.dataset.pix || "");
-                });
+                botaoCopiar.addEventListener("click", () => navigator.clipboard.writeText(botaoCopiar.dataset.pix || ""));
+            }
+            const botaoComprovante = document.getElementById("enviar-comprovante");
+            if (botaoComprovante) {
+                botaoComprovante.addEventListener("click", () => enviarComprovante(data.pagamento_id));
             }
         }
 
-        form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            feedback.innerHTML = "";
-            const payload = Object.fromEntries(new FormData(form).entries());
-            payload.quantidade_rifas = Number(payload.quantidade_rifas || 0);
+        if (form) {
+           form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                feedback.innerHTML = "";
 
-            try {
-                const response = await fetch("/rifas/comprar", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    renderError(data.erro || "Nao foi possivel gerar o pagamento.");
-                    return;
+                const formData = new FormData(form);
+
+                try {
+                    const response = await fetch("/rifas/comprar", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        renderError(data.erro || "Nao foi possivel gerar o pagamento.");
+                        return;
+                    }
+
+                    renderSuccess(data);
+
+                } catch (error) {
+                    renderError("Falha ao comunicar com o servidor.");
                 }
-                renderSuccess(data);
-            } catch (error) {
-                renderError("Falha ao comunicar com o servidor.");
-            }
-        });
+            });
+        }
     </script>
 </body>
 </html>

@@ -1,41 +1,48 @@
 ﻿{% extends "base.html" %}
 {% block content %}
+{% include "rifas_menu.html" %}
 <h1 class="h3 mb-4">Pagamentos de Rifas</h1>
 {% if schema_message %}
 <div class="alert alert-warning">{{ schema_message }}</div>
 {% endif %}
 <div class="card">
     <div class="card-body">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Cliente</th>
-                    <th>Status</th>
-                    <th>Quantidade</th>
-                    <th>Valor</th>
-                    <th>PDF</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for pagamento in pagamentos %}
-                <tr>
-                    <td>{{ pagamento.id }}</td>
-                    <td>{{ pagamento.cliente.nome if pagamento.cliente else "-" }}</td>
-                    <td>{{ pagamento.status }}</td>
-                    <td>{{ pagamento.quantidade_rifas }}</td>
-                    <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
-                    <td>
-                        {% if pagamento.pdf_path %}
-                        <span>{{ pagamento.pdf_path }}</span>
-                        {% else %}
-                        <span>-</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Campanha</th>
+                        <th>Cliente</th>
+                        <th>Status</th>
+                        <th>Quantidade</th>
+                        <th>Valor</th>
+                        <th>Comprovante</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pagamento in pagamentos %}
+                    <tr>
+                        <td class="small">{{ pagamento.id }}</td>
+                        <td>{{ pagamento.campanha.titulo if pagamento.campanha else "-" }}</td>
+                        <td>{{ pagamento.cliente.nome if pagamento.cliente else "-" }}</td>
+                        <td><span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% else %}secondary{% endif %}">{{ pagamento.status }}</span></td>
+                        <td>{{ pagamento.quantidade_rifas }}</td>
+                        <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
+                        <td>
+                            {% if pagamento.comprovante_path %}
+                            <a href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">Ver comprovante</a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_detalhe', payment_id=pagamento.id) }}">Abrir</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

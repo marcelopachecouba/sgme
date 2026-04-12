@@ -1,46 +1,97 @@
 ﻿{% extends "base.html" %}
 {% block content %}
+{% include "rifas_menu.html" %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-1">Rifas</h1>
-        <p class="text-secondary mb-0">Painel administrativo do modulo de rifas.</p>
+        <p class="text-secondary mb-0">Visao geral da campanha e do estoque.</p>
     </div>
-    <a class="btn btn-outline-primary" href="/rifas" target="_blank" rel="noreferrer">Abrir pagina publica</a>
+    <a class="btn btn-primary" href="{{ url_for('rifas_admin.admin_rifas_cadastro') }}">Cadastrar ou editar campanha</a>
 </div>
 
 {% if schema_message %}
 <div class="alert alert-warning">{{ schema_message }}</div>
 {% endif %}
 
+{% if campanha_ativa %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <div class="text-secondary">Campanha ativa</div>
+                <h2 class="h4 mb-1">{{ campanha_ativa.titulo }}</h2>
+                <div>Sorteio: {{ campanha_ativa.data_sorteio.strftime("%d/%m/%Y") }}</div>
+                <div>Valor por rifa: R$ {{ "%.2f"|format(campanha_ativa.valor_rifa|float) }}</div>
+                <div>Quantidade total: {{ campanha_ativa.quantidade_total }}</div>
+            </div>
+            <div class="col-md-6">
+                {% if campanha_ativa.descricao %}
+                <div class="alert alert-light mb-0">{{ campanha_ativa.descricao }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Disponiveis</div><div class="display-6">{{ stats.disponiveis }}</div></div></div></div>
     <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Reservadas</div><div class="display-6">{{ stats.reservadas }}</div></div></div></div>
     <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Pagas</div><div class="display-6">{{ stats.pagas }}</div></div></div></div>
-    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Faturado</div><div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-secondary">Total arrecadado</div><div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div></div></div></div>
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Numero</th>
-                    <th>Status</th>
-                    <th>Cliente</th>
-                    <th>Pagamento</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for rifa in rifas[:200] %}
-                <tr>
-                    <td>{{ "%04d"|format(rifa.numero) }}</td>
-                    <td>{{ rifa.status }}</td>
-                    <td>{{ rifa.cliente.nome if rifa.cliente else "-" }}</td>
-                    <td>{{ rifa.pagamento_id or "-" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Primeiras rifas da campanha</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Numero</th>
+                                <th>Status</th>
+                                <th>Cliente</th>
+                                <th>Pagamento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rifa in rifas[:150] %}
+                            <tr>
+                                <td>{{ "%04d"|format(rifa.numero) }}</td>
+                                <td><span class="badge text-bg-{% if rifa.status == 'pago' %}success{% elif rifa.status == 'reservado' %}warning{% else %}secondary{% endif %}">{{ rifa.status }}</span></td>
+                                <td>{{ rifa.cliente.nome if rifa.cliente else "-" }}</td>
+                                <td>{{ rifa.pagamento_id or "-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Ranking de compradores</h2>
+                {% if ranking_compradores %}
+                <ol class="list-group list-group-numbered">
+                    {% for item in ranking_compradores %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold">{{ item.cliente.nome }}</div>
+                            <div class="text-secondary small">{{ item.quantidade }} rifa(s)</div>
+                        </div>
+                        <span class="badge text-bg-success">R$ {{ "%.2f"|format(item.valor_total) }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="text-secondary mb-0">Ainda nao ha compradores com pagamento confirmado.</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

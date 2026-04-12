@@ -71,6 +71,9 @@ class Config:
     PIX_API_KEY = os.environ.get('PIX_API_KEY', '').strip()
     PIX_ACCESS_TOKEN = os.environ.get('PIX_ACCESS_TOKEN', '').strip()
     PIX_USER_ID = os.environ.get('PIX_USER_ID', '').strip()
+    PIX_CHAVE = os.environ.get('PIX_CHAVE', '63999430482').strip()
+    PIX_MERCHANT_NAME = os.environ.get('PIX_MERCHANT_NAME', 'PAROQUIA NOSSA SENHORA APARECIDA').strip()[:25]
+    PIX_MERCHANT_CITY = os.environ.get('PIX_MERCHANT_CITY', 'PALMAS').strip()[:15]
     WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', '').strip()
     RIFA_PUBLIC_TITLE = os.environ.get('RIFA_PUBLIC_TITLE', 'Rifas Online SGME').strip()
     RIFA_VALOR_UNITARIO = float(os.environ.get('RIFA_VALOR_UNITARIO', '10'))
@@ -81,6 +84,7 @@ class Config:
     RIFA_SUPABASE_URL = os.environ.get('RIFA_SUPABASE_URL', '').strip()
     RIFA_SUPABASE_KEY = os.environ.get('RIFA_SUPABASE_KEY', '').strip()
     RIFA_SUPABASE_BUCKET = os.environ.get('RIFA_SUPABASE_BUCKET', 'rifas').strip()
+    RIFA_UPLOAD_DIR = os.environ.get('RIFA_UPLOAD_DIR', str(Path('static') / 'uploads' / 'rifas')).strip()
     RIFA_WHATSAPP_ENABLED = os.environ.get('RIFA_WHATSAPP_ENABLED', '0') == '1'
     WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN', '').strip()
     PHONE_NUMBER_ID = os.environ.get('PHONE_NUMBER_ID', '').strip()

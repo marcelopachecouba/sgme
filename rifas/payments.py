@@ -1,8 +1,9 @@
-import base64
+﻿import base64
 import io
 import logging
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal, ROUND_HALF_UP
 
 import qrcode
 import requests
@@ -27,15 +28,105 @@ def _gerar_qr_code_base64(conteudo: str) -> str:
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
+def _pix_field(field_id: str, value: str) -> str:
+    return f"{field_id}{len(value):02d}{value}"
+
+
+def _crc16(payload: str) -> str:
+    polynomial = 0x1021
+    result = 0xFFFF
+    for char in payload:
+        result ^= ord(char) << 8
+        for _ in range(8):
+            if result & 0x8000:
+                result = (result << 1) ^ polynomial
+            else:
+                result <<= 1
+            result &= 0xFFFF
+    return f"{result:04X}"
+
+
+def generate_pix_payload(*, key: str, amount: float, txid: str) -> str:
+    from decimal import Decimal, ROUND_HALF_UP
+
+    key = key.strip()
+
+    def f(id, v):
+        return f"{id}{len(v):02}{v}"
+
+    # 🔧 DADOS
+    merchant_name = "PAROQUIA NS APARECIDA"[:25]
+    merchant_city = "PALMAS"[:15]
+    amount = f"{Decimal(str(amount)).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)}"
+
+    # 🔧 TXID LIMPO (SEM mock!)
+    txid = ''.join(filter(str.isalnum, txid))[:25]
+    if not txid:
+        txid = "SGME123456789"
+
+    # 🔧 CAMPOS
+    gui = "0013br.gov.bcb.pix"
+    chave = f"01{len(key):02}{key}"
+
+    merchant_account_info = gui + chave
+
+    # 🔥 FORÇANDO TAMANHO CORRETO
+    tamanho = len(merchant_account_info)
+
+    merchant_account = f"26{tamanho:02}{merchant_account_info}"
+
+    additional_data = f("62", f("05", txid))
+
+    payload = (
+        f("00", "01") +
+        f("01", "11") +
+        merchant_account +
+        f("52", "0000") +
+        f("53", "986") +
+        f("54", amount) +
+        f("58", "BR") +
+        f("59", merchant_name) +
+        f("60", merchant_city) +
+        additional_data +
+        "6304"
+    )
+
+    # 🔐 CRC
+    def crc16(payload):
+        polinomio = 0x1021
+        resultado = 0xFFFF
+        for c in payload:
+            resultado ^= ord(c) << 8
+            for _ in range(8):
+                if resultado & 0x8000:
+                    resultado = (resultado << 1) ^ polinomio
+                else:
+                    resultado <<= 1
+                resultado &= 0xFFFF
+        return f"{resultado:04X}"
+
+    return payload + crc16(payload)
+
 class MockPixGateway:
     def create_charge(self, *, amount: float, payer_name: str, payer_email: str, description: str) -> PixCharge:
-        external_id = f"mock-{uuid.uuid4()}"
-        copia_cola = f"PIX|{external_id}|{amount:.2f}|{payer_name}|{payer_email}|{description}"
+        external_id = uuid.uuid4().hex
+        chave_pix = current_app.config.get("PIX_CHAVE", "63999430482")
+        copia_cola = generate_pix_payload(
+            key=chave_pix,
+            amount=amount,
+            txid=external_id
+        )        
         return PixCharge(
             external_id=external_id,
             qr_code_base64=_gerar_qr_code_base64(copia_cola),
             copia_cola_pix=copia_cola,
-            raw_response={"provider": "mock", "external_id": external_id},
+            raw_response={
+                "provider": "mock",
+                "external_id": external_id,
+                "payer_name": payer_name,
+                "payer_email": payer_email,
+                "pix_key": chave_pix,
+            },
         )
 
     def parse_webhook(self, payload: dict) -> tuple[str | None, str]:

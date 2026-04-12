@@ -159,6 +159,16 @@ style="z-index:1000">
 
 {% endif %}
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="mb-3">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
 {% block content %}{% endblock %}
 
 <button id="btnInstalar"

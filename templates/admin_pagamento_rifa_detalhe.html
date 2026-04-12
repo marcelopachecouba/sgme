@@ -1,0 +1,102 @@
+﻿{% extends "base.html" %}
+{% block content %}
+{% include "rifas_menu.html" %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Detalhe do Pagamento</h1>
+        <p class="text-secondary mb-0">Conferir comprovante, liberar impressao e enviar as rifas por WhatsApp.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('rifas_admin.admin_pagamentos') }}">Voltar</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6"><strong>Cliente:</strong> {{ pagamento.cliente.nome }}</div>
+                    <div class="col-md-6"><strong>Telefone:</strong> {{ pagamento.cliente.telefone }}</div>
+                    <div class="col-md-6"><strong>Campanha:</strong> {{ pagamento.campanha.titulo if pagamento.campanha else '-' }}</div>
+                    <div class="col-md-6"><strong>Status:</strong> {{ pagamento.status }}</div>
+                    <div class="col-md-6"><strong>Quantidade:</strong> {{ pagamento.quantidade_rifas }}</div>
+                    <div class="col-md-6"><strong>Valor:</strong> R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</div>
+                    <div class="col-12"><strong>Numeros:</strong> {% for rifa in numeros %}<span class="badge text-bg-dark me-1">{{ "%04d"|format(rifa.numero) }}</span>{% endfor %}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Comprovante enviado</h2>
+                {% if pagamento.comprovante_path %}
+                    {% if pagamento.comprovante_path.endswith('.pdf') %}
+                    <a class="btn btn-outline-primary" href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">Abrir comprovante em PDF</a>
+                    {% else %}
+                    <a href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">
+                        <img src="{{ pagamento.comprovante_path }}" alt="Comprovante" class="img-fluid rounded border">
+                    </a>
+                    {% endif %}
+                {% else %}
+                <p class="text-secondary mb-0">Nenhum comprovante enviado ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Liberar pagamento</h2>
+                <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_aprovar', payment_id=pagamento.id) }}" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Observacoes do admin</label>
+                        <textarea class="form-control" name="observacoes_admin" rows="3">{{ pagamento.observacoes_admin or '' }}</textarea>
+                    </div>
+                    <div class="col-12 d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success" {% if pagamento.status == 'pago' %}disabled{% endif %}>Marcar como pago</button>
+                        {% if pagamento.pdf_path %}
+                        <a class="btn btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank" rel="noreferrer">Imprimir PDF</a>
+                        {% endif %}
+                        {% if whatsapp_link %}
+                        <a class="btn btn-outline-success" href="{{ whatsapp_link }}" target="_blank" rel="noreferrer">Enviar pelo WhatsApp</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">PIX gerado</h2>
+                {% if pagamento.qr_code_base64 %}
+                <img class="img-fluid border rounded p-3 bg-white mb-3" src="data:image/png;base64,{{ pagamento.qr_code_base64 }}" alt="QR Code PIX">
+                {% endif %}
+                <div class="small text-break bg-light p-3 rounded">{{ pagamento.copia_cola_pix }}</div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Arquivos</h2>
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        PDF dos canhotos
+                        {% if pdf_public_url %}
+                        <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank" rel="noreferrer">Abrir</a>
+                        {% else %}
+                        <span class="text-secondary">aguardando pagamento</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Comprovante
+                        {% if pagamento.comprovante_path %}
+                        <a href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">Abrir</a>
+                        {% else %}
+                        <span class="text-secondary">nao enviado</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -817,16 +817,34 @@ class ClienteRifa(db.Model):
     nome = db.Column(db.String(150), nullable=False, index=True)
     telefone = db.Column(db.String(30), nullable=False, index=True)
     email = db.Column(db.String(150), nullable=False, index=True)
+    endereco = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
-
+    
     pagamentos = db.relationship("PagamentoRifa", back_populates="cliente", lazy="select")
     rifas = db.relationship("Rifa", back_populates="cliente", lazy="select")
+
+
+class RifaCampanha(db.Model):
+    __tablename__ = "rifas_campanhas"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    titulo = db.Column(db.String(180), nullable=False)
+    descricao = db.Column(db.Text)
+    data_sorteio = db.Column(db.Date, nullable=False, index=True)
+    valor_rifa = db.Column(db.Numeric(12, 2), nullable=False)
+    quantidade_total = db.Column(db.Integer, nullable=False)
+    ativa = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    pagamentos = db.relationship("PagamentoRifa", back_populates="campanha", lazy="select")
+    rifas = db.relationship("Rifa", back_populates="campanha", lazy="select")
 
 
 class PagamentoRifa(db.Model):
     __tablename__ = "pagamentos"
 
     id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    campanha_id = db.Column(db.String(36), db.ForeignKey("rifas_campanhas.id"), nullable=True, index=True)
     cliente_id = db.Column(db.String(36), db.ForeignKey("clientes.id"), nullable=False, index=True)
     valor_total = db.Column(db.Numeric(12, 2), nullable=False)
     quantidade_rifas = db.Column(db.Integer, nullable=False)
@@ -835,10 +853,15 @@ class PagamentoRifa(db.Model):
     copia_cola_pix = db.Column(db.Text)
     external_id = db.Column(db.String(120), unique=True, index=True)
     pdf_path = db.Column(db.String(500))
+    comprovante_path = db.Column(db.String(500))
+    comprovante_nome = db.Column(db.String(255))
+    comprovante_enviado_em = db.Column(db.DateTime, index=True)
+    observacoes_admin = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     pago_em = db.Column(db.DateTime, index=True)
 
     cliente = db.relationship("ClienteRifa", back_populates="pagamentos", lazy="joined")
+    campanha = db.relationship("RifaCampanha", back_populates="pagamentos", lazy="joined")
     rifas = db.relationship("Rifa", back_populates="pagamento", lazy="select")
 
 
@@ -846,11 +869,13 @@ class Rifa(db.Model):
     __tablename__ = "rifas"
 
     id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    campanha_id = db.Column(db.String(36), db.ForeignKey("rifas_campanhas.id"), nullable=True, index=True)
     numero = db.Column(db.Integer, nullable=False, index=True, unique=True)
     status = db.Column(db.String(20), nullable=False, default="disponivel", index=True)
     cliente_id = db.Column(db.String(36), db.ForeignKey("clientes.id"), index=True)
     pagamento_id = db.Column(db.String(36), db.ForeignKey("pagamentos.id"), index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
+    campanha = db.relationship("RifaCampanha", back_populates="rifas", lazy="joined")
     cliente = db.relationship("ClienteRifa", back_populates="rifas", lazy="joined")
     pagamento = db.relationship("PagamentoRifa", back_populates="rifas", lazy="joined")

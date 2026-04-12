@@ -1,4 +1,4 @@
-{% if current_user.is_admin() %}
+﻿{% if current_user.is_admin() %}
 <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
 <a href="{{ url_for('ministros.ministros') }}">Ministros</a>
 <a href="{{ url_for('indisponibilidade.listar_indisponibilidade') }}">Indisponibilidades/Disponibilidade</a>
@@ -6,10 +6,7 @@
 <a href="{{ url_for('casais.listar_casais') }}">Casais Servir Juntos</a>
 <a href="{{ url_for('missas.missas') }}">Missas</a>
 <a href="{{ url_for('estatisticas.estatisticas') }}">Estatisticas</a>
-<a href="{{ '/financeiro/dashboard' }}">Financeiro</a>
 <a href="{{ url_for('rifas_admin.admin_rifas') }}">Rifas</a>
-<a href="{{ url_for('rifas_admin.admin_pagamentos') }}">Pagamentos de Rifas</a>
-<a href="{{ url_for('rifas_admin.admin_clientes') }}">Clientes de Rifas</a>
 <a href="{{ url_for('estatisticas.confiabilidade') }}">Confiabilidade</a>
 <a href="/minhas-escalas">Minhas Escalas</a>
 <a href="#" onclick="solicitarPermissaoPush(); return false;">Permissao de Push</a>
