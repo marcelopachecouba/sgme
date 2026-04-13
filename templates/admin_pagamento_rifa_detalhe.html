@@ -50,15 +50,35 @@
                         <label class="form-label">Observacoes do admin</label>
                         <textarea class="form-control" name="observacoes_admin" rows="3">{{ pagamento.observacoes_admin or '' }}</textarea>
                     </div>
+
                     <div class="col-12 d-flex gap-2 flex-wrap">
-                        <button class="btn btn-success" {% if pagamento.status == 'pago' %}disabled{% endif %}>Marcar como pago</button>
+                        
+                        <button class="btn btn-success" {% if pagamento.status == 'pago' %}disabled{% endif %}>
+                            Marcar como pago
+                        </button>
+
+                        {% if pagamento.status == 'pago' %}
+                        <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_cancelar', payment_id=pagamento.id) }}">
+                            <button class="btn btn-danger" onclick="return confirm('Tem certeza que deseja cancelar este pagamento?')">
+                                Cancelar pagamento
+                            </button>                            
+                        </form>
+                        {% endif %}
+
                         {% if pagamento.pdf_path %}
-                        <a class="btn btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank" rel="noreferrer">Imprimir PDF</a>
+                        <a class="btn btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank">
+                            Imprimir PDF
+                        </a>
                         {% endif %}
+
                         {% if whatsapp_link %}
-                        <a class="btn btn-outline-success" href="{{ whatsapp_link }}" target="_blank" rel="noreferrer">Enviar pelo WhatsApp</a>
+                        <a class="btn btn-outline-success" href="{{ whatsapp_link }}" target="_blank">
+                            Enviar pelo WhatsApp
+                        </a>
                         {% endif %}
+
                     </div>
+
                 </form>
             </div>
         </div>

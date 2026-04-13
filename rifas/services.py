@@ -25,6 +25,7 @@ STATUS_DISPONIVEL = "disponivel"
 STATUS_RESERVADO = "reservado"
 STATUS_PAGO = "pago"
 STATUS_CANCELADO = "cancelado"
+STATUS_COMPROVANTE = "comprovante"
 ALLOWED_RECEIPT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf", ".webp"}
 
 
@@ -401,6 +402,8 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     pagamento.comprovante_path = _public_static_path("comprovantes", nome_final)
     pagamento.comprovante_nome = filename
     pagamento.comprovante_enviado_em = _utcnow()
+    # 🔥 ESSENCIAL
+    pagamento.status = STATUS_COMPROVANTE
     db.session.commit()
     logger.info("Comprovante enviado para pagamento=%s arquivo=%s", pagamento.id, pagamento.comprovante_path)
     return pagamento
@@ -583,5 +586,29 @@ def formatar_telefone(tel):
     elif len(tel) == 10:
         return f"({tel[:2]}) {tel[2:6]}-{tel[6:]}"
     return tel
+
+def cancelar_pagamento(*, pagamento_id: str) -> PagamentoRifa:
+    pagamento = db.session.get(PagamentoRifa, pagamento_id)
+
+    if pagamento is None:
+        raise RifaError("Pagamento não encontrado.")
+
+    if pagamento.status != STATUS_PAGO:
+        raise RifaError("Só é possível cancelar pagamentos já pagos.")
+
+    # 🔥 Volta as rifas para disponível
+    for rifa in pagamento.rifas:
+        rifa.status = STATUS_DISPONIVEL
+        rifa.pagamento_id = None
+        rifa.cliente_id = None
+
+    # 🔥 Atualiza pagamento
+    pagamento.status = STATUS_CANCELADO
+    pagamento.pago_em = None
+    pagamento.pdf_path = None
+
+    logger.info("Pagamento cancelado manualmente: %s", pagamento.id)
+
+    return pagamento
 
 

@@ -23,11 +23,22 @@
                 </thead>
                 <tbody>
                     {% for pagamento in pagamentos %}
-                    <tr>
+                    <tr {% if pagamento.status == 'comprovante' %}class="table-info"{% endif %}>
                         <td class="small">{{ pagamento.id }}</td>
                         <td>{{ pagamento.campanha.titulo if pagamento.campanha else "-" }}</td>
                         <td>{{ pagamento.cliente.nome if pagamento.cliente else "-" }}</td>
-                        <td><span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% else %}secondary{% endif %}">{{ pagamento.status }}</span></td>
+
+                        <td>
+                         <span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% elif pagamento.status == 'comprovante' %}info{% elif pagamento.status == 'cancelado' %}danger{% else %}secondary{% endif %}">
+                            {{ 
+                            '✔ Pago' if pagamento.status == 'pago'
+                            else '⏳ Pendente' if pagamento.status == 'pendente'
+                            else '📄 Comprovante enviado' if pagamento.status == 'comprovante'
+                            else '❌ Cancelado' if pagamento.status == 'cancelado'
+                            else pagamento.status
+                            }}
+                         </span>
+                        </td>
                         <td>{{ pagamento.quantidade_rifas }}</td>
                         <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
                         <td>

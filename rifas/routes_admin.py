@@ -202,3 +202,17 @@ def admin_rifas_resumo():
         return jsonify(dados["stats"])
     except RifaSchemaMissingError as exc:
         return jsonify({"erro": str(exc)}), 503
+    
+@rifas_admin_bp.route("/admin/pagamentos/<payment_id>/cancelar", methods=["POST"])
+@login_required
+@admin_required
+def admin_pagamento_cancelar(payment_id):
+    try:
+        cancelar_pagamento(pagamento_id=payment_id)
+        db.session.commit()
+        flash("Pagamento cancelado com sucesso.", "success")
+    except RifaError as exc:
+        db.session.rollback()
+        flash(str(exc), "danger")
+
+    return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))

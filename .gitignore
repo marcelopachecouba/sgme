@@ -23,3 +23,7 @@ chrome-win64*
 .env
 .env.*
 !.env.example
+
+instance/
+.pytest_cache/
+pytest-cache-files-*
