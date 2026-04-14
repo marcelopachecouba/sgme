@@ -231,15 +231,18 @@
                         {% elif campanha %}
                         <div class="campaign-board">
                             <h1>{{ campanha.titulo }}</h1>
+                            {% if mostrar_data_sorteio %}
                             <div class="fs-5 fw-bold">Sorteio em {{ campanha.data_sorteio.strftime("%d/%m/%Y") }}</div>
+                            {% endif %}
                             {% if campanha.descricao %}
                             <div class="mt-2">{{ campanha.descricao }}</div>
                             {% endif %}
                             <div class="campaign-stats">
                                 <div class="campaign-stat">
-                                    <span>Valor por numero</span>
+                                    <span>Valor por número</span>
                                     <strong>R$ {{ "%.2f"|format(campanha.valor_rifa|float) }}</strong>
                                 </div>
+                                {% if mostrar_vendidos %}
                                 <div class="campaign-stat">
                                     <span>Disponiveis</span>
                                     <strong>{{ disponiveis }}</strong>
@@ -248,6 +251,7 @@
                                     <span>Vendidas</span>
                                     <strong>{{ vendidos }}</strong>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
                         <form id="rifa-form" class="row g-3">
@@ -268,10 +272,14 @@
                                 <label class="form-label">Email</label>
                                 <input type="email" class="form-control" name="email">
                             </div>
+                            
+                            {% if mostrar_vendedor %}
                             <div class="col-12">
                                 <label class="form-label">Vendedor</label>
                                 <input class="form-control" name="vendedor">
                             </div>
+                            {% endif %}
+
                             <div class="col-12">
                                 <label class="form-label">Quantidade de rifas</label>
                                 <input type="number" min="1" class="form-control" name="quantidade_rifas" required>
@@ -281,11 +289,31 @@
                                     Gerar PIX e reservar numeros
                                 </button>
                             </div>
+                            <div class="col-12">
+                                <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-success w-100 mt-2">
+                                    💬 Falar com a Paróquia no WhatsApp
+                                </a>
+                            </div>
+
                         </form>
                         {% else %}
                         <div class="alert alert-warning mt-3 mb-0">Nenhuma campanha de rifa esta ativa no momento.</div>
                         {% endif %}
                         <div id="form-feedback" class="mt-3"></div>
+
+                        <div class="mt-4">
+                            <h5>🔎 Consultar pedido</h5>
+
+                            <input type="text" id="pedido_id" class="form-control mb-2" placeholder="Digite o número do pedido">
+                            <input type="text" id="telefone_consulta" class="form-control mb-2" placeholder="Ou digite o telefone usado na compra">
+
+                            <button class="btn btn-dark w-100 mb-3" onclick="consultarPedido()">
+                                Consultar pedido
+                            </button>
+
+                            <div id="resultado-pedido"></div>
+                        </div>                        
+
                     </div>
                 </div>
 
@@ -293,8 +321,8 @@
                     <div class="result-card" id="resultado">
                         <div class="result-banner">
                             <div class="tag-status">Pagamento</div>
-                            <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Envie o comprovante para liberar os canhotos</h2>
-                            <p class="mb-0">Depois da compra, mostramos o QR Code, o PIX copia e cola, os numeros reservados e o link para os canhotos quando o pagamento for confirmado.</p>
+                            <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Envie o comprovante para liberar os canhotos, que serão impressos e depositados na urna na Paróquia</h2>
+                            <p class="mb-0">Depois da compra, mostramos o QR Code, o PIX copia e cola, os numeros reservados e após o pagamento for confirmado, enviamos uma msg whatsapp.</p>
                         </div>
                         <div class="mt-4">
                             <img src="{{ url_for('static', filename='img/rifas/acao_entre_fieis_canhoto_base.png') }}" alt="Modelo do canhoto da rifa" class="img-fluid rounded-4 border">
@@ -362,7 +390,8 @@
                     </div>
 
                     <div class="col-md-7">
-                        <p><strong>Pagamento:</strong> ${data.pagamento_id}</p>
+                        <p><strong>Pedido:</strong> ${data.pagamento_id}</p>
+                        <p style="color:red;"><strong>Guarde este número para enviar o comprovante depois</strong></p>
                         <p><strong>Numeros:</strong> ${data.numeros.map(n => String(n).padStart(4,"0")).join(", ")}</p>
                         <p><strong>Valor:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
 
@@ -470,6 +499,163 @@
 
             return null;
         }
+
+        async function enviarComprovanteManual() {
+            const pedidoId = document.getElementById("pedido_id").value;
+            const arquivo = document.getElementById("comprovante_manual").files[0];
+
+            if (!pedidoId) {
+                alert("Informe o número do pedido");
+                return;
+            }
+
+            if (!arquivo) {
+                alert("Selecione o comprovante");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("comprovante", arquivo);
+
+            const response = await fetch(`/rifas/pagamento/${pedidoId}/comprovante`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.erro || "Erro ao enviar comprovante");
+                return;
+            }
+
+            document.getElementById("resultado-pedido").innerHTML +=
+                `<div class="alert alert-success mt-2">Comprovante enviado com sucesso!</div>`;
+        }
+
+        async function consultarPedido() {
+            const pedidoId = document.getElementById("pedido_id").value;
+            const telefone = document.getElementById("telefone_consulta").value;
+
+            if (!pedidoId && !telefone) {
+                alert("Informe o pedido ou telefone");
+                return;
+            }
+
+            const response = await fetch("/rifas/consultar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    pedido_id: pedidoId,
+                    telefone: telefone
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById("resultado-pedido").innerHTML =
+                    `<div class="alert alert-danger">${data.erro}</div>`;
+                return;
+            }
+
+            let html = "";
+
+            data.pedidos.forEach(p => {
+
+                const status = (p.status || "").toLowerCase();  // 👈 PRIMEIRO
+                const podeEnviar = status === "pendente";       // 👈 USA STATUS
+
+                console.log("PEDIDO:", p.id, "STATUS:", status); // 👈 DEBUG
+
+                html += `
+                    <div class="card mt-3">
+                        <div class="card-body">
+
+                            <p><strong>Pedido:</strong> ${p.id}</p>
+
+                            <p><strong>Status:</strong> 
+                                ${status === "pendente" ? "🟡 Pendente" : ""}
+                                ${status === "comprovante" ? "🔵 Comprovante enviado" : ""}
+                                ${status === "pago" ? "🟢 Pago" : ""}
+                                ${status === "cancelado" ? "🔴 Cancelado" : ""}
+                            </p>
+                            p><strong>Quantidade:</strong> ${p.quantidade_rifas}</p>
+                            <p><strong>Valor:</strong> R$ ${p.valor_total.toFixed(2).replace(".", ",")}</p>
+
+                            ${status === "comprovante" ? `
+                                <div class="alert alert-info mt-2">
+                                    📄 Comprovante já enviado
+                                </div>
+                            ` : ""}
+
+                            ${status === "pago" ? `
+                                <div class="alert alert-success mt-2">
+                                    ✅ Pagamento confirmado
+                                </div>
+                            ` : ""}
+
+                            ${
+                                podeEnviar ? `
+                                <input type="file" id="file-${p.id}" class="form-control mt-2">
+                                <button class="btn btn-primary w-100 mt-2"
+                                    onclick="enviarComprovantePedido('${p.id}')">
+                                    Enviar comprovante
+                                </button>
+                                ` : ""
+                            }
+
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById("resultado-pedido").innerHTML = html;
+        }
+
+        async function enviarComprovantePedido(pedidoId) {
+            const arquivo = document.getElementById(`file-${pedidoId}`).files[0];
+
+            if (!arquivo) {
+                alert("Selecione o comprovante");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("comprovante", arquivo);
+
+            const response = await fetch(`/rifas/pagamento/${pedidoId}/comprovante`, {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.erro || "Erro ao enviar comprovante");
+                return;
+            }
+
+            alert("Comprovante enviado com sucesso!");
+
+            // 🔄 Atualiza lista
+            consultarPedido();
+        }
+
+        const telInput = document.getElementById("telefone_consulta");
+
+        telInput.addEventListener("input", function(e) {
+            let v = e.target.value.replace(/\D/g, "");
+
+            if (v.length > 11) v = v.slice(0, 11);
+
+            if (v.length > 6) {
+                v = v.replace(/^(\d{2})(\d{5})(\d+)/, "($1) $2-$3");
+            } else if (v.length > 2) {
+                v = v.replace(/^(\d{2})(\d+)/, "($1) $2");
+            }
+
+            e.target.value = v;
+        });
 
     </script>
 

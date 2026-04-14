@@ -1,5 +1,5 @@
 ﻿from pathlib import Path
-
+from urllib.parse import quote
 from flask import Blueprint, jsonify, render_template, request, send_file
 from models import PagamentoRifa, ClienteRifa
 
@@ -25,6 +25,17 @@ def rifas_home():
         dados = get_public_page_data()
     except RifaSchemaMissingError as exc:
         dados = {"campanha": None, "disponiveis": 0, "vendidos": 0, "schema_message": str(exc)}
+    dados["mostrar_vendidos"] = False  # 👈 AQUI
+    dados["mostrar_data_sorteio"] = False  # 👈 NOVO
+    dados["mostrar_vendedor"] = False
+    
+    mensagem = "Olá, quero informações sobre a rifa"
+
+    if dados.get("campanha"):
+        mensagem = f"Olá, quero saber mais sobre a rifa {dados['campanha'].titulo}"
+
+    dados["whatsapp_link"] = f"https://wa.me/556332148559?text={quote(mensagem)}"    
+    
     return render_template("rifas_publica.html", **dados)
 
 
@@ -134,3 +145,39 @@ def webhook_pix():
         from extensions import db
         db.session.rollback()
         return jsonify({"erro": str(exc)}), 400
+
+@rifas_public_bp.route("/rifas/consultar", methods=["POST"])
+def consultar_pedido():
+    data = request.get_json(silent=True) or request.form
+
+    pedido_id = (data.get("pedido_id") or "").strip()
+    telefone = (data.get("telefone") or "").strip()
+
+    from extensions import db
+
+    # 🔎 CONSULTA POR PEDIDO (mantém igual)
+    if pedido_id:
+        pagamento = get_payment(pedido_id)
+        if not pagamento:
+            return jsonify({"erro": "Pedido não encontrado"}), 404
+        return jsonify({"pedidos": [payment_summary(pagamento)]})
+
+    # 🔎 CONSULTA POR TELEFONE (AGORA LISTA TODOS)
+    if telefone:
+        telefone_limpo = ''.join(filter(str.isdigit, telefone))
+
+        pagamentos = db.session.execute(
+            db.select(PagamentoRifa)
+            .join(ClienteRifa)
+            .where(ClienteRifa.telefone == telefone_limpo)
+            .order_by(PagamentoRifa.created_at.desc())
+        ).scalars().all()
+
+        if not pagamentos:
+            return jsonify({"erro": "Nenhum pedido encontrado para este telefone"}), 404
+
+        return jsonify({
+            "pedidos": [payment_summary(p) for p in pagamentos]
+        })
+
+    return jsonify({"erro": "Informe o pedido ou telefone"}), 400

@@ -410,7 +410,7 @@ def save_duplicata(duplicata_id, payload):
     duplicata = _find(Duplicata, duplicata_id) if duplicata_id else Duplicata(id_paroquia=current_user.id_paroquia)
     if not duplicata:
         raise ValueError("Duplicata nao encontrada.")
-    if duplicata.id and any(p.status == "PAGO" for p in duplicata.parcelas):
+    if duplicata.id and any(status == "PAGO" for p in duplicata.parcelas):
         raise ValueError("Nao edite duplicatas com parcelas pagas.")
     duplicata.descricao = descricao
     duplicata.valor_total = valor_total

@@ -505,8 +505,10 @@ def payment_whatsapp_link(pagamento: PagamentoRifa) -> str | None:
         f"Sorteio: {data_sorteio}\n"
         f"Valor pago: R$ {float(pagamento.valor_total):.2f}\n"
     )
-    if link_pdf:
-        mensagem += f"\nBaixar canhotos: {link_pdf}\n"
+    
+    #if link_pdf:
+        #mensagem += f"\nBaixar canhotos: {link_pdf}\n"
+
     return gerar_link_whatsapp_telefone(pagamento.cliente.telefone, mensagem)
 
 
