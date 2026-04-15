@@ -580,6 +580,19 @@
                                 ${status === "pago" ? "🟢 Pago" : ""}
                                 ${status === "cancelado" ? "🔴 Cancelado" : ""}
                             </p>
+
+                            ${status === "pendente" ? `
+                                <div class="alert alert-warning mt-2">
+                                    ⏳ Tempo para pagamento: 60 minutos
+                                </div>
+                            ` : ""}                            
+
+                            ${status === "cancelado" ? `
+                                <div class="alert alert-danger mt-2">
+                                    ⛔ Pedido expirado por falta de pagamento após 60 minutos.
+                                </div>
+                            ` : ""}
+
                             p><strong>Quantidade:</strong> ${p.quantidade_rifas}</p>
                             <p><strong>Valor:</strong> R$ ${p.valor_total.toFixed(2).replace(".", ",")}</p>
 

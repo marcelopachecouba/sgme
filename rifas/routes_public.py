@@ -2,7 +2,7 @@
 from urllib.parse import quote
 from flask import Blueprint, jsonify, render_template, request, send_file
 from models import PagamentoRifa, ClienteRifa
-
+from rifas.services import cancelar_pagamentos_expirados
 
 from rifas.services import (
     RifaError,
@@ -21,6 +21,8 @@ rifas_public_bp = Blueprint("rifas_public", __name__)
 
 @rifas_public_bp.route("/rifas", methods=["GET"])
 def rifas_home():
+    cancelar_pagamentos_expirados()  # 👈 AQUI
+
     try:
         dados = get_public_page_data()
     except RifaSchemaMissingError as exc:
@@ -103,17 +105,39 @@ def pagamento_publico(payment_id):
 @rifas_public_bp.route("/rifas/pagamento/<payment_id>/comprovante", methods=["POST"])
 def pagamento_comprovante_publico(payment_id):
     try:
-        pagamento = save_receipt(pagamento_id=payment_id, arquivo=request.files.get("comprovante"))
+        pagamento = get_payment(payment_id)
+
+        # 🔒 VALIDAÇÕES AQUI 👇
+        if not pagamento:
+            return jsonify({"erro": "Pagamento não encontrado"}), 404
+
+        if pagamento.status == "cancelado":
+            return jsonify({"erro": "Pedido expirado. Gere um novo."}), 400
+
+        if pagamento.status == "pago":
+            return jsonify({"erro": "Pagamento já confirmado."}), 400
+
+        if pagamento.status == "comprovante":
+            return jsonify({"erro": "Comprovante já enviado."}), 400
+
+        # ✅ SÓ PASSA SE FOR PENDENTE
+        pagamento = save_receipt(
+            pagamento_id=payment_id,
+            arquivo=request.files.get("comprovante")
+        )
+
         return jsonify({
             "status": "ok",
             "pagamento_id": pagamento.id,
             "comprovante_path": pagamento.comprovante_path,
         })
+
     except RifaSchemaMissingError as exc:
         return jsonify({"erro": str(exc)}), 503
+
     except RifaError as exc:
         return jsonify({"erro": str(exc)}), 400
-
+        
 
 @rifas_public_bp.route("/rifas/pagamento/<payment_id>/pdf", methods=["GET"])
 def pagamento_pdf_publico(payment_id):

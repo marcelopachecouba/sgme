@@ -613,4 +613,35 @@ def cancelar_pagamento(*, pagamento_id: str) -> PagamentoRifa:
 
     return pagamento
 
+from datetime import datetime, timedelta
+from extensions import db
+from models import PagamentoRifa
+
+def cancelar_pagamentos_expirados():
+    from datetime import datetime, timedelta
+    from extensions import db
+    from models import PagamentoRifa, Rifa
+
+    agora = datetime.utcnow()
+    limite = agora - timedelta(minutes=60)
+
+    pagamentos = db.session.execute(
+        db.select(PagamentoRifa).where(
+            PagamentoRifa.status == "pendente",
+            PagamentoRifa.created_at < limite
+        )
+    ).scalars().all()
+
+    for p in pagamentos:
+        # 🔥 liberar rifas
+        for rifa in p.rifas:
+            rifa.status = "disponivel"
+            rifa.pagamento_id = None
+
+        p.status = "cancelado"
+
+    if pagamentos:
+        db.session.commit()
+
+
 
