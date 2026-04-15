@@ -697,7 +697,7 @@ def cancelar_pagamentos_expirados():
     cloudinary.config(
         cloud_name="Raiz",
         api_key="949366984135176",
-        api_secret="SEFcYC63EUHgdT_aprgI8kpf7Wuc"
+        api_secret="EFcYC63EUHgdT_aprgI8kpf7Wuc"
     )
 
 
