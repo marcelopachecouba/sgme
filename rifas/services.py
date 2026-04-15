@@ -700,5 +700,3 @@ def cancelar_pagamentos_expirados():
         api_secret="EFcYC63EUHgdT_aprgI8kpf7Wuc"
     )
 
-
-
