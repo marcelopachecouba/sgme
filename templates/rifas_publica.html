@@ -429,6 +429,9 @@
                         <p style="color:red;"><strong>Guarde este número para enviar o comprovante depois</strong></p>
                         <p><strong>Numeros:</strong> ${data.numeros.map(n => String(n).padStart(4,"0")).join(", ")}</p>
                         <p><strong>Valor:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
+                        <p class="text-danger fw-bold">
+                            ⏳ Este QR Code expira em 60 minutos
+                        </p>
 
                         <div class="pix-box mb-3">${data.copia_cola_pix}</div>
 

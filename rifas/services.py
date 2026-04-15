@@ -440,17 +440,48 @@ def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None 
     if pagamento.status == STATUS_PAGO:
         return pagamento
 
+    if pagamento.status == STATUS_CANCELADO:
+        raise RifaError("Este pagamento já foi cancelado e não pode ser confirmado.")
+
+        # buscar novas rifas disponíveis
+        rifas = db.session.execute(
+            db.select(Rifa)
+            .where(
+                Rifa.campanha_id == campanha.id,
+                Rifa.status == STATUS_DISPONIVEL
+            )
+            .order_by(Rifa.numero.asc())
+            .limit(pagamento.quantidade_rifas)
+        ).scalars().all()
+
+        if len(rifas) < pagamento.quantidade_rifas:
+            raise RifaError("Pagamento recebido após expiração, mas não há rifas disponíveis.")
+
+        # vincular novas rifas
+        for rifa in rifas:
+            rifa.status = STATUS_PAGO
+            rifa.cliente_id = pagamento.cliente_id
+            rifa.pagamento_id = pagamento.id
+
+        pagamento.rifas = rifas
+
+        pagamento.observacoes_admin = "Pagamento recebido após expiração"
+
+    else:
+        # fluxo normal
+        for rifa in pagamento.rifas:
+            rifa.status = STATUS_PAGO
+            rifa.cliente_id = pagamento.cliente_id
+            rifa.pagamento_id = pagamento.id
+
+    # ✅ FINALIZA PAGAMENTO
     pagamento.status = STATUS_PAGO
     pagamento.pago_em = _utcnow()
 
     if observacoes_admin:
         pagamento.observacoes_admin = observacoes_admin
 
-    for rifa in pagamento.rifas:
-        rifa.status = STATUS_PAGO
-        rifa.cliente_id = pagamento.cliente_id
-        rifa.pagamento_id = pagamento.id
-
+    # 🔥 GERA PDF COM NOVAS RIFAS
     pdf_path = generate_tickets_pdf(
         pagamento=pagamento,
         rifas=sorted(pagamento.rifas, key=lambda item: item.numero),

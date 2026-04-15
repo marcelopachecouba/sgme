@@ -57,14 +57,15 @@
                             Marcar como pago
                         </button>
 
-                        {% if pagamento.status == 'pago' %}
+                        {% if pagamento.status != 'cancelado' and pagamento.status != 'pago' %}
                         <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_cancelar', payment_id=pagamento.id) }}">
-                            <button class="btn btn-danger" onclick="return confirm('Tem certeza que deseja cancelar este pagamento?')">
+                            <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Tem certeza que deseja cancelar este pagamento?')">
                                 Cancelar pagamento
-                            </button>                            
+                            </button>
                         </form>
                         {% endif %}
-
+                        
                         {% if pagamento.pdf_path %}
                         <a class="btn btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank">
                             Imprimir PDF

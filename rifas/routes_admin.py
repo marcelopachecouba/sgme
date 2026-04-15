@@ -224,7 +224,7 @@ def admin_rifas_resumo():
     except RifaSchemaMissingError as exc:
         return jsonify({"erro": str(exc)}), 503
     
-@rifas_admin_bp.route("/admin/pagamentos/<payment_id>/cancelar", methods=["POST"])
+
 @login_required
 @admin_required
 def admin_pagamento_cancelar(payment_id):
@@ -235,5 +235,44 @@ def admin_pagamento_cancelar(payment_id):
     except RifaError as exc:
         db.session.rollback()
         flash(str(exc), "danger")
+
+    return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+
+from models import PagamentoRifa
+
+@rifas_admin_bp.route("/admin/pagamentos/<payment_id>/cancelar", methods=["POST"])
+@login_required
+@admin_required
+def admin_pagamento_cancelar(payment_id):
+    try:
+        pagamento = db.session.get(PagamentoRifa, payment_id)
+
+        if not pagamento:
+            flash("Pagamento não encontrado.", "danger")
+            return redirect(url_for("rifas_admin.admin_pagamentos"))
+
+        if pagamento.status == "cancelado":
+            flash("Pagamento já está cancelado.", "warning")
+            return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+
+        if pagamento.status == "pago":
+            flash("Não é permitido cancelar pagamento já confirmado.", "danger")
+            return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+
+        # 🔥 LIBERA AS RIFAS
+        for rifa in pagamento.rifas:
+            rifa.status = "disponivel"
+            rifa.pagamento_id = None
+            rifa.cliente_id = None
+
+        pagamento.status = "cancelado"
+
+        db.session.commit()
+
+        flash("Pagamento cancelado com sucesso.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao cancelar: {str(e)}", "danger")
 
     return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
