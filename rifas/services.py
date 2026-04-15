@@ -148,7 +148,7 @@ def _ensure_inventory(*, campanha: RifaCampanha):
     if faltantes <= 0:
         return
 
-    ultimo_numero_global = db.session.scalar(db.select(func.max(Rifa.numero))) or 0
+    ultimo_numero_global = db.session.scalar(db.select(func.max(Rifa.numero))) or 60000
     novos = [
         Rifa(campanha_id=campanha.id, numero=ultimo_numero_global + indice, status=STATUS_DISPONIVEL)
         for indice in range(1, faltantes + 1)
