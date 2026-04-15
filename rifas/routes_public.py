@@ -20,6 +20,7 @@ rifas_public_bp = Blueprint("rifas_public", __name__)
 
 
 @rifas_public_bp.route("/rifas", methods=["GET"])
+@rifas_public_bp.route("/acao_entre_fieis", methods=["GET"])
 def rifas_home():
     cancelar_pagamentos_expirados()  # 👈 AQUI
 
