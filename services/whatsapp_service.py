@@ -214,7 +214,13 @@ def _whatsapp_request_payload(numero_formatado, payload):
     graph_version = _get_config_value("WHATSAPP_GRAPH_VERSION", "v19.0")
 
     if not token or not phone_number_id:
-        raise RuntimeError("WHATSAPP_TOKEN e PHONE_NUMBER_ID precisam estar configurados.")
+        logger.warning("WhatsApp não configurado — envio ignorado")
+        return {
+            "status_code": 0,
+            "body": "whatsapp_desativado",
+            "numero": numero_formatado,
+            "tipo_envio": "desativado",
+        }
 
     url = f"https://graph.facebook.com/{graph_version}/{phone_number_id}/messages"
     headers = {
