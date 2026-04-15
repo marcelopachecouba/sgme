@@ -400,35 +400,31 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     if suffix not in ALLOWED_RECEIPT_EXTENSIONS:
         raise RifaError("Formato de comprovante nao permitido.")
 
-    # 🔥 ENVIA PARA CLOUDINARY
-        comprovante_url = None
-
-        try:
-            upload = cloudinary.uploader.upload(
-                arquivo.stream,
-                folder="rifas/comprovantes",
-                resource_type="auto"
-            )
-
-            comprovante_url = upload.get("secure_url")
-
-        except Exception as e:
-            print("ERRO CLOUDINARY:", str(e))
-    # 🔥 FALLBACK (NÃO QUEBRA O SISTEMA)
+    # ✅ CORRETO (fora do if)
     comprovante_url = None
 
-    # 🔥 SALVA URL (não caminho local)
+    try:
+        upload = cloudinary.uploader.upload(
+            arquivo.stream,
+            folder="rifas/comprovantes",
+            resource_type="auto"
+        )
+
+        comprovante_url = upload.get("secure_url")
+
+    except Exception as e:
+        print("ERRO CLOUDINARY:", str(e))
+
+    # ✅ SALVA MESMO SE DER ERRO
     pagamento.comprovante_path = comprovante_url
     pagamento.comprovante_nome = filename
     pagamento.comprovante_enviado_em = _utcnow()
-
-    # 🔥 STATUS
     pagamento.status = STATUS_COMPROVANTE
 
     db.session.commit()
 
     logger.info(
-        "Comprovante enviado (Cloudinary) pagamento=%s url=%s",
+        "Comprovante enviado pagamento=%s url=%s",
         pagamento.id,
         pagamento.comprovante_path
     )
@@ -702,11 +698,11 @@ def cancelar_pagamentos_expirados():
     if pagamentos:
         db.session.commit()
 
-    import cloudinary
+   # import cloudinary
 
-    cloudinary.config(
-        cloud_name="Raiz",
-        api_key="949366984135176",
-        api_secret="EFcYC63EUHgdT_aprgI8kpf7Wuc"
-    )
+    #cloudinary.config(
+    #    cloud_name="Raiz",
+    #    api_key="949366984135176",
+    #    api_secret="EFcYC63EUHgdT_aprgI8kpf7Wuc"
+    #)
 
