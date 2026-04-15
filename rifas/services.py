@@ -401,24 +401,24 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
         raise RifaError("Formato de comprovante nao permitido.")
 
     # 🔥 ENVIA PARA CLOUDINARY
-    try:
-        upload = cloudinary.uploader.upload(
-            arquivo.stream,
-            folder="rifas/comprovantes",
-            public_id=public_id,
-            resource_type="auto"
-        )
+        comprovante_url = None
 
-        comprovante_url = upload.get("secure_url")
+        try:
+            upload = cloudinary.uploader.upload(
+                arquivo.stream,
+                folder="rifas/comprovantes",
+                resource_type="auto"
+            )
 
-    except Exception as e:
-        print("ERRO CLOUDINARY:", str(e))
+            comprovante_url = upload.get("secure_url")
 
+        except Exception as e:
+            print("ERRO CLOUDINARY:", str(e))
     # 🔥 FALLBACK (NÃO QUEBRA O SISTEMA)
     comprovante_url = None
 
     # 🔥 SALVA URL (não caminho local)
-    pagamento.comprovante_path = upload["secure_url"]
+    pagamento.comprovante_path = comprovante_url
     pagamento.comprovante_nome = filename
     pagamento.comprovante_enviado_em = _utcnow()
 
