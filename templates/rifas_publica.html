@@ -486,6 +486,17 @@
 
                     renderSuccess(data);
 
+                    // ✅ ALTERA TEXTO DO BOTÃO
+                    if (btn) {
+                        btn.innerHTML = "✔ PIX gerado";
+                        btn.classList.remove("btn-rifa");
+                        btn.classList.add("btn-success");
+                    }
+
+                    // ✅ SCROLL AUTOMÁTICO PARA O QR CODE
+                    document.getElementById("resultado")
+                        ?.scrollIntoView({ behavior: "smooth" });
+
                     // 🔥 NÃO libera botão (evita duplicidade)
 
                 } catch (error) {
