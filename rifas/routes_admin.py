@@ -1,6 +1,5 @@
 ﻿from datetime import datetime
 from pathlib import Path
-
 from flask import Blueprint, jsonify, redirect, render_template, request, send_file, url_for, flash
 from flask_login import login_required
 
@@ -108,6 +107,8 @@ def admin_pagamento_aprovar(payment_id):
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>/pdf", methods=["GET"])
 @login_required
 @admin_required
+
+
 def admin_pagamento_pdf(payment_id):
     try:
         detalhe = payment_detail_data(payment_id)
@@ -116,17 +117,37 @@ def admin_pagamento_pdf(payment_id):
         return redirect(url_for("rifas_admin.admin_pagamentos"))
 
     pagamento = detalhe["pagamento"]
+
     if not pagamento.pdf_path:
         flash("O PDF ainda nao foi gerado para este pagamento.", "warning")
         return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
 
+    pdf_path = Path(pagamento.pdf_path)
+
+    # 🔥 SE NÃO EXISTIR → GERA NOVAMENTE
+    if not pdf_path.exists():
+        try:
+            from rifas.pdf_generator import generate_tickets_pdf
+
+            
+
+            novo_pdf = generate_tickets_pdf(
+                pagamento=pagamento,
+                rifas=sorted(pagamento.rifas, key=lambda item: item.numero),
+                cliente=pagamento.cliente,
+            )            
+            pdf_path = Path(novo_pdf)
+
+        except Exception as e:
+            flash(f"Erro ao gerar PDF: {str(e)}", "danger")
+            return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+
     return send_file(
-        Path(pagamento.pdf_path),
+        pdf_path,
         mimetype="application/pdf",
         download_name=f"rifas-{payment_id}.pdf",
         as_attachment=False
     )
-
 
 @rifas_admin_bp.route("/admin/clientes", methods=["GET"])
 @login_required

@@ -139,15 +139,44 @@ def pagamento_comprovante_publico(payment_id):
         return jsonify({"erro": str(exc)}), 400
         
 
+from pathlib import Path
+
 @rifas_public_bp.route("/rifas/pagamento/<payment_id>/pdf", methods=["GET"])
 def pagamento_pdf_publico(payment_id):
     try:
         pagamento = get_payment(payment_id)
     except RifaSchemaMissingError as exc:
         return jsonify({"erro": str(exc)}), 503
-    if pagamento is None or not pagamento.pdf_path:
+
+    if pagamento is None:
+        return jsonify({"erro": "Pagamento não encontrado."}), 404
+
+    if not pagamento.pdf_path:
         return jsonify({"erro": "PDF ainda nao disponivel."}), 404
-    return send_file(Path(pagamento.pdf_path), mimetype="application/pdf", download_name=f"rifas-{payment_id}.pdf", as_attachment=False)
+
+    pdf_path = Path(pagamento.pdf_path)
+
+    # 🔥 se não existir → tenta gerar novamente
+    if not pdf_path.exists():
+        try:
+            from rifas.pdf_generator import generate_tickets_pdf
+
+            novo_pdf = generate_tickets_pdf(
+                pagamento=pagamento,
+                rifas=sorted(pagamento.rifas, key=lambda r: r.numero),
+                cliente=pagamento.cliente,
+            )
+
+            pdf_path = Path(novo_pdf)
+
+        except Exception as e:
+            return jsonify({"erro": f"Erro ao gerar PDF: {str(e)}"}), 500
+
+    return send_file(
+        pdf_path,
+        mimetype="application/pdf",
+        as_attachment=False
+    )
 
 
 @rifas_public_bp.route("/rifas/webhook/pix", methods=["POST"])

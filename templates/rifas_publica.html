@@ -234,8 +234,21 @@
                             {% if mostrar_data_sorteio %}
                             <div class="fs-5 fw-bold">Sorteio em {{ campanha.data_sorteio.strftime("%d/%m/%Y") }}</div>
                             {% endif %}
+                             
                             {% if campanha.descricao %}
-                            <div class="mt-2">{{ campanha.descricao }}</div>
+                            <div class="mt-3">
+
+                                <!-- IMAGEM DOS SORTEIOS -->
+                                <img src="{{ url_for('static', filename='img/rifas/sorteios.png') }}" 
+                                    alt="Sorteios da rifa"
+                                    class="img-fluid rounded-4 mb-3">
+
+                                <!-- DESCRIÇÃO DIGITADA NO CADASTRO -->
+                                <div class="alert alert-light mb-0">
+                                    {{ campanha.descricao }}
+                                </div>
+
+                            </div>
                             {% endif %}
                             <div class="campaign-stats">
                                 <div class="campaign-stat">
@@ -320,16 +333,38 @@
                 <div class="col-lg-7">
                     <div class="result-card" id="resultado">
                         <div class="result-banner">
-                            <div class="tag-status">Pagamento</div>
-                            <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Envie o comprovante para liberar os canhotos, que serão impressos e depositados na urna na Paróquia</h2>
-                            <p class="mb-0">Depois da compra, mostramos o QR Code, o PIX copia e cola, os numeros reservados e após o pagamento for confirmado, enviamos uma msg whatsapp.</p>
+                            <div class="tag-status">PAGAMENTO</div>
+                            
+                            <h2 class="h3 mt-3 mb-2 fw-bold">
+                                Garanta já seus números!<br>
+                                Envie o comprovante e libere sua participação.
+                            </h2>
+
+                            <p class="mb-2">
+                                Seus canhotos serão impressos e depositados na urna da paróquia.
+                            </p>
+
+                            <p class="mb-2">
+                                Após a compra, você recebe o QR Code ou PIX copia e cola com os números reservados.
+                                Enviaremos sua confirmação pelo WhatsApp.
+                            </p>
+
+                            <p class="mb-0 fw-bold fs-5 text-warning">
+                                Não deixe para depois — quanto antes garantir, maiores são suas chances!
+                            </p>
                         </div>
+
                         <div class="mt-4">
-                            <img src="{{ url_for('static', filename='img/rifas/acao_entre_fieis_canhoto_base.png') }}" alt="Modelo do canhoto da rifa" class="img-fluid rounded-4 border">
-                            <p class="muted-note mb-0 mt-3">O canhoto em PDF segue o mesmo formato horizontal do anexo enviado.</p>
+                            <img src="{{ url_for('static', filename='img/rifas/acao_entre_fieis_canhoto_base.png') }}" 
+                                alt="Modelo do canhoto da rifa" 
+                                class="img-fluid rounded-4 border">
+
+                            <p class="muted-note mb-0 mt-3">
+                                O canhoto em PDF segue o mesmo formato horizontal do anexo enviado.
+                            </p>
                         </div>
                     </div>
-                </div>
+                </div>                
             </div>
         </div>
     </div>

@@ -382,32 +382,48 @@ def _public_static_path(subdir: str, filename: str) -> str:
     return f"/{base}/{subdir}/{filename}" if subdir else f"/{base}/{filename}"
 
 
+import cloudinary.uploader
+
 def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     ensure_rifas_schema()
+
     pagamento = db.session.get(PagamentoRifa, pagamento_id)
     if pagamento is None:
         raise RifaError("Pagamento nao encontrado.")
+
     if arquivo is None or not getattr(arquivo, "filename", ""):
         raise RifaError("Selecione um comprovante para enviar.")
 
     filename = secure_filename(arquivo.filename)
     suffix = Path(filename).suffix.lower()
+
     if suffix not in ALLOWED_RECEIPT_EXTENSIONS:
         raise RifaError("Formato de comprovante nao permitido.")
 
-    nome_final = f"{pagamento.id}-{uuid.uuid4().hex[:8]}{suffix}"
-    destino = _upload_dir("comprovantes") / nome_final
-    arquivo.save(destino)
-
-    pagamento.comprovante_path = _public_static_path("comprovantes", nome_final)
+    # 🔥 ENVIA PARA CLOUDINARY
+    upload = cloudinary.uploader.upload(
+        arquivo.stream,
+        folder="rifas/comprovantes",
+        public_id=f"{pagamento.id}_{uuid.uuid4().hex[:6]}",
+        resource_type="auto"
+    )
+    # 🔥 SALVA URL (não caminho local)
+    pagamento.comprovante_path = upload["secure_url"]
     pagamento.comprovante_nome = filename
     pagamento.comprovante_enviado_em = _utcnow()
-    # 🔥 ESSENCIAL
-    pagamento.status = STATUS_COMPROVANTE
-    db.session.commit()
-    logger.info("Comprovante enviado para pagamento=%s arquivo=%s", pagamento.id, pagamento.comprovante_path)
-    return pagamento
 
+    # 🔥 STATUS
+    pagamento.status = STATUS_COMPROVANTE
+
+    db.session.commit()
+
+    logger.info(
+        "Comprovante enviado (Cloudinary) pagamento=%s url=%s",
+        pagamento.id,
+        pagamento.comprovante_path
+    )
+
+    return pagamento
 
 def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None = None, observacoes_admin: str | None = None) -> PagamentoRifa:
     pagamento = None
@@ -637,11 +653,21 @@ def cancelar_pagamentos_expirados():
         for rifa in p.rifas:
             rifa.status = "disponivel"
             rifa.pagamento_id = None
+             # 🔥 LIMPA O CLIENTE TAMBÉM
+            rifa.cliente_id = None
 
         p.status = "cancelado"
 
     if pagamentos:
         db.session.commit()
+
+    import cloudinary
+
+    cloudinary.config(
+        cloud_name="Raiz",
+        api_key="S949366984135176",
+        api_secret="SEFcYC63EUHgdT_aprgI8kpf7Wuc"
+    )
 
 
 
