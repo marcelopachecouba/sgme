@@ -4,11 +4,10 @@ import logging
 import uuid
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
-
 import qrcode
 import requests
 from flask import current_app
-
+from rifas.sicoob_service import get_sicoob_token
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +120,7 @@ def generate_pix_payload(key, amount, txid):
 
 class MockPixGateway:
     def create_charge(self, *, amount: float, payer_name: str, payer_email: str, description: str) -> PixCharge:
-        external_id = uuid.uuid4().hex
+        external_id = uuid.uuid4().hex[:25].upper()
         chave_pix = current_app.config.get("PIX_CHAVE", "01172466000480")
         copia_cola = generate_pix_payload(
             key=chave_pix,
@@ -194,11 +193,99 @@ class MercadoPagoPixGateway:
 
 
 def get_pix_gateway():
-    provider = current_app.config.get("PIX_PROVIDER", "mock")
+    provider = current_app.config.get("PIX_PROVIDER", "manual")
+
     if provider == "mercadopago":
         access_token = current_app.config.get("PIX_ACCESS_TOKEN") or current_app.config.get("PIX_API_KEY")
         if not access_token:
-            logger.warning("PIX_ACCESS_TOKEN/PIX_API_KEY nao configurado; usando gateway mock.")
+            logger.warning("PIX_ACCESS_TOKEN nao configurado; usando manual.")
             return MockPixGateway()
         return MercadoPagoPixGateway(access_token)
+
+    if provider == "sicoob":
+        return SicoobPixGateway()
+
+    if provider == "manual":
+        return MockPixGateway()
+
+    # fallback segurança
+    logger.warning(f"PIX_PROVIDER desconhecido: {provider}, usando manual.")
     return MockPixGateway()
+
+
+class SicoobPixGateway:
+
+    def parse_webhook(self, payload: dict):
+        pix_list = payload.get("pix", [])
+
+        if not pix_list:
+            return None, None
+
+        pix = pix_list[0]
+        txid = pix.get("txid")
+
+        return txid, "pago"
+
+    def create_charge(self, *, amount, payer_name, payer_email, description):
+        token = get_sicoob_token()
+
+        base_url = current_app.config.get("SICOOB_BASE_URL")
+        chave_pix = current_app.config.get("PIX_CHAVE")
+
+        cert_path = current_app.config.get("SICOOB_CERT_PATH")
+        key_path = current_app.config.get("SICOOB_KEY_PATH")
+
+        if not all([base_url, chave_pix, cert_path, key_path]):
+            raise Exception("Configuração do Sicoob incompleta.")
+
+        txid = uuid.uuid4().hex[:25].upper()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        cert = (cert_path, key_path)
+
+        # 🔥 1. CRIAR COBRANÇA
+        url = f"{base_url}/cob/{txid}"
+
+        payload = {
+            "calendario": {"expiracao": 3600},
+            "valor": {"original": f"{float(amount):.2f}"},
+            "chave": chave_pix,
+            "solicitacaoPagador": description[:140]
+        }
+
+        response = requests.put(
+            url,
+            json=payload,
+            headers=headers,
+            cert=cert,
+            timeout=30
+        )
+
+        if response.status_code not in (200, 201):
+            raise Exception(f"Erro ao criar cobrança Sicoob: {response.text}")
+
+        # 🔥 2. GERAR QR CODE
+        url_qr = f"{base_url}/cob/{txid}/qrcode"
+
+        response_qr = requests.get(
+            url_qr,
+            headers=headers,
+            cert=cert,
+            timeout=30
+        )
+
+        if response_qr.status_code != 200:
+            raise Exception(f"Erro ao gerar QR Code Sicoob: {response_qr.text}")
+
+        data = response_qr.json()
+
+        return PixCharge(
+            external_id=txid,
+            qr_code_base64=data.get("imagemQrcode", ""),
+            copia_cola_pix=data.get("qrCode", ""),
+            raw_response=data
+        )

@@ -18,9 +18,35 @@
                     <div class="col-md-6"><strong>Telefone:</strong> {{ pagamento.cliente.telefone }}</div>
                     <div class="col-md-6"><strong>Campanha:</strong> {{ pagamento.campanha.titulo if pagamento.campanha else '-' }}</div>
                     <div class="col-md-6"><strong>Status:</strong> {{ pagamento.status }}</div>
+                    
+                    
+                    <div class="col-md-6">
+                        <strong>Data da compra:</strong> 
+                        {{ pagamento.created_at | hora_br }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <strong>Expira em:</strong> 
+                        {{ pagamento.expira_em | hora_br }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <strong>Status tempo:</strong>
+                        
+                    {% if pagamento.status == 'pago' %}
+                        <span class="badge bg-success">Pago</span>
+                    {% elif pagamento.expira_em and pagamento.expira_em < now %}
+                        <span class="badge bg-danger">Expirado</span>
+                    {% else %}
+                        <span class="badge bg-success">No prazo</span>
+                    {% endif %}
+                    
+                    </div>                    
+
                     <div class="col-md-6"><strong>Quantidade:</strong> {{ pagamento.quantidade_rifas }}</div>
                     <div class="col-md-6"><strong>Valor:</strong> R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</div>
                     <div class="col-12"><strong>Numeros:</strong> {% for rifa in numeros %}<span class="badge text-bg-dark me-1">{{ "%04d"|format(rifa.numero) }}</span>{% endfor %}</div>
+
                 </div>
             </div>
         </div>
@@ -66,7 +92,7 @@
                         </form>
                         {% endif %}
                         
-                        {% if pagamento.pdf_path %}
+                        {% if pagamento.status == 'pago' %}
                         <a class="btn btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank">
                             Imprimir PDF
                         </a>

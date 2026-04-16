@@ -25,7 +25,7 @@
                         <td>{{ cliente.telefone  | telefone }}</td>
                         <td>{{ cliente.email }}</td>
                         <td>{{ cliente.pagamentos|length }}</td>
-                        <td>{{ cliente.created_at.strftime("%d/%m/%Y %H:%M") if cliente.created_at else "-" }}</td>
+                        <td>{{ cliente.created_at | hora_br }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

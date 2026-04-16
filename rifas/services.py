@@ -2,6 +2,7 @@
 import hmac
 import logging
 import uuid
+from models import PagamentoRifa, Rifa
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -158,26 +159,6 @@ def _ensure_inventory(*, campanha: RifaCampanha):
     logger.info("Estoque da campanha %s inicializado com %s numero(s).", campanha.id, len(novos))
 
 
-def _release_expired_reservations():
-    reserva_minutos = int(current_app.config["RIFA_RESERVA_MINUTOS"])
-    limite = _utcnow() - timedelta(minutes=reserva_minutos)
-    expirados = db.session.execute(
-        db.select(PagamentoRifa).where(
-            PagamentoRifa.status == "pendente",
-            PagamentoRifa.created_at < limite,
-        )
-    ).scalars().all()
-    for pagamento in expirados:
-        for rifa in pagamento.rifas:
-            rifa.status = STATUS_DISPONIVEL
-            rifa.pagamento_id = None
-            rifa.cliente_id = None
-        pagamento.status = STATUS_CANCELADO
-    if expirados:
-        logger.info("Reservas expiradas liberadas: %s", len(expirados))
-        db.session.flush()
-
-
 def _validate_purchase_input(nome: str, telefone: str, email: str, quantidade_rifas: int):
     if not nome:
         raise RifaError("Nome e obrigatorio.")
@@ -260,10 +241,10 @@ def get_public_page_data() -> dict:
 
 def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vendedor: str, quantidade_rifas: int):
     ensure_rifas_schema()
-    nome = _normalizar_texto(nome)
+    nome = _normalizar_texto(nome).upper()
     email = _normalizar_texto(email).lower()
     telefone = _validate_purchase_input(nome, telefone, email, quantidade_rifas)
-    endereco = _normalizar_texto(endereco).lower()
+    endereco = _normalizar_texto(endereco).upper()
     #_validate_purchase_input(nome, telefone, email, quantidade_rifas)
     
     
@@ -281,7 +262,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vended
 
 
     _ensure_inventory(campanha=campanha)
-    _release_expired_reservations()
+    #
 
     cliente = _buscar_ou_criar_cliente(nome=nome, telefone=telefone, email=email, endereco=endereco)
 
@@ -306,7 +287,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vended
         payer_email=email,
         description=f"{campanha.titulo} - {quantidade_rifas} rifa(s)",
     )
-
+    txid = ''.join(filter(str.isalnum, (charge.external_id or '')))[:25].upper()
     pagamento = PagamentoRifa(
         campanha_id=campanha.id,
         cliente_id=cliente.id,
@@ -316,6 +297,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vended
         qr_code_base64=charge.qr_code_base64,
         copia_cola_pix=charge.copia_cola_pix,
         external_id=charge.external_id,
+        txid=txid,
         vendedor=vendedor,  # ✅ NOVO
     )
 
@@ -328,9 +310,10 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vended
         rifa.pagamento_id = pagamento.id
 
     logger.info(
-        "Compra iniciada: campanha=%s pagamento=%s cliente=%s quantidade=%s numeros=%s",
+        "Compra iniciada: campanha=%s pagamento=%s txid=%s cliente=%s quantidade=%s numeros=%s",
         campanha.id,
         pagamento.id,
+        pagamento.txid,
         cliente.email,
         quantidade_rifas,
         [rifa.numero for rifa in rifas],
@@ -370,6 +353,14 @@ def get_payment_by_external_id(external_id: str) -> PagamentoRifa | None:
         db.select(PagamentoRifa).where(PagamentoRifa.external_id == external_id)
     ).scalar_one_or_none()
 
+def get_payment_by_txid(txid: str) -> PagamentoRifa | None:
+    ensure_rifas_schema()
+
+    return db.session.execute(
+        db.select(PagamentoRifa).where(
+            func.upper(PagamentoRifa.txid) == txid.upper()
+        )
+    ).scalar_one_or_none()
 
 def _upload_dir(subdir: str) -> Path:
     path = Path(current_app.root_path) / current_app.config.get("RIFA_UPLOAD_DIR", "static/uploads/rifas") / subdir
@@ -421,7 +412,7 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     pagamento.comprovante_enviado_em = _utcnow()
     pagamento.status = STATUS_COMPROVANTE
 
-    db.session.commit()
+    #db.session.commit()
 
     logger.info(
         "Comprovante enviado pagamento=%s url=%s",
@@ -432,6 +423,7 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     return pagamento
 
 def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None = None, observacoes_admin: str | None = None) -> PagamentoRifa:
+    # 🔍 1. Buscar pagamento
     pagamento = None
 
     if pagamento_id:
@@ -443,14 +435,26 @@ def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None 
     if pagamento is None:
         raise RifaError("Pagamento nao encontrado.")
 
+    # 🔁 2. Idempotência (se já está pago, retorna)
     if pagamento.status == STATUS_PAGO:
         return pagamento
 
-    if pagamento.status == STATUS_CANCELADO:
-        raise RifaError("Este pagamento já foi cancelado e não pode ser confirmado.")
+    # 🔒 3. Verifica campanha
+    campanha = pagamento.campanha
+    if campanha is None:
+        raise RifaError("Campanha nao encontrada para este pagamento.")
 
-        # buscar novas rifas disponíveis
-        rifas = db.session.execute(
+    # ⏰ 4. Verifica expiração
+    reserva_minutos = int(current_app.config["RIFA_RESERVA_MINUTOS"])
+    limite = pagamento.created_at + timedelta(minutes=reserva_minutos)
+    expirado = datetime.utcnow() > limite
+
+    # 🔄 5. Se expirou → precisa reatribuir rifas
+    if pagamento.status == STATUS_CANCELADO or expirado:
+        logger.warning(f"Pagamento {pagamento.id} confirmado apos expiracao. Reatribuindo rifas...")
+
+        # 🔍 Busca novas rifas disponíveis
+        query = (
             db.select(Rifa)
             .where(
                 Rifa.campanha_id == campanha.id,
@@ -458,58 +462,82 @@ def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None 
             )
             .order_by(Rifa.numero.asc())
             .limit(pagamento.quantidade_rifas)
-        ).scalars().all()
+        )
 
-        if len(rifas) < pagamento.quantidade_rifas:
-            raise RifaError("Pagamento recebido após expiração, mas não há rifas disponíveis.")
+        if db.session.bind and db.session.bind.dialect.name != "sqlite":
+            query = query.with_for_update(skip_locked=True)
 
-        # vincular novas rifas
-        for rifa in rifas:
+        novas_rifas = db.session.execute(query).scalars().all()
+
+        if len(novas_rifas) < pagamento.quantidade_rifas:
+            raise RifaError("Pagamento recebido apos expiracao, mas nao ha rifas disponiveis.")
+
+        # 🔄 Limpa rifas antigas (se ainda existirem)
+        for rifa in pagamento.rifas:
+            rifa.status = STATUS_DISPONIVEL
+            rifa.pagamento_id = None
+            rifa.cliente_id = None
+
+        # 🔗 Vincula novas rifas
+        for rifa in novas_rifas:
             rifa.status = STATUS_PAGO
-            rifa.cliente_id = pagamento.cliente_id
             rifa.pagamento_id = pagamento.id
+            rifa.cliente_id = pagamento.cliente_id
 
-        pagamento.rifas = rifas
-
-        pagamento.observacoes_admin = "Pagamento recebido após expiração"
+        pagamento.rifas = novas_rifas
 
     else:
-        # fluxo normal
+        # ✅ 6. Fluxo normal (não expirado)
         for rifa in pagamento.rifas:
             rifa.status = STATUS_PAGO
-            rifa.cliente_id = pagamento.cliente_id
-            rifa.pagamento_id = pagamento.id
 
-    # ✅ FINALIZA PAGAMENTO
+    # 💾 7. Atualiza pagamento
     pagamento.status = STATUS_PAGO
-    pagamento.pago_em = _utcnow()
+    pagamento.pago_em = datetime.utcnow()
+    pagamento.observacoes_admin = observacoes_admin
 
-    if observacoes_admin:
-        pagamento.observacoes_admin = observacoes_admin
+    # 🧾 8. Gerar PDF (opcional)
+    try:
+        from rifas.pdf_generator import generate_tickets_pdf
 
-    # 🔥 GERA PDF COM NOVAS RIFAS
-    pdf_path = generate_tickets_pdf(
-        pagamento=pagamento,
-        rifas=sorted(pagamento.rifas, key=lambda item: item.numero),
-        cliente=pagamento.cliente,
-    )
+        generate_tickets_pdf(
+            pagamento=pagamento,
+            rifas=sorted(pagamento.rifas, key=lambda r: r.numero),
+            cliente=pagamento.cliente,
+        )
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF pagamento {pagamento.id}: {str(e)}")
 
-    pagamento.pdf_path = pdf_path
-
-    logger.info("Pagamento confirmado: pagamento=%s external_id=%s", pagamento.id, pagamento.external_id)
+    logger.info(f"Pagamento confirmado com sucesso: {pagamento.id}")
 
     return pagamento
 
 def process_webhook(payload: dict, raw_body: bytes, signature: str | None) -> PagamentoRifa:
     if not validate_webhook_signature(raw_body, signature):
         raise RifaError("Assinatura do webhook invalida.")
-    gateway = get_pix_gateway()
-    external_id, status = gateway.parse_webhook(payload)
-    if status not in {"approved", "paid", "pago", "payment.updated"} and payload.get("tipo") != "pago":
-        raise RifaError("Webhook recebido sem confirmacao de pagamento.")
-    pagamento_id = payload.get("pagamento_id")
-    return confirm_payment(external_id=external_id, pagamento_id=pagamento_id)
 
+    gateway = get_pix_gateway()
+
+    identifier, status = gateway.parse_webhook(payload)
+
+    if not identifier:
+        raise RifaError("Webhook sem identificador.")
+
+    pagamento = get_payment_by_txid(identifier)
+
+    if not pagamento:
+        pagamento = get_payment_by_external_id(identifier)
+
+    if not pagamento:
+        raise RifaError(f"Pagamento nao encontrado: {identifier}")
+
+    if pagamento.status == STATUS_PAGO:
+        return pagamento
+
+    if status.lower() in ["pago", "paid", "approved"]:
+        return confirm_payment(pagamento_id=pagamento.id)
+
+    raise RifaError("Webhook sem confirmacao de pagamento.")
 
 def payment_summary(pagamento: PagamentoRifa) -> dict:
     rifas = sorted((rifa.numero for rifa in pagamento.rifas), key=int)
@@ -549,21 +577,51 @@ def payment_pdf_public_url(pagamento: PagamentoRifa) -> str:
 def payment_whatsapp_link(pagamento: PagamentoRifa) -> str | None:
     rifas = sorted((rifa.numero for rifa in pagamento.rifas), key=int)
     numeros = ", ".join(f"{numero:04d}" for numero in rifas)
+
     campanha = pagamento.campanha.titulo if pagamento.campanha else "Rifa"
-    data_sorteio = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y") if pagamento.campanha and pagamento.campanha.data_sorteio else ""
-    link_pdf = payment_pdf_public_url(pagamento) if pagamento.pdf_path else ""
-    mensagem = (
-        f"Ola {pagamento.cliente.nome}, seu pagamento da {campanha} foi confirmado.\n\n"
-        f"Numeros adquiridos: {numeros}\n"
-        f"Sorteio: {data_sorteio}\n"
-        f"Valor pago: R$ {float(pagamento.valor_total):.2f}\n"
+
+    data_sorteio = (
+        pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
+        if pagamento.campanha and pagamento.campanha.data_sorteio
+        else ""
     )
-    
-    #if link_pdf:
-        #mensagem += f"\nBaixar canhotos: {link_pdf}\n"
+
+    valor_formatado = format(float(pagamento.valor_total), ".2f").replace(".", ",")
+
+    mensagem = (
+        f"🎉 *Pagamento confirmado com sucesso!*\n\n"
+
+        f"Olá *{pagamento.cliente.nome}*, tudo bem? 😊\n\n"
+
+        f"Sua participação na *{campanha}* foi confirmada! 🙌\n\n"
+
+        f"🎟️ *Seus números:* {numeros}\n"
+        f"💰 *Valor pago:* R$ {valor_formatado}\n"
+        f"📅 *Sorteio final:* {data_sorteio}\n\n"
+
+        f"---\n\n"
+
+        f"🔥 *Confira os prêmios incríveis:*\n\n"
+
+        f"📅 03/05 → 💵 R$ 3.000,00\n"
+        f"📅 07/06 → 📱 iPhone 16 Pro Max\n"
+        f"📅 08/08 → 💵 R$ 3.000,00\n"
+        f"📅 13/09 → 💵 R$ 3.000,00\n\n"
+
+        f"🚗 *Sorteio Final (12/10):*\n"
+        f"🎁 Fiat Mobi\n\n"
+
+        f"• 01 ano de combustível\n"
+        f"• 01 ano de seguro\n"
+        f"• 01 ano de lavagem\n\n"
+
+        f"---\n\n"
+
+        f"🙏 Muito obrigado por participar e boa sorte! 🍀\n"
+        f"Qualquer dúvida, estamos à disposição."
+    )
 
     return gerar_link_whatsapp_telefone(pagamento.cliente.telefone, mensagem)
-
 
 def payment_detail_data(pagamento_id: str) -> dict:
     pagamento = get_payment(pagamento_id)
@@ -666,14 +724,9 @@ def cancelar_pagamento(*, pagamento_id: str) -> PagamentoRifa:
 
     return pagamento
 
-from datetime import datetime, timedelta
-from extensions import db
-from models import PagamentoRifa
-
 def cancelar_pagamentos_expirados():
-    from datetime import datetime, timedelta
-    from extensions import db
-    from models import PagamentoRifa, Rifa
+    
+    
 
     agora = datetime.utcnow()
     limite = agora - timedelta(minutes=60)
@@ -686,6 +739,14 @@ def cancelar_pagamentos_expirados():
     ).scalars().all()
 
     for p in pagamentos:
+        logger.info(
+            "RIFA EXPIRADA | pagamento=%s | cliente=%s | qtd=%s | criado_em=%s",
+            p.id,
+            p.cliente_id,
+             p.quantidade_rifas,
+             p.created_at
+        )
+
         # 🔥 liberar rifas
         for rifa in p.rifas:
             rifa.status = "disponivel"
@@ -695,8 +756,8 @@ def cancelar_pagamentos_expirados():
 
         p.status = "cancelado"
 
-    if pagamentos:
-        db.session.commit()
+    #if pagamentos:
+     #   db.session.commit()
 
    # import cloudinary
 

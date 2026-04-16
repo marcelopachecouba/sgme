@@ -31,7 +31,7 @@ from services.agendamento_service import registrar_agendamentos
 from routes.push_routes import push_bp
 from routes.notificacoes_routes import notificacao_bp
 from routes.observacoes_lembrete_routes import observacoes_lembrete_bp
-
+from datetime import timedelta
 
 scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
 migrate = Migrate()
@@ -108,6 +108,23 @@ def create_app(config_override=None):
         elif len(tel) == 10:
             return f"({tel[:2]}) {tel[2:6]}-{tel[6:]}"
         return tel
+
+  
+    import pytz
+    from datetime import datetime
+
+    @app.template_filter('hora_br')
+    def hora_br(dt):
+        if not dt:
+            return "-"
+        
+        tz = pytz.timezone("America/Sao_Paulo")
+
+        # 🔥 garante que o datetime é UTC
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+
+        return dt.astimezone(tz).strftime("%d/%m/%Y %H:%M")
 
     if config_override:
         app.config.update(config_override)

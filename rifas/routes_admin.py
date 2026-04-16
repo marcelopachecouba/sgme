@@ -1,11 +1,14 @@
-﻿from datetime import datetime
+﻿
+from datetime import timedelta  # 🔥 IMPORTAR LÁ EM CIMA
+from datetime import datetime
 from pathlib import Path
 from flask import Blueprint, jsonify, redirect, render_template, request, send_file, url_for, flash
 from flask_login import login_required
-
+from rifas.services import cancelar_pagamentos_expirados  # 🔥 IMPORTAR LÁ EM CIMA
 from utils.auth import admin_required
 from extensions import db  # ✅ ADICIONADO
-
+from models import PagamentoRifa, ClienteRifa
+from sqlalchemy import func
 from rifas.services import (
     RifaError,
     RifaSchemaMissingError,
@@ -65,8 +68,44 @@ def admin_rifas():
 @login_required
 @admin_required
 def admin_pagamentos():
+    cancelar_pagamentos_expirados()
+    db.session.commit()
+
+    status = request.args.get("status")
+    data_inicio_str = request.args.get("data_inicio")
+    data_fim_str = request.args.get("data_fim")
+
+    query = db.select(PagamentoRifa)
+
+    if status:
+        query = query.where(PagamentoRifa.status == status)
+
+    if data_inicio_str:
+        data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d")
+        query = query.where(PagamentoRifa.created_at >= data_inicio)
+
+    if data_fim_str:
+        data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d")
+        data_fim = data_fim.replace(hour=23, minute=59, second=59)
+        query = query.where(PagamentoRifa.created_at <= data_fim)
+
+    pagamentos = db.session.execute(
+        query.order_by(PagamentoRifa.created_at.desc())
+    ).scalars().all()
+
     dados = _base_context()
-    return render_template("admin_pagamentos_rifas.html", **dados)
+
+    # 🔥 sobrescreve pagamentos
+    dados["pagamentos"] = pagamentos
+    dados["status"] = status
+    dados["data_inicio"] = data_inicio_str
+    dados["data_fim"] = data_fim_str
+
+    return render_template(
+        "admin_pagamentos_rifas.html",
+        now=datetime.utcnow(),
+        **dados
+    )
 
 
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>", methods=["GET"])
@@ -77,11 +116,23 @@ def admin_pagamento_detalhe(payment_id):
     try:
         detalhe = payment_detail_data(payment_id)
         dados.update(detalhe)
+
+        pagamento = dados.get("pagamento")
+
+        if pagamento and pagamento.created_at:
+            pagamento.expira_em = pagamento.created_at + timedelta(minutes=60)
+        else:
+            pagamento.expira_em = None
+
     except RifaError as exc:
         flash(str(exc), "danger")
         return redirect(url_for("rifas_admin.admin_pagamentos"))
-    return render_template("admin_pagamento_rifa_detalhe.html", **dados)
 
+    return render_template(
+        "admin_pagamento_rifa_detalhe.html",
+        now=datetime.utcnow(),  # 🔥 AQUI
+        **dados
+    )
 
 # ✅ CORRIGIDO
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>/aprovar", methods=["POST"])
@@ -107,9 +158,9 @@ def admin_pagamento_aprovar(payment_id):
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>/pdf", methods=["GET"])
 @login_required
 @admin_required
-
-
 def admin_pagamento_pdf(payment_id):
+    from datetime import datetime
+
     try:
         detalhe = payment_detail_data(payment_id)
     except RifaError as exc:
@@ -118,32 +169,33 @@ def admin_pagamento_pdf(payment_id):
 
     pagamento = detalhe["pagamento"]
 
-    if not pagamento.pdf_path:
-        flash("O PDF ainda nao foi gerado para este pagamento.", "warning")
-        return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+    # 🔥 REGRA PRINCIPAL: SÓ PODE IMPRIMIR SE FOR PAGO
+    if pagamento.status != "pago":
+        flash("Só é permitido imprimir pagamentos com status PAGO.", "danger")
+        return redirect(url_for("rifas_admin.admin_pagamentos"))
 
-    pdf_path = Path(pagamento.pdf_path)
+    # 🔥 BLOQUEIO DE REIMPRESSÃO
+    if pagamento.impresso and not request.args.get("forcar"):
+        flash("Este pagamento já foi impresso.", "warning")
+        return redirect(url_for("rifas_admin.admin_pagamentos"))
 
-    # 🔥 SE NÃO EXISTIR → GERA NOVAMENTE
-    if not pdf_path.exists():
-        try:
-            from rifas.pdf_generator import generate_tickets_pdf
+    # 🔥 GERA O PDF
+    from rifas.pdf_generator import generate_tickets_pdf_memory
 
-            
+    pdf_buffer = generate_tickets_pdf_memory(
+        pagamento=pagamento,
+        rifas=sorted(pagamento.rifas, key=lambda r: r.numero),
+        cliente=pagamento.cliente,
+    )
 
-            novo_pdf = generate_tickets_pdf(
-                pagamento=pagamento,
-                rifas=sorted(pagamento.rifas, key=lambda item: item.numero),
-                cliente=pagamento.cliente,
-            )            
-            pdf_path = Path(novo_pdf)
-
-        except Exception as e:
-            flash(f"Erro ao gerar PDF: {str(e)}", "danger")
-            return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+    # 🔥 MARCA COMO IMPRESSO
+    if not pagamento.impresso:
+        pagamento.impresso = True
+        pagamento.impresso_em = datetime.utcnow()
+        db.session.commit()
 
     return send_file(
-        pdf_path,
+        pdf_buffer,
         mimetype="application/pdf",
         download_name=f"rifas-{payment_id}.pdf",
         as_attachment=False
@@ -161,9 +213,68 @@ def admin_clientes():
 @login_required
 @admin_required
 def admin_relatorio():
-    dados = _base_context()
-    return render_template("admin_relatorio_rifas.html", **dados)
+    status = request.args.get("status")
+    data_inicio_str = request.args.get("data_inicio")
+    data_fim_str = request.args.get("data_fim")
 
+    query = db.select(PagamentoRifa)
+
+    if status:
+        query = query.where(PagamentoRifa.status == status)
+
+    if data_inicio_str:
+        data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d")
+        query = query.where(PagamentoRifa.created_at >= data_inicio)
+
+    if data_fim_str:
+        data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d")
+        data_fim = data_fim.replace(hour=23, minute=59, second=59)
+        query = query.where(PagamentoRifa.created_at <= data_fim)
+
+    pagamentos = db.session.execute(
+        query.order_by(PagamentoRifa.created_at.desc())
+    ).scalars().all()
+
+    total_valor = sum(float(p.valor_total) for p in pagamentos if p.status == "pago")
+    total_quantidade = sum(p.quantidade_rifas for p in pagamentos)
+
+    # 🔥 base context
+    dados = _base_context()
+
+    # 🔥 sobrescreve corretamente (SEM DUPLICIDADE)
+    dados["pagamentos"] = pagamentos
+    dados["total_valor"] = total_valor
+    dados["total_quantidade"] = total_quantidade
+    dados["status"] = status
+    dados["data_inicio"] = data_inicio_str
+    dados["data_fim"] = data_fim_str
+
+    # 🔥 stats
+    # 🔥 base filtrada
+    pagamentos_filtrados = pagamentos
+
+    # 👤 clientes únicos do filtro
+    clientes_unicos = len(set(p.cliente_id for p in pagamentos_filtrados))
+
+    # 💰 total apenas pagos (respeitando filtro)
+    total_pago = sum(
+        float(p.valor_total) for p in pagamentos_filtrados if p.status == "pago"
+    )
+
+    # 📊 total de registros filtrados
+    total_pagamentos = len(pagamentos_filtrados)
+
+    dados["stats"] = {
+        "clientes": len(set(p.cliente_id for p in pagamentos if p.status == "pago")),
+        "pagamentos": len([p for p in pagamentos if p.status == "pago"]),
+        "total_pago": sum(
+            float(p.valor_total) for p in pagamentos if p.status == "pago"
+        )
+    }
+    return render_template(
+        "admin_relatorio_rifas.html",
+        **dados
+    )
 
 # ✅ CORRIGIDO
 @rifas_admin_bp.route("/admin/rifas/cadastro", methods=["GET", "POST"])

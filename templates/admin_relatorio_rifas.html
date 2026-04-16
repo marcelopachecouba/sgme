@@ -1,23 +1,124 @@
 ﻿{% extends "base.html" %}
 {% block content %}
 {% include "rifas_menu.html" %}
-<h1 class="h3 mb-4">Relatorio de Rifas</h1>
-{% if schema_message %}
-<div class="alert alert-warning">{{ schema_message }}</div>
-{% endif %}
+
+<h1 class="h3 mb-4">Relatório de Rifas</h1>
+
+<!-- FILTRO -->
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-3">
+        <select name="status" class="form-control">
+            <option value="">Todos</option>
+            <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
+            <option value="pago" {% if status == 'pago' %}selected{% endif %}>Pago</option>
+            <option value="cancelado" {% if status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+            <option value="comprovante" {% if status == 'comprovante' %}selected{% endif %}>Comprovante</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
+    </div>
+
+    <div class="col-md-3">
+        <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+    </div>
+
+    <div class="col-md-3">
+        <button class="btn btn-primary w-100">Filtrar</button>
+    </div>
+</form>
+
+<!-- CARDS -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Clientes</div><div class="display-6">{{ stats.clientes }}</div></div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Pagamentos</div><div class="display-6">{{ stats.pagamentos }}</div></div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-secondary">Receita Confirmada</div><div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div></div></div></div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-secondary">Clientes</div>
+            <div class="display-6">{{ stats.clientes }}</div>
+        </div></div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-secondary">Pagamentos</div>
+            <div class="display-6">{{ stats.pagamentos }}</div>
+        </div></div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-secondary">Receita Confirmada</div>
+            <div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div>
+        </div></div>
+    </div>
 </div>
+
+<!-- RESUMO FILTRADO -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="alert alert-success">
+            💰 Total filtrado: R$ {{ "%.2f"|format(total_valor) }}
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="alert alert-info">
+            🎟️ Total de rifas: {{ total_quantidade }}
+        </div>
+    </div>
+</div>
+
+<!-- TABELA -->
 <div class="card mb-4">
     <div class="card-body">
-        <h2 class="h5 mb-3">Campanhas cadastradas</h2>
+        <h2 class="h5 mb-3">Pagamentos</h2>
+
         <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
+            <table class="table table-striped align-middle">
                 <thead>
                     <tr>
-                        <th>Titulo</th>
+                        <th>Cliente</th>
+                        <th>Status</th>
+                        <th>Quantidade</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pagamentos %}
+                    <tr>
+                        <td>{{ p.cliente.nome }}</td>
+                        <td>
+                            <span class="badge
+                                {% if p.status == 'pago' %}bg-success
+                                {% elif p.status == 'pendente' %}bg-warning
+                                {% elif p.status == 'cancelado' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ p.status }}
+                            </span>
+                        </td>
+                        <td>{{ p.quantidade_rifas }}</td>
+                        <td>R$ {{ "%.2f"|format(p.valor_total|float) }}</td>
+                        <td>{{ p.created_at | hora_br }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<!-- CAMPANHAS -->
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Campanhas cadastradas</h2>
+
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Título</th>
                         <th>Sorteio</th>
                         <th>Valor</th>
                         <th>Quantidade</th>
@@ -37,12 +138,8 @@
                 </tbody>
             </table>
         </div>
+
     </div>
 </div>
-<div class="card">
-    <div class="card-body">
-        <h2 class="h5">Pronto para aprovacao manual e WhatsApp</h2>
-        <p class="mb-0">A tela de detalhe do pagamento permite conferir o comprovante, marcar como pago, gerar PDF e abrir o envio das rifas no WhatsApp do cliente.</p>
-    </div>
-</div>
+
 {% endblock %}

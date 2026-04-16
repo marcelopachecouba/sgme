@@ -3,7 +3,7 @@ from urllib.parse import quote
 from flask import Blueprint, jsonify, render_template, request, send_file
 from models import PagamentoRifa, ClienteRifa
 from rifas.services import cancelar_pagamentos_expirados
-
+from datetime import datetime, timedelta
 from rifas.services import (
     RifaError,
     RifaSchemaMissingError,
@@ -22,7 +22,7 @@ rifas_public_bp = Blueprint("rifas_public", __name__)
 @rifas_public_bp.route("/rifas", methods=["GET"])
 @rifas_public_bp.route("/acao_entre_fieis", methods=["GET"])
 def rifas_home():
-    cancelar_pagamentos_expirados()  # 👈 AQUI
+    #cancelar_pagamentos_expirados()  # 👈 AQUI
 
     try:
         dados = get_public_page_data()
@@ -53,12 +53,17 @@ def comprar_rifa():
         telefone = data.get("telefone", "")
 
         # 🔒 ANTI DUPLICIDADE (MESMO TELEFONE + PENDENTE)
+        
+
+        limite = datetime.utcnow() - timedelta(minutes=10)
+
         pagamento_existente = db.session.execute(
             db.select(PagamentoRifa)
             .join(ClienteRifa)
             .where(
                 ClienteRifa.telefone == telefone,
-                PagamentoRifa.status == "pendente"
+                PagamentoRifa.status == "pendente",
+                PagamentoRifa.created_at > limite
             )
         ).scalar_one_or_none()
 

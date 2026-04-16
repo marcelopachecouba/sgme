@@ -1,13 +1,48 @@
 ﻿{% extends "base.html" %}
 {% block content %}
 {% include "rifas_menu.html" %}
+
 <h1 class="h3 mb-4">Pagamentos de Rifas</h1>
+
 {% if schema_message %}
 <div class="alert alert-warning">{{ schema_message }}</div>
 {% endif %}
+
+<!-- 🔥 FILTRO -->
+<form method="get" class="row g-2 mb-3">
+
+    <div class="col-md-3">
+        <select name="status" class="form-control">
+            <option value="">Todos</option>
+            <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
+            <option value="pago" {% if status == 'pago' %}selected{% endif %}>Pago</option>
+            <option value="comprovante" {% if status == 'comprovante' %}selected{% endif %}>Comprovante</option>
+            <option value="cancelado" {% if status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
+    </div>
+
+    <div class="col-md-3">
+        <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+    </div>
+
+    <div class="col-md-2">
+        <button class="btn btn-primary w-100">Filtrar</button>
+    </div>
+
+    <div class="col-md-1">
+        <a href="{{ url_for('rifas_admin.admin_pagamentos') }}" class="btn btn-secondary w-100">Limpar</a>
+    </div>
+
+</form>
+
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
+
             <table class="table table-striped align-middle">
                 <thead>
                     <tr>
@@ -15,45 +50,93 @@
                         <th>Campanha</th>
                         <th>Cliente</th>
                         <th>Status</th>
-                        <th>Quantidade</th>
+                        <th>Qtd</th>
                         <th>Valor</th>
                         <th>Comprovante</th>
-                        <th></th>
+                        <th>Data</th>
+                        <th>Ação</th>
+                        <th>Impressão</th> <!-- 🔥 NOVO -->
                     </tr>
                 </thead>
+
                 <tbody>
                     {% for pagamento in pagamentos %}
                     <tr {% if pagamento.status == 'comprovante' %}class="table-info"{% endif %}>
+
                         <td class="small">{{ pagamento.id }}</td>
+
                         <td>{{ pagamento.campanha.titulo if pagamento.campanha else "-" }}</td>
+
                         <td>{{ pagamento.cliente.nome if pagamento.cliente else "-" }}</td>
 
                         <td>
-                         <span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% elif pagamento.status == 'comprovante' %}info{% elif pagamento.status == 'cancelado' %}danger{% else %}secondary{% endif %}">
-                            {{ 
-                            '✔ Pago' if pagamento.status == 'pago'
-                            else '⏳ Pendente' if pagamento.status == 'pendente'
-                            else '📄 Comprovante enviado' if pagamento.status == 'comprovante'
-                            else '❌ Cancelado' if pagamento.status == 'cancelado'
-                            else pagamento.status
-                            }}
-                         </span>
+                            <span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% elif pagamento.status == 'comprovante' %}info{% elif pagamento.status == 'cancelado' %}danger{% else %}secondary{% endif %}">
+                                {{
+                                '✔ Pago' if pagamento.status == 'pago'
+                                else '⏳ Pendente' if pagamento.status == 'pendente'
+                                else '📄 Comprovante enviado' if pagamento.status == 'comprovante'
+                                else '❌ Cancelado' if pagamento.status == 'cancelado'
+                                else pagamento.status
+                                }}
+                            </span>
                         </td>
+
                         <td>{{ pagamento.quantidade_rifas }}</td>
+
                         <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
+
                         <td>
                             {% if pagamento.comprovante_path %}
-                            <a href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">Ver comprovante</a>
+                            <a href="{{ pagamento.comprovante_path }}" target="_blank">Ver</a>
                             {% else %}
                             -
                             {% endif %}
                         </td>
-                        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_detalhe', payment_id=pagamento.id) }}">Abrir</a></td>
+
+                        <td>
+                            {{ pagamento.created_at | hora_br }}
+                        </td>
+
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{{ url_for('rifas_admin.admin_pagamento_detalhe', payment_id=pagamento.id) }}">
+                                Abrir
+                            </a>
+                        </td>
+
+                        <!-- 🔥 CONTROLE DE IMPRESSÃO -->
+                        <td>
+                            {% if pagamento.impresso %}
+                                <span class="badge bg-secondary">Impresso</span>
+
+                                {% if pagamento.impresso_em %}
+                                    <div class="small text-muted">
+                                        {{ pagamento.impresso_em.strftime("%d/%m/%Y %H:%M") }}
+                                    </div>
+                                {% endif %}
+
+                                <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id, forcar=1) }}"
+                                target="_blank"
+                                class="btn btn-sm btn-warning">
+                                Reimprimir
+                                </a>
+
+                            {% else %}
+                                <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}"
+                                target="_blank"
+                                class="btn btn-sm btn-success">
+                                Imprimir
+                                </a>
+                            {% endif %}
+                        </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+
         </div>
     </div>
 </div>
+
 {% endblock %}

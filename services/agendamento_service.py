@@ -4,6 +4,10 @@ from services.lembrete_missa_service import enviar_lembretes_missa
 from services.notification_manager import NotificationManager
 from services.whatsapp_service import enviar_lembretes_whatsapp
 
+from rifas.services import cancelar_pagamentos_expirados
+from extensions import db
+from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 
@@ -52,4 +56,30 @@ def registrar_agendamentos(scheduler, app):
         id="limpar_tokens_push",
     )
 
+# 🔥 👉 FALTA ISSO AQUI
+    scheduler.add_job(
+        executar_expiracao_rifas,
+        trigger="interval",
+        minutes=5,
+        args=[app],
+        max_instances=1,
+        replace_existing=True,
+        misfire_grace_time=60,
+        id="expirar_rifas",
+    )
+
     scheduler.start()
+
+def executar_expiracao_rifas(app):
+    with app.app_context():
+        logger.info("JOB RIFA INICIADO")
+        logger.info("JOB RIFA FINALIZADO")
+        try:
+            cancelar_pagamentos_expirados()
+            db.session.commit()
+
+            logger.info("Expiração de rifas concluída com sucesso")
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Erro ao expirar rifas: {str(e)}")

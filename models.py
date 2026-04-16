@@ -816,7 +816,9 @@ class ClienteRifa(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
     nome = db.Column(db.String(150), nullable=False, index=True)
     telefone = db.Column(db.String(30), nullable=False, index=True)
-    email = db.Column(db.String(150), nullable=False, index=True)
+    
+    email = db.Column(db.String(150), nullable=True, index=True)
+
     endereco = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     
@@ -851,7 +853,9 @@ class PagamentoRifa(db.Model):
     status = db.Column(db.String(20), nullable=False, default="pendente", index=True)
     qr_code_base64 = db.Column(db.Text)
     copia_cola_pix = db.Column(db.Text)
-    external_id = db.Column(db.String(120), unique=True, index=True)
+    
+    external_id = db.Column(db.String(120), index=True)
+
     pdf_path = db.Column(db.String(500))
     comprovante_path = db.Column(db.String(500))
     comprovante_nome = db.Column(db.String(255))
@@ -860,6 +864,16 @@ class PagamentoRifa(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     pago_em = db.Column(db.DateTime, index=True)
     vendedor = db.Column(db.String(120))
+    txid = db.Column(db.String(25), unique=True, index=True)
+    origem_pagamento = db.Column(db.String(20))
+    impresso = db.Column(db.Boolean, default=False)
+    impresso_em = db.Column(db.DateTime)
+
+    __table_args__ = (
+    db.Index('idx_txid_status', 'txid', 'status'),
+    db.Index('idx_status_created', 'status', 'created_at'),
+    db.Index('idx_cliente_status', 'cliente_id', 'status'),  # ✅ NOVO
+    )
 
     cliente = db.relationship("ClienteRifa", back_populates="pagamentos", lazy="joined")
     campanha = db.relationship("RifaCampanha", back_populates="pagamentos", lazy="joined")
@@ -871,12 +885,17 @@ class Rifa(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
     campanha_id = db.Column(db.String(36), db.ForeignKey("rifas_campanhas.id"), nullable=True, index=True)
-    numero = db.Column(db.Integer, nullable=False, index=True, unique=True)
+    
+    numero = db.Column(db.Integer, nullable=False, index=True)
+
     status = db.Column(db.String(20), nullable=False, default="disponivel", index=True)
     cliente_id = db.Column(db.String(36), db.ForeignKey("clientes.id"), index=True)
     pagamento_id = db.Column(db.String(36), db.ForeignKey("pagamentos.id"), index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
+    __table_args__ = (
+        db.UniqueConstraint('campanha_id', 'numero', name='uq_rifa_campanha_numero'),
+    )
     campanha = db.relationship("RifaCampanha", back_populates="rifas", lazy="joined")
     cliente = db.relationship("ClienteRifa", back_populates="rifas", lazy="joined")
     pagamento = db.relationship("PagamentoRifa", back_populates="rifas", lazy="joined")
