@@ -74,6 +74,7 @@ class Config:
     PIX_CHAVE = ''.join(os.environ.get('PIX_CHAVE', '01172466000480').split())
     PIX_MERCHANT_NAME = ''.join(os.environ.get('PIX_MERCHANT_NAME', 'PAROQUIA NOSSA SENHORA APARECIDA').split())[:25]
     PIX_MERCHANT_CITY = ''.join(os.environ.get('PIX_MERCHANT_CITY', 'PALMAS').split())[:15]
+    CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '').strip().strip('"\'')
     CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip().strip('"\'')
     CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '').strip().strip('"\'')
     CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '').strip().strip('"\'')

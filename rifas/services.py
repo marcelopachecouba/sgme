@@ -378,13 +378,14 @@ def _public_static_path(subdir: str, filename: str) -> str:
 def _save_receipt_cloudinary(*, arquivo) -> str:
     import cloudinary.uploader
 
+    cloudinary_url = (current_app.config.get("CLOUDINARY_URL") or "").strip()
     cloud_name = (current_app.config.get("CLOUDINARY_CLOUD_NAME") or "").strip()
     api_key = (current_app.config.get("CLOUDINARY_API_KEY") or "").strip()
     api_secret = (current_app.config.get("CLOUDINARY_API_SECRET") or "").strip()
 
-    if not all([cloud_name, api_key, api_secret]):
+    if not cloudinary_url and not all([cloud_name, api_key, api_secret]):
         raise RifaError(
-            "Cloudinary nao configurado. Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET."
+            "Cloudinary nao configurado. Defina CLOUDINARY_URL ou CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET."
         )
 
     upload = cloudinary.uploader.upload(

@@ -72,11 +72,14 @@ def _registrar_blueprints(app):
         app.register_blueprint(blueprint)
 
 
-cloudinary.config(
-    cloud_name=Config.CLOUDINARY_CLOUD_NAME,
-    api_key=Config.CLOUDINARY_API_KEY,
-    api_secret=Config.CLOUDINARY_API_SECRET,
-)
+if Config.CLOUDINARY_URL:
+    cloudinary.config(cloudinary_url=Config.CLOUDINARY_URL)
+else:
+    cloudinary.config(
+        cloud_name=Config.CLOUDINARY_CLOUD_NAME,
+        api_key=Config.CLOUDINARY_API_KEY,
+        api_secret=Config.CLOUDINARY_API_SECRET,
+    )
 
 
 def _registrar_rotas_internas(app):
