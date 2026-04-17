@@ -67,13 +67,16 @@ class Config:
         PUBLIC_BASE_URL = os.environ.get('RENDER_EXTERNAL_URL', '').strip().rstrip('/')
     if not PUBLIC_BASE_URL:
         PUBLIC_BASE_URL = 'http://localhost:5000'
-    PIX_PROVIDER = os.environ.get('PIX_PROVIDER', 'mock').strip().lower()
+    PIX_PROVIDER = os.environ.get('PIX_PROVIDER', 'manual').strip().strip('"\'').lower()
     PIX_API_KEY = os.environ.get('PIX_API_KEY', '').strip()
     PIX_ACCESS_TOKEN = os.environ.get('PIX_ACCESS_TOKEN', '').strip()
     PIX_USER_ID = os.environ.get('PIX_USER_ID', '').strip()
     PIX_CHAVE = ''.join(os.environ.get('PIX_CHAVE', '01172466000480').split())
     PIX_MERCHANT_NAME = ''.join(os.environ.get('PIX_MERCHANT_NAME', 'PAROQUIA NOSSA SENHORA APARECIDA').split())[:25]
     PIX_MERCHANT_CITY = ''.join(os.environ.get('PIX_MERCHANT_CITY', 'PALMAS').split())[:15]
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip().strip('"\'')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '').strip().strip('"\'')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '').strip().strip('"\'')
     WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', '').strip()
     RIFA_PUBLIC_TITLE = os.environ.get('RIFA_PUBLIC_TITLE', 'Rifas Online SGME').strip()
     RIFA_VALOR_UNITARIO = float(os.environ.get('RIFA_VALOR_UNITARIO', '10'))

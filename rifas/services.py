@@ -375,7 +375,24 @@ def _public_static_path(subdir: str, filename: str) -> str:
     return f"/{base}/{subdir}/{filename}" if subdir else f"/{base}/{filename}"
 
 
-import cloudinary.uploader
+def _save_receipt_cloudinary(*, arquivo) -> str:
+    import cloudinary.uploader
+
+    cloud_name = (current_app.config.get("CLOUDINARY_CLOUD_NAME") or "").strip()
+    api_key = (current_app.config.get("CLOUDINARY_API_KEY") or "").strip()
+    api_secret = (current_app.config.get("CLOUDINARY_API_SECRET") or "").strip()
+
+    if not all([cloud_name, api_key, api_secret]):
+        raise RifaError(
+            "Cloudinary nao configurado. Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET."
+        )
+
+    upload = cloudinary.uploader.upload(
+        arquivo.stream,
+        folder="rifas/comprovantes",
+        resource_type="auto"
+    )
+    return upload.get("secure_url")
 
 def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     ensure_rifas_schema()
@@ -393,22 +410,12 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     if suffix not in ALLOWED_RECEIPT_EXTENSIONS:
         raise RifaError("Formato de comprovante nao permitido.")
 
-    # ✅ CORRETO (fora do if)
     comprovante_url = None
 
     try:
-        upload = cloudinary.uploader.upload(
-            arquivo.stream,
-            folder="rifas/comprovantes",
-            resource_type="auto"
-        )
-
-        comprovante_url = upload.get("secure_url")
-
+        comprovante_url = _save_receipt_cloudinary(arquivo=arquivo)
     except Exception as e:
         raise RifaError(f"Erro ao enviar comprovante: {str(e)}")
-
-    # ✅ SALVA MESMO SE DER ERRO
 
     if not comprovante_url:
         raise RifaError("Falha ao obter URL do comprovante")

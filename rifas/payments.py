@@ -193,7 +193,7 @@ class MercadoPagoPixGateway:
 
 
 def get_pix_gateway():
-    provider = current_app.config.get("PIX_PROVIDER", "manual")
+    provider = (current_app.config.get("PIX_PROVIDER", "manual") or "manual").strip().lower()
 
     if provider == "mercadopago":
         access_token = current_app.config.get("PIX_ACCESS_TOKEN") or current_app.config.get("PIX_API_KEY")
@@ -205,7 +205,7 @@ def get_pix_gateway():
     if provider == "sicoob":
         return SicoobPixGateway()
 
-    if provider == "manual":
+    if provider in {"manual", "mock"}:
         return MockPixGateway()
 
     # fallback segurança

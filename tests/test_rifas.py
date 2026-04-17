@@ -2,10 +2,12 @@
 import hmac
 import io
 import json
+import os
 from pathlib import Path
 
 from extensions import db
 from models import PagamentoRifa, Rifa
+from rifas.services import save_receipt
 
 
 def test_compra_de_rifa_reserva_numeros_e_gera_pix(client, app):
@@ -36,7 +38,12 @@ def test_compra_de_rifa_reserva_numeros_e_gera_pix(client, app):
         assert all(rifa.status == "reservado" for rifa in rifas)
 
 
-def test_upload_de_comprovante(client, app):
+def test_upload_de_comprovante(client, app, monkeypatch):
+    monkeypatch.setattr(
+        "rifas.services._save_receipt_cloudinary",
+        lambda *, arquivo: "https://cloudinary.example/comprovante.png",
+    )
+
     compra = client.post(
         "/rifas/comprar",
         json={
@@ -56,6 +63,40 @@ def test_upload_de_comprovante(client, app):
     assert response.status_code == 200
     data = response.get_json()
     assert data["comprovante_path"]
+    assert data["comprovante_path"] == "https://cloudinary.example/comprovante.png"
+
+
+def test_save_receipt_usa_cloudinary_mesmo_com_provider_manual(app, monkeypatch):
+    monkeypatch.setattr(
+        "rifas.services._save_receipt_cloudinary",
+        lambda *, arquivo: "https://cloudinary.example/manual.png",
+    )
+
+    client = app.test_client()
+    compra = client.post(
+        "/rifas/comprar",
+        json={
+            "nome": "Maria",
+            "telefone": "(11) 99999-1111",
+            "email": "maria2@example.com",
+            "quantidade_rifas": 1,
+        },
+    ).get_json()
+
+    with app.app_context():
+        pagamento = save_receipt(
+            pagamento_id=compra["pagamento_id"],
+            arquivo=type(
+                "ArquivoTeste",
+                (),
+                {
+                    "filename": "comprovante.png",
+                    "save": lambda self, destino: Path(destino).write_bytes(b"arquivo-teste"),
+                },
+            )(),
+        )
+
+        assert pagamento.comprovante_path == "https://cloudinary.example/manual.png"
 
 
 def test_webhook_confirma_pagamento_e_gera_pdf(client, app):
@@ -108,3 +149,20 @@ def test_consulta_pagamento_retorna_resumo(client):
     assert data["cliente"]["nome"] == "Clara"
     assert data["campanha"]["titulo"] == "Rifa Teste"
     assert len(data["rifas"]) == 1
+
+
+def test_pix_provider_com_aspas_e_normalizado():
+    valor_anterior = os.environ.get("PIX_PROVIDER")
+    os.environ["PIX_PROVIDER"] = '"manual"'
+
+    from config import Config
+
+    class ConfigTeste(Config):
+        PIX_PROVIDER = os.environ.get("PIX_PROVIDER", "manual").strip().strip("\"'").lower()
+
+    assert ConfigTeste.PIX_PROVIDER == "manual"
+
+    if valor_anterior is None:
+        del os.environ["PIX_PROVIDER"]
+    else:
+        os.environ["PIX_PROVIDER"] = valor_anterior

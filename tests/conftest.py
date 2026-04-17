@@ -24,6 +24,7 @@ def app():
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "WTF_CSRF_ENABLED": False,
             "RIFA_PDF_DIR": str(temp_dir),
+            "RIFA_UPLOAD_DIR": str(Path("static") / "uploads" / "rifas-tests"),
             "PIX_PROVIDER": "mock",
             "WEBHOOK_SECRET": "segredo-webhook",
             "RIFA_TOTAL_NUMEROS": 30,
