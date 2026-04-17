@@ -381,6 +381,7 @@
 
         async function enviarComprovante(pagamentoId) {
             const campo = document.getElementById("comprovante-arquivo");
+
             if (!campo || !campo.files.length) {
                 alert("Selecione o comprovante antes de enviar.");
                 return;
@@ -389,6 +390,12 @@
             const formData = new FormData();
             formData.append("comprovante", campo.files[0]);
 
+            // 🔥 LOADING AQUI
+            const status = document.getElementById("status-comprovante");
+            if (status) {
+                status.innerHTML = `<div class="alert alert-warning">⏳ Enviando comprovante...</div>`;
+            }
+
             const response = await fetch(`/rifas/pagamento/${pagamentoId}/comprovante`, {
                 method: "POST",
                 body: formData,
@@ -396,15 +403,18 @@
 
             const data = await response.json();
 
-            if (!response.ok) {
-                alert(data.erro || "Nao foi possivel enviar o comprovante.");
+            // 🔥 valida erro vindo do backend
+            if (!response.ok || data.erro) {
+                if (status) {
+                    status.innerHTML = `<div class="alert alert-danger">${data.erro || "Erro ao enviar comprovante"}</div>`;
+                }
                 return;
             }
 
-            const status = document.getElementById("status-comprovante");
+            // só mostra sucesso se realmente não houver erro
             if (status) {
-                status.innerHTML = `<div class="alert alert-success mb-0">Comprovante enviado com sucesso. Aguarde a confirmacao manual.</div>`;
-            }
+                status.innerHTML = `<div class="alert alert-success">✅ Comprovante enviado com sucesso!</div>`;
+            }            
         }
 
         function renderSuccess(data) {
@@ -438,19 +448,65 @@
                         <button id="copiar-pix" class="btn btn-dark mb-3">Copiar PIX</button>
 
                         <div class="file-box">
-                            <input id="comprovante-arquivo" type="file" class="form-control mb-2">
-                            <button id="enviar-comprovante" class="btn btn-primary">Enviar comprovante</button>
-                            <div id="status-comprovante" class="mt-2"></div>
+
+                                <div id="upload-box" style="cursor:pointer; border:2px dashed #0b57b6; padding:20px; border-radius:10px; text-align:center;">
+                                    📁 Clique para enviar comprovante
+                                    <input id="comprovante-arquivo" type="file" style="display:none;">
+                                </div>
+
+                                <img id="preview-img" class="img-fluid mt-2 d-none"/>
+
+                                <button id="enviar-comprovante" class="btn btn-primary mt-2">
+                                    Enviar comprovante
+                                </button>
+
+                                <div id="status-comprovante" class="mt-2"></div>
+                           
                         </div>
                     </div>
                 </div>
             `;
 
             document.getElementById("copiar-pix")
-                ?.addEventListener("click", () => navigator.clipboard.writeText(data.copia_cola_pix));
+            ?.addEventListener("click", () => {
+                navigator.clipboard.writeText(data.copia_cola_pix);
+
+                alert("PIX copiado com sucesso!");
+            });
+
+            // clique upload
+            document.getElementById("upload-box")?.addEventListener("click", () => {
+                document.getElementById("comprovante-arquivo").click();});
+                
 
             document.getElementById("enviar-comprovante")
                 ?.addEventListener("click", () => enviarComprovante(data.pagamento_id));
+
+            document.getElementById("comprovante-arquivo")
+            ?.addEventListener("change", function() {
+
+                const file = this.files[0];
+                const preview = document.getElementById("preview-img");
+
+                if (!file) return;
+
+                if (!file.type.startsWith("image/")) {
+                    alert("Selecione uma imagem JPG ou PNG");
+                    this.value = "";
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("Arquivo muito grande (máx 5MB)");
+                    this.value = "";
+                    return;
+                }
+
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove("d-none");
+                preview.style.maxHeight = "200px";
+            });
+
         }
 
         if (form) {
@@ -466,6 +522,20 @@
                 feedback.innerHTML = "";
 
                 const formData = new FormData(form);
+
+                const telefone = formData.get("telefone");
+                const erroTel = validarTelefone(telefone);
+
+                if (erroTel) {
+                    renderError(erroTel);
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "Gerar PIX e reservar numeros";
+                    }
+
+                    return;
+                }
 
                 try {
                     const response = await fetch("/rifas/comprar", {
@@ -512,43 +582,48 @@
                 }
             });
         }
+        
         const telefoneInput = document.getElementById("telefone");
 
-        telefoneInput.addEventListener("input", (e) => {
-            let v = e.target.value.replace(/\D/g, "");
+        if (telefoneInput) {
+            telefoneInput.addEventListener("input", (e) => {
+                let v = e.target.value.replace(/\D/g, "");
 
-            if (v.length > 11) v = v.slice(0, 11);
+                if (v.length > 11) v = v.slice(0, 11);
 
-            if (v.length > 6) {
-                v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
-            } else if (v.length > 2) {
-                v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-            } else {
-                v = v.replace(/^(\d*)/, "($1");
-            }
+                if (v.length > 6) {
+                    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
+                } else if (v.length > 2) {
+                    v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+                } else {
+                    v = v.replace(/^(\d*)/, "($1");
+                }
 
-            e.target.value = v;
-        });
+                e.target.value = v;
+            });
+        }
 
         function validarTelefone(tel) {
-            tel = tel.replace(/\D/g, "");
+            const numero = tel.replace(/\D/g, "");
 
-            if (tel.length < 10 || tel.length > 11) {
-                return "Telefone deve ter 10 ou 11 dígitos";
+            // 🔥 AGORA só aceita celular (11 dígitos)
+            if (numero.length !== 11) {
+                return "Informe um celular válido com DDD (11 dígitos)";
             }
 
-            const ddd = tel.substring(0, 2);
-            if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+            const ddd = parseInt(numero.substring(0, 2));
+
+            if (ddd < 11 || ddd > 99) {
                 return "DDD inválido";
             }
 
-            if (tel.length === 11 && tel[2] !== "9") {
+            // 🔥 obrigatório começar com 9
+            if (numero[2] !== "9") {
                 return "Celular deve começar com 9";
             }
 
             return null;
         }
-
         async function enviarComprovanteManual() {
             const pedidoId = document.getElementById("pedido_id").value;
             const arquivo = document.getElementById("comprovante_manual").files[0];
@@ -642,7 +717,7 @@
                                 </div>
                             ` : ""}
 
-                            p><strong>Quantidade:</strong> ${p.quantidade_rifas}</p>
+                            <p><strong>Quantidade:</strong> ${p.quantidade_rifas}</p>
                             <p><strong>Valor:</strong> R$ ${p.valor_total.toFixed(2).replace(".", ",")}</p>
 
                             ${status === "comprovante" ? `

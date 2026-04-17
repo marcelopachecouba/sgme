@@ -1,3 +1,9 @@
+import os
+import cloudinary
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, send_from_directory
 from flask_migrate import Migrate
@@ -33,6 +39,7 @@ from routes.notificacoes_routes import notificacao_bp
 from routes.observacoes_lembrete_routes import observacoes_lembrete_bp
 from datetime import timedelta
 
+
 scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
 migrate = Migrate()
 
@@ -66,6 +73,13 @@ def _registrar_blueprints(app):
 
     for blueprint in blueprints:
         app.register_blueprint(blueprint)
+
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 
 def _registrar_rotas_internas(app):
@@ -145,6 +159,7 @@ def create_app(config_override=None):
         _iniciar_scheduler(app)
 
     return app
+
 
 
 app = create_app()

@@ -1,4 +1,6 @@
-﻿import hashlib
+﻿from flask import session, abort
+from functools import wraps
+import hashlib
 import hmac
 import logging
 import uuid
@@ -404,15 +406,19 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
         comprovante_url = upload.get("secure_url")
 
     except Exception as e:
-        print("ERRO CLOUDINARY:", str(e))
+        raise RifaError(f"Erro ao enviar comprovante: {str(e)}")
 
     # ✅ SALVA MESMO SE DER ERRO
+
+    if not comprovante_url:
+        raise RifaError("Falha ao obter URL do comprovante")
+
     pagamento.comprovante_path = comprovante_url
     pagamento.comprovante_nome = filename
     pagamento.comprovante_enviado_em = _utcnow()
     pagamento.status = STATUS_COMPROVANTE
 
-    #db.session.commit()
+    db.session.commit()
 
     logger.info(
         "Comprovante enviado pagamento=%s url=%s",
@@ -436,7 +442,7 @@ def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None 
         raise RifaError("Pagamento nao encontrado.")
 
     # 🔁 2. Idempotência (se já está pago, retorna)
-    if pagamento.status == STATUS_PAGO:
+    if pagamento.status in [STATUS_PAGO, STATUS_CANCELADO]:
         return pagamento
 
     # 🔒 3. Verifica campanha
@@ -450,7 +456,7 @@ def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None 
     expirado = datetime.utcnow() > limite
 
     # 🔄 5. Se expirou → precisa reatribuir rifas
-    if pagamento.status == STATUS_CANCELADO or expirado:
+    if expirado:
         logger.warning(f"Pagamento {pagamento.id} confirmado apos expiracao. Reatribuindo rifas...")
 
         # 🔍 Busca novas rifas disponíveis
@@ -531,7 +537,7 @@ def process_webhook(payload: dict, raw_body: bytes, signature: str | None) -> Pa
     if not pagamento:
         raise RifaError(f"Pagamento nao encontrado: {identifier}")
 
-    if pagamento.status == STATUS_PAGO:
+    if pagamento.status in [STATUS_PAGO, STATUS_CANCELADO]:
         return pagamento
 
     if status.lower() in ["pago", "paid", "approved"]:
@@ -706,27 +712,32 @@ def cancelar_pagamento(*, pagamento_id: str) -> PagamentoRifa:
     if pagamento is None:
         raise RifaError("Pagamento não encontrado.")
 
-    if pagamento.status != STATUS_PAGO:
-        raise RifaError("Só é possível cancelar pagamentos já pagos.")
+    # 🔥 só bloqueia se já estiver cancelado
+    if pagamento.status == STATUS_CANCELADO:
+        raise RifaError("Pagamento já está cancelado.")
 
-    # 🔥 Volta as rifas para disponível
+    # 🔥 libera rifas (se existirem)
     for rifa in pagamento.rifas:
         rifa.status = STATUS_DISPONIVEL
         rifa.pagamento_id = None
         rifa.cliente_id = None
 
-    # 🔥 Atualiza pagamento
+    # 🔥 atualiza pagamento
     pagamento.status = STATUS_CANCELADO
     pagamento.pago_em = None
     pagamento.pdf_path = None
 
+    try:
+        pagamento.cancelado_em = _utcnow()
+    except:
+        pass
+
     logger.info("Pagamento cancelado manualmente: %s", pagamento.id)
 
+    db.session.commit()
     return pagamento
 
 def cancelar_pagamentos_expirados():
-    
-    
 
     agora = datetime.utcnow()
     limite = agora - timedelta(minutes=60)
@@ -759,11 +770,55 @@ def cancelar_pagamentos_expirados():
     #if pagamentos:
      #   db.session.commit()
 
-   # import cloudinary
 
-    #cloudinary.config(
-    #    cloud_name="Raiz",
-    #    api_key="949366984135176",
-    #    api_secret="EFcYC63EUHgdT_aprgI8kpf7Wuc"
-    #)
+def limpeza_completa_rifas():
+    ensure_rifas_schema()
 
+    from sqlalchemy import text
+    from extensions import db
+
+    # 🔥 1. LIBERAR RIFAS DE PAGAMENTOS CANCELADOS
+    db.session.execute(text("""
+        UPDATE rifas
+        SET status = 'disponivel',
+            cliente_id = NULL,
+            pagamento_id = NULL
+        WHERE pagamento_id IN (
+            SELECT id FROM pagamentos WHERE status = 'cancelado'
+        )
+    """))
+
+    # 🔥 2. DELETAR PAGAMENTOS CANCELADOS
+    result_pag = db.session.execute(text("""
+        DELETE FROM pagamentos
+        WHERE status = 'cancelado'
+        RETURNING id
+    """))
+
+    pagamentos_deletados = result_pag.fetchall()
+
+    # 🔥 3. DELETAR CLIENTES SEM PAGAMENTOS
+    result_cli = db.session.execute(text("""
+        DELETE FROM clientes c
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM pagamentos p
+            WHERE p.cliente_id = c.id
+        )
+        RETURNING c.id
+    """))
+
+    clientes_deletados = result_cli.fetchall()
+
+    return {
+        "pagamentos": len(pagamentos_deletados),
+        "clientes": len(clientes_deletados)
+    }
+
+def acesso_rifas_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("acesso_rifas"):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function

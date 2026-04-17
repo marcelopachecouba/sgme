@@ -39,6 +39,13 @@
 
 </form>
 
+<!-- 🔥 BOTÃO LIMPEZA -->
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-danger" onclick="abrirModalLimpeza()">
+        🧹 Limpeza completa
+    </button>
+</div>
+
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
@@ -55,7 +62,7 @@
                         <th>Comprovante</th>
                         <th>Data</th>
                         <th>Ação</th>
-                        <th>Impressão</th> <!-- 🔥 NOVO -->
+                        <th>Impressão</th>
                     </tr>
                 </thead>
 
@@ -64,9 +71,7 @@
                     <tr {% if pagamento.status == 'comprovante' %}class="table-info"{% endif %}>
 
                         <td class="small">{{ pagamento.id }}</td>
-
                         <td>{{ pagamento.campanha.titulo if pagamento.campanha else "-" }}</td>
-
                         <td>{{ pagamento.cliente.nome if pagamento.cliente else "-" }}</td>
 
                         <td>
@@ -82,20 +87,17 @@
                         </td>
 
                         <td>{{ pagamento.quantidade_rifas }}</td>
-
                         <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
 
                         <td>
                             {% if pagamento.comprovante_path %}
-                            <a href="{{ pagamento.comprovante_path }}" target="_blank">Ver</a>
+                                <a href="{{ pagamento.comprovante_path }}" target="_blank">Ver</a>
                             {% else %}
-                            -
+                                -
                             {% endif %}
                         </td>
 
-                        <td>
-                            {{ pagamento.created_at | hora_br }}
-                        </td>
+                        <td>{{ pagamento.created_at | hora_br }}</td>
 
                         <td>
                             <a class="btn btn-sm btn-outline-primary"
@@ -104,7 +106,6 @@
                             </a>
                         </td>
 
-                        <!-- 🔥 CONTROLE DE IMPRESSÃO -->
                         <td>
                             {% if pagamento.impresso %}
                                 <span class="badge bg-secondary">Impresso</span>
@@ -116,16 +117,16 @@
                                 {% endif %}
 
                                 <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id, forcar=1) }}"
-                                target="_blank"
-                                class="btn btn-sm btn-warning">
-                                Reimprimir
+                                   target="_blank"
+                                   class="btn btn-sm btn-warning">
+                                   Reimprimir
                                 </a>
 
                             {% else %}
                                 <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}"
-                                target="_blank"
-                                class="btn btn-sm btn-success">
-                                Imprimir
+                                   target="_blank"
+                                   class="btn btn-sm btn-success">
+                                   Imprimir
                                 </a>
                             {% endif %}
                         </td>
@@ -138,5 +139,73 @@
         </div>
     </div>
 </div>
+
+<!-- 🔥 MODAL -->
+<div class="modal fade" id="modalLimpeza" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Limpeza do Sistema</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <p>Será realizada a seguinte limpeza:</p>
+
+        <ul>
+          <li>Pagamentos cancelados: <strong id="previewPag">...</strong></li>
+          <li>Clientes sem pagamento: <strong id="previewCli">...</strong></li>
+        </ul>
+
+        <div class="alert alert-warning">
+            ⚠️ Essa ação não pode ser desfeita.
+        </div>
+
+        <label>Digite <strong>LIMPAR</strong> para confirmar:</label>
+        <input type="text" id="confirmacao" class="form-control">
+      </div>
+
+      <div class="modal-footer">
+        <form method="post" action="{{ url_for('rifas_admin.limpeza_completa') }}">
+            <button type="submit" class="btn btn-danger" id="btnConfirmar" disabled>
+                Confirmar limpeza
+            </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 🔥 JS -->
+<script>
+function abrirModalLimpeza() {
+
+    document.getElementById("previewPag").innerText = "...";
+    document.getElementById("previewCli").innerText = "...";
+
+    fetch("/admin/limpeza-preview")
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("previewPag").innerText = data.pagamentos_cancelados;
+            document.getElementById("previewCli").innerText = data.clientes_sem_pagamento;
+        });
+
+    let modal = new bootstrap.Modal(document.getElementById('modalLimpeza'));
+    modal.show();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const campo = document.getElementById("confirmacao");
+
+    if (campo) {
+        campo.addEventListener("input", function() {
+            const btn = document.getElementById("btnConfirmar");
+            btn.disabled = this.value !== "LIMPAR";
+        });
+    }
+});
+</script>
 
 {% endblock %}

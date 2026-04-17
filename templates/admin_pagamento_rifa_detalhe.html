@@ -71,42 +71,55 @@
         <div class="card">
             <div class="card-body">
                 <h2 class="h5 mb-3">Liberar pagamento</h2>
+
+                <!-- 🔥 FORM APROVAR -->
                 <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_aprovar', payment_id=pagamento.id) }}" class="row g-3">
+
                     <div class="col-12">
                         <label class="form-label">Observacoes do admin</label>
                         <textarea class="form-control" name="observacoes_admin" rows="3">{{ pagamento.observacoes_admin or '' }}</textarea>
                     </div>
-
-                    <div class="col-12 d-flex gap-2 flex-wrap">
-                        
-                        <button class="btn btn-success" {% if pagamento.status == 'pago' %}disabled{% endif %}>
-                            Marcar como pago
-                        </button>
-
-                        {% if pagamento.status != 'cancelado' and pagamento.status != 'pago' %}
-                        <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_cancelar', payment_id=pagamento.id) }}">
-                            <button type="submit" class="btn btn-danger"
-                                onclick="return confirm('Tem certeza que deseja cancelar este pagamento?')">
-                                Cancelar pagamento
-                            </button>
-                        </form>
-                        {% endif %}
-                        
-                        {% if pagamento.status == 'pago' %}
-                        <a class="btn btn-outline-primary" href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank">
-                            Imprimir PDF
-                        </a>
-                        {% endif %}
-
-                        {% if whatsapp_link %}
-                        <a class="btn btn-outline-success" href="{{ whatsapp_link }}" target="_blank">
-                            Enviar pelo WhatsApp
-                        </a>
-                        {% endif %}
-
-                    </div>
-
                 </form>
+
+                <div class="col-12 d-flex gap-2 flex-wrap align-items-center">
+
+                    <!-- ✅ MARCAR COMO PAGO -->
+                    <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_aprovar', payment_id=pagamento.id) }}">
+                        <button class="btn btn-success btn-sm"
+                            {% if pagamento.status == 'pago' %}disabled{% endif %}>
+                            ✔️ Marcar como pago
+                        </button>
+                    </form>
+
+                    <!-- ✅ CANCELAR -->
+                    {% if pagamento.status != 'cancelado' %}
+                    <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_cancelar', payment_id=pagamento.id) }}">
+                        <button type="submit" class="btn btn-danger btn-sm"
+                            onclick="return confirm('Tem certeza que deseja cancelar este pagamento?')">
+                            ❌ Cancelar
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <!-- ✅ PDF -->
+                    {% if pagamento.status == 'pago' %}
+                    <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}"
+                    target="_blank"
+                    class="btn btn-primary btn-sm">
+                        🖨️ Imprimir PDF Canhotos
+                    </a>
+
+                    <!-- ✅ WHATSAPP -->
+                    {% if whatsapp_link %}
+                        <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-success btn-sm">
+                            💬 Enviar WhatsApp
+                        </a>
+                    {% else %}
+                        <span class="text-danger small">sem WhatsApp</span>
+                    {% endif %}
+                    {% endif %}
+
+                </div>
             </div>
         </div>
     </div>
@@ -125,14 +138,34 @@
             <div class="card-body">
                 <h2 class="h5 mb-3">Arquivos</h2>
                 <ul class="list-group">
+
+                    {% if pagamento.status == 'pago' %}
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        PDF dos canhotos
-                        {% if pdf_public_url %}
-                        <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}" target="_blank" rel="noreferrer">Abrir</a>
+                        🖨️ Imprimir PDF Canhotos
+
+                        <a href="{{ url_for('rifas_admin.admin_pagamento_pdf', payment_id=pagamento.id) }}"
+                        target="_blank"
+                        class="btn btn-success btn-sm">
+                        Imprimir
+                        </a>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        💬 Enviar WhatsApp
+
+                        {% if whatsapp_link %}
+                            <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-success btn-sm">
+                                Enviar
+                            </a>
                         {% else %}
-                        <span class="text-secondary">aguardando pagamento</span>
+                            <span class="text-danger">link indisponível</span>
                         {% endif %}
                     </li>
+
+                    {% endif %}                    
+                    
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         Comprovante
                         {% if pagamento.comprovante_path %}

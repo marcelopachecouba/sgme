@@ -1,4 +1,7 @@
-﻿
+﻿from rifas.services import cancelar_pagamento
+from rifas.services import acesso_rifas_required
+from flask import request, session, render_template, redirect, url_for, flash
+from rifas.services import payment_whatsapp_link
 from datetime import timedelta  # 🔥 IMPORTAR LÁ EM CIMA
 from datetime import datetime
 from pathlib import Path
@@ -57,16 +60,16 @@ def _parse_date(value: str):
 
 
 @rifas_admin_bp.route("/admin/rifas", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_rifas():
     dados = _base_context()
     return render_template("admin_rifas.html", **dados)
 
 
 @rifas_admin_bp.route("/admin/pagamentos", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_pagamentos():
     cancelar_pagamentos_expirados()
     db.session.commit()
@@ -109,8 +112,8 @@ def admin_pagamentos():
 
 
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_pagamento_detalhe(payment_id):
     dados = _base_context()
     try:
@@ -124,20 +127,25 @@ def admin_pagamento_detalhe(payment_id):
         else:
             pagamento.expira_em = None
 
+        # 🔥 AQUI ESTAVA FALTANDO
+        from rifas.services import payment_whatsapp_link
+        whatsapp_link = payment_whatsapp_link(pagamento)
+        dados["whatsapp_link"] = whatsapp_link
+
     except RifaError as exc:
         flash(str(exc), "danger")
         return redirect(url_for("rifas_admin.admin_pagamentos"))
 
     return render_template(
         "admin_pagamento_rifa_detalhe.html",
-        now=datetime.utcnow(),  # 🔥 AQUI
+        now=datetime.utcnow(),
         **dados
     )
 
 # ✅ CORRIGIDO
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>/aprovar", methods=["POST"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_pagamento_aprovar(payment_id):
     observacoes = (request.form.get("observacoes_admin") or "").strip()
 
@@ -156,8 +164,8 @@ def admin_pagamento_aprovar(payment_id):
 
 
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>/pdf", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_pagamento_pdf(payment_id):
     from datetime import datetime
 
@@ -175,9 +183,9 @@ def admin_pagamento_pdf(payment_id):
         return redirect(url_for("rifas_admin.admin_pagamentos"))
 
     # 🔥 BLOQUEIO DE REIMPRESSÃO
-    if pagamento.impresso and not request.args.get("forcar"):
-        flash("Este pagamento já foi impresso.", "warning")
-        return redirect(url_for("rifas_admin.admin_pagamentos"))
+    #if pagamento.impresso and not request.args.get("forcar"):
+     #   flash("Este pagamento já foi impresso.", "warning")
+      #  return redirect(url_for("rifas_admin.admin_pagamentos"))
 
     # 🔥 GERA O PDF
     from rifas.pdf_generator import generate_tickets_pdf_memory
@@ -202,16 +210,16 @@ def admin_pagamento_pdf(payment_id):
     )
 
 @rifas_admin_bp.route("/admin/clientes", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_clientes():
     dados = _base_context()
     return render_template("admin_clientes_rifas.html", **dados)
 
 
 @rifas_admin_bp.route("/admin/relatorio", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_relatorio():
     status = request.args.get("status")
     data_inicio_str = request.args.get("data_inicio")
@@ -278,8 +286,8 @@ def admin_relatorio():
 
 # ✅ CORRIGIDO
 @rifas_admin_bp.route("/admin/rifas/cadastro", methods=["GET", "POST"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_rifas_cadastro():
     campanha = None
 
@@ -326,8 +334,8 @@ def admin_rifas_cadastro():
 
 
 @rifas_admin_bp.route("/admin/rifas/resumo.json", methods=["GET"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_rifas_resumo():
     try:
         dados = admin_dashboard_data()
@@ -336,8 +344,8 @@ def admin_rifas_resumo():
         return jsonify({"erro": str(exc)}), 503
     
 
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_pagamento_cancelar(payment_id):
     try:
         cancelar_pagamento(pagamento_id=payment_id)
@@ -352,8 +360,8 @@ def admin_pagamento_cancelar(payment_id):
 from models import PagamentoRifa
 
 @rifas_admin_bp.route("/admin/pagamentos/<payment_id>/cancelar", methods=["POST"])
-@login_required
-@admin_required
+@acesso_rifas_required
+
 def admin_pagamento_cancelar(payment_id):
     try:
         pagamento = db.session.get(PagamentoRifa, payment_id)
@@ -366,9 +374,9 @@ def admin_pagamento_cancelar(payment_id):
             flash("Pagamento já está cancelado.", "warning")
             return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
 
-        if pagamento.status == "pago":
-            flash("Não é permitido cancelar pagamento já confirmado.", "danger")
-            return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+        #if pagamento.status == "pago":
+            #flash("Não é permitido cancelar pagamento já confirmado.", "danger")
+            #return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
 
         # 🔥 LIBERA AS RIFAS
         for rifa in pagamento.rifas:
@@ -387,3 +395,57 @@ def admin_pagamento_cancelar(payment_id):
         flash(f"Erro ao cancelar: {str(e)}", "danger")
 
     return redirect(url_for("rifas_admin.admin_pagamento_detalhe", payment_id=payment_id))
+
+@rifas_admin_bp.route("/admin/limpeza-completa", methods=["POST"])
+@acesso_rifas_required
+
+def limpeza_completa():
+    from rifas.services import limpeza_completa_rifas
+
+    try:
+        resultado = limpeza_completa_rifas()
+        db.session.commit()
+
+        flash(
+            f"🧹 Limpeza concluída: "
+            f"{resultado['pagamentos']} pagamentos e "
+            f"{resultado['clientes']} clientes removidos.",
+            "success"
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro na limpeza: {str(e)}", "danger")
+
+    return redirect(url_for("rifas_admin.admin_pagamentos"))
+
+
+@rifas_admin_bp.route("/admin/limpeza-preview", methods=["GET"])
+@acesso_rifas_required
+
+def limpeza_preview():
+    from rifas.services import preview_limpeza_rifas
+
+    dados = preview_limpeza_rifas()
+    return jsonify(dados)
+
+
+
+CODIGO_SECRETARIA = "paroquia2026"  # 🔒 troque depois
+
+@rifas_admin_bp.route("/rifas/acesso", methods=["GET", "POST"])
+def acesso_rifas_secretaria():
+
+    # 🔥 AQUI É O LUGAR CERTO
+    codigo = request.args.get("codigo") or request.form.get("codigo")
+
+    if codigo:
+        if codigo == CODIGO_SECRETARIA:
+            session["acesso_rifas"] = True
+            session["perfil"] = "secretaria"
+
+            return redirect(url_for("rifas_admin.admin_rifas"))
+
+        flash("Código inválido", "danger")
+
+    return render_template("acesso_rifas.html")    
