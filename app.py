@@ -1,8 +1,5 @@
 import os
 import cloudinary
-from dotenv import load_dotenv
-
-load_dotenv()
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, send_from_directory
