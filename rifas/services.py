@@ -3,6 +3,7 @@ from functools import wraps
 import hashlib
 import hmac
 import logging
+import os
 import uuid
 from models import PagamentoRifa, Rifa
 from dataclasses import asdict, dataclass
@@ -376,16 +377,42 @@ def _public_static_path(subdir: str, filename: str) -> str:
 
 
 def _save_receipt_cloudinary(*, arquivo) -> str:
+    import cloudinary
     import cloudinary.uploader
 
-    cloudinary_url = (current_app.config.get("CLOUDINARY_URL") or "").strip()
-    cloud_name = (current_app.config.get("CLOUDINARY_CLOUD_NAME") or "").strip()
-    api_key = (current_app.config.get("CLOUDINARY_API_KEY") or "").strip()
-    api_secret = (current_app.config.get("CLOUDINARY_API_SECRET") or "").strip()
+    cloudinary_url = (
+        current_app.config.get("CLOUDINARY_URL")
+        or os.environ.get("CLOUDINARY_URL")
+        or ""
+    ).strip()
+    cloud_name = (
+        current_app.config.get("CLOUDINARY_CLOUD_NAME")
+        or os.environ.get("CLOUDINARY_CLOUD_NAME")
+        or ""
+    ).strip()
+    api_key = (
+        current_app.config.get("CLOUDINARY_API_KEY")
+        or os.environ.get("CLOUDINARY_API_KEY")
+        or ""
+    ).strip()
+    api_secret = (
+        current_app.config.get("CLOUDINARY_API_SECRET")
+        or os.environ.get("CLOUDINARY_API_SECRET")
+        or ""
+    ).strip()
 
     if not cloudinary_url and not all([cloud_name, api_key, api_secret]):
         raise RifaError(
             "Cloudinary nao configurado. Defina CLOUDINARY_URL ou CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET."
+        )
+
+    if cloudinary_url:
+        cloudinary.config(cloudinary_url=cloudinary_url)
+    else:
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret,
         )
 
     upload = cloudinary.uploader.upload(
