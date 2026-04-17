@@ -29,8 +29,11 @@ STATUS_CONCILIACAO = ("SIM", "NAO")
 
 
 def _query(model):
-    return model.query.filter_by(id_paroquia=current_user.id_paroquia)
 
+    if not current_user.is_authenticated:
+        return model.query.filter(False)  # não retorna nada
+
+    return model.query.filter_by(id_paroquia=current_user.id_paroquia)
 
 def parse_date(value):
     raw = str(value or "").strip()

@@ -66,8 +66,11 @@ def _toolbar(prefix):
         html.Button("Excluir", id=f"{prefix}-delete", n_clicks=0, style=BUTTON_DANGER),
     ], style={"display": "flex", "gap": "10px", "marginBottom": "14px"})
 
-
+from flask_login import current_user
 def _dashboard_page():
+    if not current_user.is_authenticated:
+      return html.Div("Acesso restrito")
+
     totals = services.get_dashboard_totals()
     return html.Div([
         html.H3("Dashboard Financeiro"),
