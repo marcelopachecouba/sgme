@@ -1,14 +1,16 @@
 ﻿from pathlib import Path
 from urllib.parse import quote
-from flask import Blueprint, jsonify, render_template, request, send_file
+from flask import Blueprint, jsonify, render_template, request, send_file, session
 from models import PagamentoRifa, ClienteRifa
 from rifas.services import cancelar_pagamentos_expirados
 from datetime import datetime, timedelta
 from rifas.services import (
     RifaError,
     RifaSchemaMissingError,
+    generate_vendor_link,
     get_payment,
     get_public_page_data,
+    get_vendedor_by_codigo,
     payment_summary,
     process_webhook,
     purchase_rifas,
@@ -31,6 +33,23 @@ def rifas_home():
     dados["mostrar_vendidos"] = False  # 👈 AQUI
     dados["mostrar_data_sorteio"] = False  # 👈 NOVO
     dados["mostrar_vendedor"] = False
+
+    # Mantem o vendedor da landing page vinculado ao restante da jornada.
+    ref = (request.args.get("ref") or "").strip().upper()
+    if ref:
+        session["rifa_ref_vendedor"] = ref
+
+    vendedor_ref = session.get("rifa_ref_vendedor")
+    vendedor_obj = None
+    if vendedor_ref and not dados.get("schema_message"):
+        vendedor_obj = get_vendedor_by_codigo(vendedor_ref)
+    if vendedor_ref and vendedor_obj is None:
+        session.pop("rifa_ref_vendedor", None)
+        vendedor_ref = None
+
+    dados["vendedor_ref"] = vendedor_ref
+    dados["vendedor_nome"] = vendedor_obj.nome if vendedor_obj else None
+    dados["vendedor_link"] = generate_vendor_link(vendedor_ref) if vendedor_ref else None
     
     mensagem = "Olá, quero informações sobre a rifa"
 
@@ -77,7 +96,7 @@ def comprar_rifa():
             telefone=telefone,
             endereco=data.get("endereco", ""),
             email = data.get("email") or None,
-            vendedor=data.get("vendedor", ""),  # ✅ NOVO
+            vendedor=session.get("rifa_ref_vendedor") or data.get("vendedor", ""),
             quantidade_rifas=quantidade,
         )
 

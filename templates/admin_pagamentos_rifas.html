@@ -56,6 +56,7 @@
                         <th>ID</th>
                         <th>Campanha</th>
                         <th>Cliente</th>
+                        <th>Vendedor</th>
                         <th>Status</th>
                         <th>Qtd</th>
                         <th>Valor</th>
@@ -73,6 +74,7 @@
                         <td class="small">{{ pagamento.id }}</td>
                         <td>{{ pagamento.campanha.titulo if pagamento.campanha else "-" }}</td>
                         <td>{{ pagamento.cliente.nome if pagamento.cliente else "-" }}</td>
+                        <td>{{ pagamento.vendedor or "-" }}</td>
 
                         <td>
                             <span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% elif pagamento.status == 'comprovante' %}info{% elif pagamento.status == 'cancelado' %}danger{% else %}secondary{% endif %}">

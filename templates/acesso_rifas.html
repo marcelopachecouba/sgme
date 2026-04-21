@@ -1,8 +1,23 @@
-<div class="container mt-5" style="max-width:400px;">
-    <h4 class="mb-3">🔐 Acesso Secretaria</h4>
+<div class="container mt-5" style="max-width:420px;">
+    <h4 class="mb-3">Acesso Rifas</h4>
 
     <form method="post">
-        <input type="password" name="codigo" class="form-control mb-3" placeholder="Digite o código" required>
+        <div class="mb-3">
+            <label class="form-label">Codigo da secretaria</label>
+            <input type="password" name="codigo" class="form-control" placeholder="Digite o codigo">
+        </div>
+
+        <div class="text-center text-secondary mb-3">ou</div>
+
+        <div class="mb-3">
+            <label class="form-label">Login admin</label>
+            <input type="text" name="login" class="form-control" placeholder="Email, CPF ou telefone">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Senha admin</label>
+            <input type="password" name="senha" class="form-control" placeholder="Digite a senha">
+        </div>
 
         <button class="btn btn-primary w-100">
             Entrar

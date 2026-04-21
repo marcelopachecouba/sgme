@@ -1,11 +1,11 @@
 ﻿from flask import session, abort
 from functools import wraps
+from flask_login import current_user
 import hashlib
 import hmac
 import logging
 import os
 import uuid
-from models import PagamentoRifa, Rifa
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -16,7 +16,7 @@ from sqlalchemy import func, inspect
 from werkzeug.utils import secure_filename
 
 from extensions import db
-from models import ClienteRifa, PagamentoRifa, Rifa, RifaCampanha
+from models import BlocoRifa, ClienteRifa, Equipe, PagamentoRifa, Rifa, RifaCampanha, Vendedor
 from rifas.payments import get_pix_gateway
 from rifas.pdf_generator import generate_tickets_pdf
 from services.public_url_service import build_public_url
@@ -30,6 +30,7 @@ STATUS_RESERVADO = "reservado"
 STATUS_PAGO = "pago"
 STATUS_CANCELADO = "cancelado"
 STATUS_COMPROVANTE = "comprovante"
+STATUS_BLOCO = "bloco"
 ALLOWED_RECEIPT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".pdf", ".webp"}
 
 
@@ -71,7 +72,15 @@ def _utcnow() -> datetime:
 def rifas_schema_ready() -> bool:
     inspector = inspect(db.engine)
     tabelas = set(inspector.get_table_names())
-    return {"clientes", "pagamentos", "rifas", "rifas_campanhas"}.issubset(tabelas)
+    return {
+        "clientes",
+        "pagamentos",
+        "rifas",
+        "rifas_campanhas",
+        "equipes",
+        "vendedores",
+        "blocos_rifas",
+    }.issubset(tabelas)
 
 
 def ensure_rifas_schema() -> None:
@@ -201,6 +210,154 @@ def _validate_purchase_input(nome: str, telefone: str, email: str, quantidade_ri
     return telefone_limpo  # 🔥 IMPORTANTE
 
 
+def _normalizar_codigo_vendedor(codigo: str | None) -> str | None:
+    codigo_normalizado = _normalizar_texto(codigo).upper()
+    return codigo_normalizado or None
+
+
+def get_vendedor_by_codigo(codigo: str | None) -> Vendedor | None:
+    codigo_normalizado = _normalizar_codigo_vendedor(codigo)
+    if not codigo_normalizado:
+        return None
+
+    db.session.flush()
+    return db.session.execute(
+        db.select(Vendedor).where(Vendedor.codigo == codigo_normalizado)
+    ).scalar_one_or_none()
+
+
+def generate_vendor_link(vendedor_codigo: str) -> str:
+    codigo_normalizado = _normalizar_codigo_vendedor(vendedor_codigo)
+    if not codigo_normalizado:
+        raise RifaError("Codigo do vendedor e obrigatorio.")
+    return f"/rifas?ref={codigo_normalizado}"
+
+
+def create_team(*, nome: str, ativa: bool = True) -> Equipe:
+    ensure_rifas_schema()
+    nome_normalizado = _normalizar_texto(nome)
+
+    if not nome_normalizado:
+        raise RifaError("Nome da equipe e obrigatorio.")
+
+    equipe = db.session.execute(
+        db.select(Equipe).where(func.upper(Equipe.nome) == nome_normalizado.upper())
+    ).scalar_one_or_none()
+
+    if equipe is None:
+        equipe = Equipe(nome=nome_normalizado, ativa=ativa)
+        db.session.add(equipe)
+        db.session.flush()
+        return equipe
+
+    equipe.ativa = ativa
+    return equipe
+
+
+def create_vendor(*, nome: str, codigo: str, equipe_id: str) -> Vendedor:
+    ensure_rifas_schema()
+    nome_normalizado = _normalizar_texto(nome)
+    codigo_normalizado = _normalizar_codigo_vendedor(codigo)
+
+    if not nome_normalizado:
+        raise RifaError("Nome do vendedor e obrigatorio.")
+    if not codigo_normalizado:
+        raise RifaError("Codigo do vendedor e obrigatorio.")
+
+    equipe = db.session.get(Equipe, equipe_id)
+    if equipe is None:
+        raise RifaError("Equipe nao encontrada.")
+    if not equipe.ativa:
+        raise RifaError("Nao e permitido vincular vendedor a uma equipe inativa.")
+
+    vendedor_existente = get_vendedor_by_codigo(codigo_normalizado)
+    if vendedor_existente is not None:
+        raise RifaError("Ja existe um vendedor com esse codigo.")
+
+    vendedor = Vendedor(nome=nome_normalizado, codigo=codigo_normalizado, equipe_id=equipe.id)
+    db.session.add(vendedor)
+    db.session.flush()
+    return vendedor
+
+
+def _get_campaign_for_block(campanha_id: str | None = None) -> RifaCampanha:
+    campanha = get_campaign(campanha_id) if campanha_id else get_active_campaign()
+    if campanha is None:
+        raise RifaError("Nenhuma campanha de rifa ativa foi cadastrada.")
+    return campanha
+
+
+def create_bloco_rifa(
+    *,
+    vendedor_codigo: str,
+    numero_inicio: int,
+    numero_fim: int,
+    campanha_id: str | None = None,
+) -> BlocoRifa:
+    ensure_rifas_schema()
+    vendedor_codigo_normalizado = _normalizar_codigo_vendedor(vendedor_codigo)
+    db.session.flush()
+    vendedor_row = db.session.execute(
+        db.select(Vendedor.codigo, Vendedor.equipe_id).where(Vendedor.codigo == vendedor_codigo_normalizado)
+    ).one_or_none()
+
+    if vendedor_row is None:
+        raise RifaError("Vendedor nao encontrado para o bloco informado.")
+    equipe = db.session.get(Equipe, vendedor_row.equipe_id)
+    if equipe and not equipe.ativa:
+        raise RifaError("Nao e permitido criar bloco para vendedor de equipe inativa.")
+    if numero_inicio <= 0 or numero_fim <= 0 or numero_inicio > numero_fim:
+        raise RifaError("Intervalo do bloco invalido.")
+
+    campanha = _get_campaign_for_block(campanha_id)
+    _ensure_inventory(campanha=campanha)
+
+    bloco_existente = db.session.execute(
+        db.select(BlocoRifa).where(
+            BlocoRifa.campanha_id == campanha.id,
+            BlocoRifa.numero_inicio <= numero_fim,
+            BlocoRifa.numero_fim >= numero_inicio,
+        )
+    ).scalar_one_or_none()
+    if bloco_existente is not None:
+        raise RifaError("Ja existe um bloco cadastrado para esse intervalo de numeros.")
+
+    # O bloco físico troca o status das rifas para impedir reserva online.
+    rifas = db.session.execute(
+        db.select(Rifa)
+        .where(
+            Rifa.campanha_id == campanha.id,
+            Rifa.numero >= numero_inicio,
+            Rifa.numero <= numero_fim,
+        )
+        .order_by(Rifa.numero.asc())
+    ).scalars().all()
+
+    total_esperado = (numero_fim - numero_inicio) + 1
+    if len(rifas) != total_esperado:
+        raise RifaError("Existem numeros do intervalo que nao pertencem a campanha ativa.")
+
+    indisponiveis = [rifa.numero for rifa in rifas if rifa.status != STATUS_DISPONIVEL]
+    if indisponiveis:
+        raise RifaError(
+            f"Os numeros {', '.join(str(numero) for numero in indisponiveis)} nao estao disponiveis para bloco."
+        )
+
+    bloco = BlocoRifa(
+        campanha_id=campanha.id,
+        vendedor_codigo=vendedor_row.codigo,
+        numero_inicio=numero_inicio,
+        numero_fim=numero_fim,
+    )
+    db.session.add(bloco)
+
+    for rifa in rifas:
+        rifa.status = STATUS_BLOCO
+
+    db.session.flush()
+    return bloco
+
+
 def _buscar_ou_criar_cliente(*, nome: str, telefone: str, email: str, endereco: str = None) -> ClienteRifa:
     cliente = db.session.execute(
         db.select(ClienteRifa).where(ClienteRifa.email == email, ClienteRifa.telefone == telefone,ClienteRifa.nome == nome)
@@ -242,7 +399,7 @@ def get_public_page_data() -> dict:
     }
 
 
-def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vendedor: str, quantidade_rifas: int):
+def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vendedor: str, quantidade_rifas: int):
     ensure_rifas_schema()
     nome = _normalizar_texto(nome).upper()
     email = _normalizar_texto(email).lower()
@@ -259,6 +416,31 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vended
 
     if campanha is None:
         raise RifaError("Nenhuma campanha de rifa ativa foi cadastrada.")
+
+    vendedor_codigo = _normalizar_codigo_vendedor(vendedor)
+    vendedor_resolvido = None
+    if vendedor_codigo:
+        vendedor_obj = get_vendedor_by_codigo(vendedor_codigo)
+        if vendedor_obj:
+            vendedor = vendedor_obj.nome
+
+
+    equipe_id = None
+
+    if vendedor_codigo:
+        db.session.flush()
+        vendedor_row = db.session.execute(
+            db.select(Vendedor.codigo, Vendedor.equipe_id).where(Vendedor.codigo == vendedor_codigo)
+        ).one_or_none()
+        if vendedor_row is None:
+            raise RifaError("Codigo de vendedor invalido.")
+        vendedor_resolvido = vendedor_row.codigo
+        equipe_id = vendedor_row.equipe_id
+        equipe_ativa = db.session.scalar(
+            db.select(Equipe.ativa).where(Equipe.id == vendedor_row.equipe_id)
+        )
+        if equipe_ativa is False:
+            raise RifaError("A equipe vinculada ao vendedor informado esta inativa.")
 
     valor_unitario = Decimal(str(campanha.valor_rifa))
     valor_total = (valor_unitario * quantidade_rifas).quantize(Decimal("0.00"))
@@ -301,7 +483,9 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str,vended
         copia_cola_pix=charge.copia_cola_pix,
         external_id=charge.external_id,
         txid=txid,
-        vendedor=vendedor,  # ✅ NOVO
+        vendedor=vendedor,
+        vendedor_codigo=vendedor_resolvido,
+        equipe_id=equipe_id,
     )
 
     db.session.add(pagamento)
@@ -604,6 +788,12 @@ def payment_summary(pagamento: PagamentoRifa) -> dict:
             "data_sorteio": pagamento.campanha.data_sorteio.isoformat() if pagamento.campanha and pagamento.campanha.data_sorteio else None,
             "valor_rifa": float(pagamento.campanha.valor_rifa),
         } if pagamento.campanha else None,
+        "vendedor": pagamento.vendedor,
+        "vendedor_codigo": pagamento.vendedor_codigo,
+        "equipe": {
+            "id": pagamento.equipe.id,
+            "nome": pagamento.equipe.nome,
+        } if pagamento.equipe else None,
         "rifas": rifas,
         "pdf_path": pagamento.pdf_path,
         "comprovante_path": pagamento.comprovante_path,
@@ -853,7 +1043,134 @@ def limpeza_completa_rifas():
 def acesso_rifas_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated and current_user.is_admin():
+            session["acesso_rifas"] = True
+            session["perfil"] = "admin"
+            return f(*args, **kwargs)
+
         if not session.get("acesso_rifas"):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
+
+def update_team(equipe_id: str, nome: str, ativa: bool):
+    ensure_rifas_schema()
+    equipe = db.session.get(Equipe, equipe_id)
+    if not equipe:
+        raise RifaError("Equipe nao encontrada.")
+
+    nome_normalizado = _normalizar_texto(nome)
+    if not nome_normalizado:
+        raise RifaError("Nome da equipe e obrigatorio.")
+
+    equipe_existente = db.session.execute(
+        db.select(Equipe).where(
+            func.upper(Equipe.nome) == nome_normalizado.upper(),
+            Equipe.id != equipe.id,
+        )
+    ).scalar_one_or_none()
+    if equipe_existente is not None:
+        raise RifaError("Ja existe outra equipe com esse nome.")
+
+    equipe.nome = nome_normalizado
+    equipe.ativa = ativa
+    return equipe
+
+
+def delete_team(equipe_id: str):
+    ensure_rifas_schema()
+    equipe = db.session.get(Equipe, equipe_id)
+    if not equipe:
+        raise RifaError("Equipe nao encontrada.")
+
+    possui_vendedores = db.session.scalar(
+        db.select(func.count(Vendedor.id)).where(Vendedor.equipe_id == equipe.id)
+    ) or 0
+    if possui_vendedores:
+        raise RifaError("Nao e permitido excluir equipe com vendedores vinculados.")
+
+    pagamentos = db.session.execute(
+        db.select(PagamentoRifa).where(PagamentoRifa.equipe_id == equipe.id)
+    ).scalars().all()
+    for pagamento in pagamentos:
+        pagamento.equipe_id = None
+
+    db.session.delete(equipe)
+
+
+def update_vendor(vendedor_id: str, nome: str, codigo: str, equipe_id: str):
+    ensure_rifas_schema()
+    vendedor = db.session.get(Vendedor, vendedor_id)
+    if not vendedor:
+        raise RifaError("Vendedor nao encontrado.")
+
+    nome_normalizado = _normalizar_texto(nome)
+    codigo_normalizado = _normalizar_codigo_vendedor(codigo)
+
+    if not nome_normalizado:
+        raise RifaError("Nome do vendedor e obrigatorio.")
+    if not codigo_normalizado:
+        raise RifaError("Codigo do vendedor e obrigatorio.")
+
+    equipe = db.session.get(Equipe, equipe_id)
+    if not equipe:
+        raise RifaError("Equipe nao encontrada.")
+    if not equipe.ativa:
+        raise RifaError("Nao e permitido vincular vendedor a uma equipe inativa.")
+
+    vendedor_existente = db.session.execute(
+        db.select(Vendedor).where(
+            func.upper(Vendedor.codigo) == codigo_normalizado.upper(),
+            Vendedor.id != vendedor.id,
+        )
+    ).scalar_one_or_none()
+    if vendedor_existente is not None:
+        raise RifaError("Ja existe outro vendedor com esse codigo.")
+
+    codigo_anterior = vendedor.codigo
+    if codigo_anterior != codigo_normalizado:
+        total_pagamentos = db.session.scalar(
+            db.select(func.count(PagamentoRifa.id)).where(PagamentoRifa.vendedor_codigo == codigo_anterior)
+        ) or 0
+        total_blocos = db.session.scalar(
+            db.select(func.count(BlocoRifa.id)).where(BlocoRifa.vendedor_codigo == codigo_anterior)
+        ) or 0
+        if total_pagamentos or total_blocos:
+            raise RifaError(
+                "Nao e permitido alterar o codigo de vendedor que ja possui pagamentos ou blocos vinculados."
+            )
+
+    vendedor.nome = nome_normalizado
+    vendedor.codigo = codigo_normalizado
+    vendedor.equipe_id = equipe_id
+
+    pagamentos_equipe = db.session.execute(
+        db.select(PagamentoRifa).where(PagamentoRifa.vendedor_codigo == vendedor.codigo)
+    ).scalars().all()
+    for pagamento in pagamentos_equipe:
+        pagamento.equipe_id = equipe.id
+
+    return vendedor
+
+
+def delete_vendor(vendedor_id: str):
+    ensure_rifas_schema()
+    vendedor = db.session.get(Vendedor, vendedor_id)
+    if not vendedor:
+        raise RifaError("Vendedor nao encontrado.")
+
+    possui_blocos = db.session.scalar(
+        db.select(func.count(BlocoRifa.id)).where(BlocoRifa.vendedor_codigo == vendedor.codigo)
+    ) or 0
+    if possui_blocos:
+        raise RifaError("Nao e permitido excluir vendedor com blocos cadastrados.")
+
+    pagamentos = db.session.execute(
+        db.select(PagamentoRifa).where(PagamentoRifa.vendedor_codigo == vendedor.codigo)
+    ).scalars().all()
+    for pagamento in pagamentos:
+        if not pagamento.vendedor:
+            pagamento.vendedor = vendedor.nome
+        pagamento.vendedor_codigo = None
+
+    db.session.delete(vendedor)

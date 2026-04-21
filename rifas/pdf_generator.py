@@ -27,6 +27,7 @@ def generate_tickets_pdf(*, pagamento, rifas, cliente) -> str:
     telefone = cliente.telefone or ""
     endereco = (cliente.endereco or "").upper()
     data = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
+    vendedor = (pagamento.vendedor or "").upper()
 
     for i, rifa in enumerate(rifas):
 
@@ -55,6 +56,10 @@ def generate_tickets_pdf(*, pagamento, rifas, cliente) -> str:
         pdf.setFont("Helvetica", 9)
         pdf.drawString(190 + 20+20+20, base_y + 95, telefone[:20])
 
+        # VENDEDOR
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(190+60+60, base_y + 80, vendedor[:30])
+
         # ENDEREÇO
         pdf.setFont("Helvetica", 8)
         pdf.drawString(150 + 40+120, base_y + 75 + 50, endereco[:50])
@@ -70,6 +75,7 @@ def generate_tickets_pdf(*, pagamento, rifas, cliente) -> str:
         # ID
         pdf.setFont("Helvetica", 6)
         pdf.drawString(20, base_y + 5, f"ID: {pagamento.id[:10]}")
+
 
     pdf.save()
     return str(output_path)
@@ -93,6 +99,7 @@ def generate_tickets_pdf_memory(*, pagamento, rifas, cliente):
     telefone = cliente.telefone or ""
     endereco = (cliente.endereco or "").upper()
     data = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
+    vendedor = (pagamento.vendedor or "").upper()
 
     for i, rifa in enumerate(rifas):
 
@@ -111,6 +118,9 @@ def generate_tickets_pdf_memory(*, pagamento, rifas, cliente):
 
         pdf.setFont("Helvetica", 9)
         pdf.drawString(250, base_y + 95, telefone[:20])
+
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(190+60+60, base_y + 80, vendedor[:30])
 
         pdf.setFont("Helvetica", 8)
         pdf.drawString(310, base_y + 125, endereco[:50])

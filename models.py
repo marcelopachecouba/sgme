@@ -840,6 +840,66 @@ class RifaCampanha(db.Model):
 
     pagamentos = db.relationship("PagamentoRifa", back_populates="campanha", lazy="select")
     rifas = db.relationship("Rifa", back_populates="campanha", lazy="select")
+    blocos = db.relationship("BlocoRifa", back_populates="campanha", lazy="select")
+
+
+class Equipe(db.Model):
+    __tablename__ = "equipes"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    nome = db.Column(db.String(120), nullable=False, unique=True)
+    ativa = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    vendedores = db.relationship("Vendedor", back_populates="equipe", lazy="select")
+    pagamentos = db.relationship("PagamentoRifa", back_populates="equipe", lazy="select")
+
+
+class Vendedor(db.Model):
+    __tablename__ = "vendedores"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    nome = db.Column(db.String(120), nullable=False)
+    codigo = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    equipe_id = db.Column(db.String(36), db.ForeignKey("equipes.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    equipe = db.relationship("Equipe", back_populates="vendedores", lazy="joined")
+    pagamentos = db.relationship(
+        "PagamentoRifa",
+        back_populates="vendedor_rel",
+        lazy="select",
+        foreign_keys="PagamentoRifa.vendedor_codigo",
+    )
+    blocos = db.relationship("BlocoRifa", back_populates="vendedor", lazy="select")
+
+    @property
+    def link_publico(self) -> str:
+        return f"/rifas?ref={self.codigo}"
+
+
+class BlocoRifa(db.Model):
+    __tablename__ = "blocos_rifas"
+
+    id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
+    campanha_id = db.Column(db.String(36), db.ForeignKey("rifas_campanhas.id"), nullable=False, index=True)
+    vendedor_codigo = db.Column(db.String(50), db.ForeignKey("vendedores.codigo"), nullable=False, index=True)
+    numero_inicio = db.Column(db.Integer, nullable=False)
+    numero_fim = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.CheckConstraint("numero_inicio <= numero_fim", name="ck_bloco_rifa_intervalo"),
+        db.UniqueConstraint(
+            "campanha_id",
+            "numero_inicio",
+            "numero_fim",
+            name="uq_bloco_rifa_intervalo_campanha",
+        ),
+    )
+
+    campanha = db.relationship("RifaCampanha", back_populates="blocos", lazy="joined")
+    vendedor = db.relationship("Vendedor", back_populates="blocos", lazy="joined")
 
 
 class PagamentoRifa(db.Model):
@@ -864,6 +924,8 @@ class PagamentoRifa(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     pago_em = db.Column(db.DateTime, index=True)
     vendedor = db.Column(db.String(120))
+    vendedor_codigo = db.Column(db.String(50), db.ForeignKey("vendedores.codigo"), index=True)
+    equipe_id = db.Column(db.String(36), db.ForeignKey("equipes.id"), index=True)
     txid = db.Column(db.String(25), unique=True, index=True)
     origem_pagamento = db.Column(db.String(20))
     impresso = db.Column(db.Boolean, default=False)
@@ -877,6 +939,13 @@ class PagamentoRifa(db.Model):
 
     cliente = db.relationship("ClienteRifa", back_populates="pagamentos", lazy="joined")
     campanha = db.relationship("RifaCampanha", back_populates="pagamentos", lazy="joined")
+    equipe = db.relationship("Equipe", back_populates="pagamentos", lazy="joined")
+    vendedor_rel = db.relationship(
+        "Vendedor",
+        back_populates="pagamentos",
+        lazy="joined",
+        foreign_keys=[vendedor_codigo],
+    )
     rifas = db.relationship("Rifa", back_populates="pagamento", lazy="select")
 
 

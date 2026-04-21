@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "rifas_menu.html" %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Equipes e Vendedores</h1>
+        <p class="text-secondary mb-0">Cadastre equipes, vincule vendedores e gere links personalizados.</p>
+    </div>
+</div>
+
+{% if schema_message %}
+<div class="alert alert-warning">{{ schema_message }}</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Nova Equipe</h2>
+                <form method="post" class="row g-3">
+                    <input type="hidden" name="acao" value="criar_equipe">
+                    <div class="col-12">
+                        <label class="form-label">Nome da equipe</label>
+                        <input class="form-control" name="nome_equipe" required>
+                    </div>
+                    <div class="col-12 form-check">
+                        <input class="form-check-input" type="checkbox" name="ativa" id="ativa" checked>
+                        <label class="form-check-label" for="ativa">Equipe ativa</label>
+                    </div>
+                    <div class="col-12 d-grid">
+                        <button class="btn btn-primary" type="submit">Cadastrar equipe</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Novo Vendedor</h2>
+                <form method="post" class="row g-3">
+                    <input type="hidden" name="acao" value="criar_vendedor">
+                    <div class="col-md-5">
+                        <label class="form-label">Nome</label>
+                        <input class="form-control" name="nome_vendedor" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Codigo</label>
+                        <input class="form-control text-uppercase" name="codigo_vendedor" placeholder="JOAO123" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Equipe</label>
+                        <select class="form-select" name="equipe_id" required>
+                            <option value="">Selecione</option>
+                            {% for equipe in equipes_lista %}
+                            <option value="{{ equipe.id }}">{{ equipe.nome }}{% if not equipe.ativa %} (inativa){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 d-grid">
+                        <button class="btn btn-success" type="submit">Cadastrar vendedor</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Equipes Cadastradas</h2>
+                {% if equipes_lista %}
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Equipe</th>
+                                <th>Status</th>
+                                <th class="text-end">Acao</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equipe in equipes_lista %}
+                            <tr>
+                                <td colspan="3">
+                                    <div class="row g-2 align-items-center">
+                                        <form method="post" class="col-12">
+                                            <input type="hidden" name="acao" value="editar_equipe">
+                                            <input type="hidden" name="equipe_id" value="{{ equipe.id }}">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-6">
+                                                    <input
+                                                        type="text"
+                                                        name="nome_equipe"
+                                                        value="{{ equipe.nome }}"
+                                                        class="form-control form-control-sm"
+                                                        required
+                                                    >
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <input
+                                                            class="form-check-input"
+                                                            type="checkbox"
+                                                            name="ativa"
+                                                            id="equipe-ativa-{{ equipe.id }}"
+                                                            {% if equipe.ativa %}checked{% endif %}
+                                                        >
+                                                        <label class="form-check-label small" for="equipe-ativa-{{ equipe.id }}">
+                                                            Ativa
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 d-flex justify-content-md-end gap-1">
+                                                    <button class="btn btn-success btn-sm" type="submit">Salvar</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <div class="col-12 d-flex justify-content-end">
+                                            <form method="post" onsubmit="return confirm('Deseja excluir esta equipe?')">
+                                                <input type="hidden" name="acao" value="excluir_equipe">
+                                                <input type="hidden" name="equipe_id" value="{{ equipe.id }}">
+                                                <button class="btn btn-danger btn-sm" type="submit">Excluir</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-secondary mb-0">Nenhuma equipe cadastrada ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Vendedores Cadastrados</h2>
+                {% if vendedores_lista %}
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Codigo</th>
+                                <th>Equipe</th>
+                                <th>Link</th>
+                                <th class="text-end">Acao</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vendedor in vendedores_lista %}
+                            <tr>
+                                <td colspan="5">
+                                    <div class="row g-2 align-items-center">
+                                        <form method="post" class="col-12">
+                                            <input type="hidden" name="acao" value="editar_vendedor">
+                                            <input type="hidden" name="vendedor_id" value="{{ vendedor.id }}">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-3">
+                                                    <input
+                                                        type="text"
+                                                        name="nome_vendedor"
+                                                        value="{{ vendedor.nome }}"
+                                                        class="form-control form-control-sm"
+                                                        required
+                                                    >
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <input
+                                                        type="text"
+                                                        name="codigo_vendedor"
+                                                        value="{{ vendedor.codigo }}"
+                                                        class="form-control form-control-sm text-uppercase"
+                                                        required
+                                                    >
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <select name="equipe_id" class="form-select form-select-sm" required>
+                                                        {% for equipe in equipes_lista %}
+                                                        <option value="{{ equipe.id }}" {% if equipe.id == vendedor.equipe_id %}selected{% endif %}>
+                                                            {{ equipe.nome }}{% if not equipe.ativa %} (inativa){% endif %}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <a href="{{ vendedor.link_absoluto }}" target="_blank" rel="noreferrer">
+                                                        {{ vendedor.link_relativo }}
+                                                    </a>
+                                                </div>
+                                                <div class="col-md-2 d-flex justify-content-md-end gap-1">
+                                                    <button class="btn btn-success btn-sm" type="submit">Salvar</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <div class="col-12 d-flex justify-content-end gap-1">
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm"
+                                                type="button"
+                                                onclick="copiarLink('{{ vendedor.link_absoluto }}')">
+                                                Copiar
+                                            </button>
+                                            <form method="post" onsubmit="return confirm('Deseja excluir este vendedor?')">
+                                                <input type="hidden" name="acao" value="excluir_vendedor">
+                                                <input type="hidden" name="vendedor_id" value="{{ vendedor.id }}">
+                                                <button class="btn btn-danger btn-sm" type="submit">Excluir</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-secondary mb-0">Nenhum vendedor cadastrado ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copiarLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        alert("Link copiado com sucesso.");
+    }).catch(() => {
+        prompt("Copie o link abaixo:", link);
+    });
+}
+</script>
+{% endblock %}

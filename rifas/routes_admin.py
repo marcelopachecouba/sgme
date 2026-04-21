@@ -1,4 +1,5 @@
-﻿from rifas.services import cancelar_pagamento
+﻿from rifas.services import update_team, delete_team, update_vendor, delete_vendor
+from rifas.services import cancelar_pagamento
 from rifas.services import acesso_rifas_required
 from flask import request, session, render_template, redirect, url_for, flash
 from rifas.services import payment_whatsapp_link
@@ -6,21 +7,25 @@ from datetime import timedelta  # 🔥 IMPORTAR LÁ EM CIMA
 from datetime import datetime
 from pathlib import Path
 from flask import Blueprint, jsonify, redirect, render_template, request, send_file, url_for, flash
-from flask_login import login_required
+from flask_login import current_user, login_required, login_user
 from rifas.services import cancelar_pagamentos_expirados  # 🔥 IMPORTAR LÁ EM CIMA
 from utils.auth import admin_required
 from extensions import db  # ✅ ADICIONADO
-from models import PagamentoRifa, ClienteRifa
+from models import ClienteRifa, Equipe, Ministro, PagamentoRifa, Vendedor
 from sqlalchemy import func
 from rifas.services import (
     RifaError,
     RifaSchemaMissingError,
     admin_dashboard_data,
     confirm_payment,
+    create_team,
+    create_vendor,
     create_or_update_campaign,
+    generate_vendor_link,
     get_campaign,
     payment_detail_data,
 )
+from services.public_url_service import build_public_url
 
 rifas_admin_bp = Blueprint("rifas_admin", __name__)
 
@@ -333,6 +338,101 @@ def admin_rifas_cadastro():
     return render_template("admin_rifa_cadastro.html", **dados)
 
 
+@rifas_admin_bp.route("/admin/rifas/equipes-vendedores", methods=["GET", "POST"])
+@acesso_rifas_required
+def admin_equipes_vendedores():
+
+    if request.method == "POST":
+        acao = (request.form.get("acao") or "").strip()
+
+        try:
+            if acao == "criar_equipe":
+                create_team(
+                    nome=request.form.get("nome_equipe", ""),
+                    ativa=request.form.get("ativa") == "on",
+                )
+                db.session.commit()
+                flash("Equipe cadastrada com sucesso.", "success")
+
+            elif acao == "criar_vendedor":
+                create_vendor(
+                    nome=request.form.get("nome_vendedor", ""),
+                    codigo=request.form.get("codigo_vendedor", ""),
+                    equipe_id=request.form.get("equipe_id", ""),
+                )
+                db.session.commit()
+                flash("Vendedor cadastrado com sucesso.", "success")
+
+            elif acao == "editar_equipe":
+                update_team(
+                    equipe_id=request.form.get("equipe_id"),
+                    nome=request.form.get("nome_equipe"),
+                    ativa=request.form.get("ativa") == "on"
+                )
+                db.session.commit()
+                flash("Equipe atualizada", "success")
+
+            elif acao == "excluir_equipe":
+                delete_team(request.form.get("equipe_id"))
+                db.session.commit()
+                flash("Equipe excluída", "success")
+
+            elif acao == "editar_vendedor":
+                update_vendor(
+                    vendedor_id=request.form.get("vendedor_id"),
+                    nome=request.form.get("nome_vendedor"),
+                    codigo=request.form.get("codigo_vendedor"),
+                    equipe_id=request.form.get("equipe_id"),
+                )
+                db.session.commit()
+                flash("Vendedor atualizado", "success")
+
+            elif acao == "excluir_vendedor":
+                delete_vendor(request.form.get("vendedor_id"))
+                db.session.commit()
+                flash("Vendedor excluído", "success")
+
+            else:
+                flash("Acao invalida.", "danger")
+
+        except RifaError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+
+        return redirect(url_for("rifas_admin.admin_equipes_vendedores"))
+
+    # 🔽 GET (TEM QUE FICAR FORA DO POST!)
+    dados = _base_context()
+
+    equipes = db.session.execute(
+        db.select(Equipe).order_by(Equipe.nome.asc())
+    ).scalars().all()
+
+    vendedores = db.session.execute(
+        db.select(Vendedor).order_by(Vendedor.nome.asc(), Vendedor.codigo.asc())
+    ).scalars().all()
+
+    vendedores_view = []
+    for vendedor in vendedores:
+        link_relativo = generate_vendor_link(vendedor.codigo)
+        link_absoluto = build_public_url("rifas_public.rifas_home", ref=vendedor.codigo)
+
+        vendedores_view.append({
+            "id": vendedor.id,
+            "nome": vendedor.nome,
+            "codigo": vendedor.codigo,
+            "equipe_id": vendedor.equipe_id,
+            "equipe_nome": vendedor.equipe.nome if vendedor.equipe else "-",
+            "link_relativo": link_relativo,
+            "link_absoluto": link_absoluto,
+        })
+
+    dados["equipes_lista"] = equipes
+    dados["vendedores_lista"] = vendedores_view
+
+    return render_template("admin_equipes_vendedores.html", **dados)
+
+
 @rifas_admin_bp.route("/admin/rifas/resumo.json", methods=["GET"])
 @acesso_rifas_required
 
@@ -435,17 +535,45 @@ CODIGO_SECRETARIA = "paroquia2026"  # 🔒 troque depois
 
 @rifas_admin_bp.route("/rifas/acesso", methods=["GET", "POST"])
 def acesso_rifas_secretaria():
+    if current_user.is_authenticated and current_user.is_admin():
+        session["acesso_rifas"] = True
+        session["perfil"] = "admin"
+        return redirect(url_for("rifas_admin.admin_rifas"))
 
-    # 🔥 AQUI É O LUGAR CERTO
-    codigo = request.args.get("codigo") or request.form.get("codigo")
+    codigo = (request.args.get("codigo") or request.form.get("codigo") or "").strip()
+    login_input = (request.form.get("login") or "").strip()
+    senha = request.form.get("senha") or ""
 
     if codigo:
         if codigo == CODIGO_SECRETARIA:
             session["acesso_rifas"] = True
             session["perfil"] = "secretaria"
-
             return redirect(url_for("rifas_admin.admin_rifas"))
 
-        flash("Código inválido", "danger")
+        flash("Código inválido.", "danger")
+
+    if login_input and senha:
+        login_limpo = (
+            login_input
+            .replace(".", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace(" ", "")
+        )
+
+        usuario = Ministro.query.filter(
+            (Ministro.email == login_input)
+            | (Ministro.cpf == login_limpo)
+            | (Ministro.telefone == login_limpo)
+        ).first()
+
+        if usuario and usuario.pode_logar and usuario.check_senha(senha) and usuario.is_admin():
+            login_user(usuario)
+            session["acesso_rifas"] = True
+            session["perfil"] = "admin"
+            return redirect(url_for("rifas_admin.admin_rifas"))
+
+        flash("Login admin inválido para acesso às rifas.", "danger")
 
     return render_template("acesso_rifas.html")    

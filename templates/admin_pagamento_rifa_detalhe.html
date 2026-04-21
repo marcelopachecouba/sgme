@@ -18,6 +18,8 @@
                     <div class="col-md-6"><strong>Telefone:</strong> {{ pagamento.cliente.telefone }}</div>
                     <div class="col-md-6"><strong>Campanha:</strong> {{ pagamento.campanha.titulo if pagamento.campanha else '-' }}</div>
                     <div class="col-md-6"><strong>Status:</strong> {{ pagamento.status }}</div>
+                    <div class="col-md-6"><strong>Vendedor:</strong> {{ pagamento.vendedor or '-' }}</div>
+                    <div class="col-md-6"><strong>Equipe:</strong> {{ pagamento.equipe.nome if pagamento.equipe else '-' }}</div>
                     
                     
                     <div class="col-md-6">

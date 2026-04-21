@@ -231,6 +231,11 @@
                         {% elif campanha %}
                         <div class="campaign-board">
                             <h1>{{ campanha.titulo }}</h1>
+                            {% if vendedor_ref and vendedor_nome %}
+                            <div class="alert alert-info mt-3 mb-0">
+                                Compra vinculada automaticamente ao vendedor <strong>{{ vendedor_nome }}</strong> ({{ vendedor_ref }}).
+                            </div>
+                            {% endif %}
                             {% if mostrar_data_sorteio %}
                             <div class="fs-5 fw-bold">Sorteio em {{ campanha.data_sorteio.strftime("%d/%m/%Y") }}</div>
                             {% endif %}
