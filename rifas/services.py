@@ -422,7 +422,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
     if vendedor_codigo:
         vendedor_obj = get_vendedor_by_codigo(vendedor_codigo)
         if vendedor_obj:
-            vendedor = vendedor_obj.nome
+            vendedor = vendedor_obj.nome if vendedor_obj else ""
 
 
     equipe_id = None

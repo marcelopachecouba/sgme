@@ -26,8 +26,14 @@ def generate_tickets_pdf(*, pagamento, rifas, cliente) -> str:
     nome = (cliente.nome or "").upper()
     telefone = cliente.telefone or ""
     endereco = (cliente.endereco or "").upper()
-    data = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
-    vendedor = (pagamento.vendedor or "").upper()
+    
+    data = (
+        pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
+        if pagamento.campanha and pagamento.campanha.data_sorteio
+        else ""
+    )
+
+    vendedor = pagamento.vendedor.upper() if pagamento.vendedor else ""
 
     for i, rifa in enumerate(rifas):
 
@@ -98,9 +104,15 @@ def generate_tickets_pdf_memory(*, pagamento, rifas, cliente):
     nome = (cliente.nome or "").upper()
     telefone = cliente.telefone or ""
     endereco = (cliente.endereco or "").upper()
-    data = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
-    vendedor = (pagamento.vendedor or "").upper()
 
+    data = (
+        pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
+        if pagamento.campanha and pagamento.campanha.data_sorteio
+        else ""
+    )
+
+
+    vendedor = pagamento.vendedor.upper() if pagamento.vendedor else ""
     for i, rifa in enumerate(rifas):
 
         pos_y = page_height - ((i % 5 + 1) * ticket_height)
