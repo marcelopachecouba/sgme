@@ -254,7 +254,7 @@ def create_team(*, nome: str, ativa: bool = True) -> Equipe:
     return equipe
 
 
-def create_vendor(*, nome: str, codigo: str, equipe_id: str) -> Vendedor:
+def create_vendor(*, nome: str, codigo: str, equipe_id: str, telefone: str = None) -> Vendedor:
     ensure_rifas_schema()
     nome_normalizado = _normalizar_texto(nome)
     codigo_normalizado = _normalizar_codigo_vendedor(codigo)
@@ -274,7 +274,7 @@ def create_vendor(*, nome: str, codigo: str, equipe_id: str) -> Vendedor:
     if vendedor_existente is not None:
         raise RifaError("Ja existe um vendedor com esse codigo.")
 
-    vendedor = Vendedor(nome=nome_normalizado, codigo=codigo_normalizado, equipe_id=equipe.id)
+    vendedor = Vendedor(nome=nome_normalizado, codigo=codigo_normalizado, equipe_id=equipe.id,telefone=telefone)
     db.session.add(vendedor)
     db.session.flush()
     return vendedor
@@ -1098,7 +1098,7 @@ def delete_team(equipe_id: str):
     db.session.delete(equipe)
 
 
-def update_vendor(vendedor_id: str, nome: str, codigo: str, equipe_id: str):
+def update_vendor(vendedor_id: str, nome: str, codigo: str, equipe_id: str, telefone: str = None):
     ensure_rifas_schema()
     vendedor = db.session.get(Vendedor, vendedor_id)
     if not vendedor:
@@ -1143,6 +1143,10 @@ def update_vendor(vendedor_id: str, nome: str, codigo: str, equipe_id: str):
     vendedor.nome = nome_normalizado
     vendedor.codigo = codigo_normalizado
     vendedor.equipe_id = equipe_id
+    if telefone is not None:
+        telefone_limpo = _normalize_phone(telefone)
+        if telefone_limpo:
+            vendedor.telefone = telefone_limpo
 
     pagamentos_equipe = db.session.execute(
         db.select(PagamentoRifa).where(PagamentoRifa.vendedor_codigo == vendedor.codigo)
@@ -1174,3 +1178,70 @@ def delete_vendor(vendedor_id: str):
         pagamento.vendedor_codigo = None
 
     db.session.delete(vendedor)
+
+def gerar_mensagem_vendedor(codigo):
+    link = f"https://sgme.onrender.com/acao_entre_fieis?ref={codigo}"
+
+    mensagem = f"""Oi 😊 tudo bem?
+
+Estou participando de uma ação entre fiéis da igreja 🙏
+Se você puder ajudar, pode adquirir sua rifa direto por aqui:
+
+👉 {link}
+
+Os números são gerados automaticamente pelo sistema, de forma rápida e segura 👍
+
+Você preenche seus dados no próprio link, o sistema já gera o QR Code do Pix, você faz o pagamento e pode enviar o comprovante ali mesmo na tela.
+
+📌 Importante:
+Comprando pelo link, não precisa canhoto nem bloco — já fica tudo registrado automaticamente.
+
+Qualquer ajuda já faz muita diferença 🙌
+Deus abençoe!
+"""
+    return mensagem
+
+import urllib.parse
+
+def gerar_link_whatsapp(codigo):
+    mensagem = gerar_mensagem_vendedor(codigo)
+    mensagem_encoded = urllib.parse.quote(mensagem)
+
+    return f"https://wa.me/?text={mensagem_encoded}"
+
+from datetime import datetime, timedelta
+from urllib.parse import quote
+
+def lembrar_comprovante():
+    agora = datetime.utcnow()
+    limite = agora - timedelta(minutes=30)
+
+    pagamentos = db.session.execute(
+        db.select(PagamentoRifa).where(
+            PagamentoRifa.status == "pendente",
+            PagamentoRifa.created_at < limite
+        )
+    ).scalars().all()
+
+    for p in pagamentos:
+        if not p.cliente or not p.cliente.telefone:
+            continue
+
+        link = build_public_url("rifas_public.pagamento_detalhe", payment_id=p.id)
+
+        mensagem = f"""Olá {p.cliente.nome} 😊
+
+Você iniciou a compra da rifa, mas ainda não enviou o comprovante.
+
+👉 Envie aqui:
+{link}
+
+⏰ Sua reserva pode expirar!
+
+Deus abençoe 🙌
+"""
+
+        telefone = ''.join(filter(str.isdigit, p.cliente.telefone))
+        whatsapp_link = f"https://wa.me/55{telefone}?text={quote(mensagem)}"
+
+        print("LEMBRETE:", whatsapp_link)

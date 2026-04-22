@@ -1,4 +1,5 @@
-﻿from rifas.services import update_team, delete_team, update_vendor, delete_vendor
+﻿import urllib.parse
+from rifas.services import update_team, delete_team, update_vendor, delete_vendor
 from rifas.services import cancelar_pagamento
 from rifas.services import acesso_rifas_required
 from flask import request, session, render_template, redirect, url_for, flash
@@ -26,6 +27,8 @@ from rifas.services import (
     payment_detail_data,
 )
 from services.public_url_service import build_public_url
+
+
 
 rifas_admin_bp = Blueprint("rifas_admin", __name__)
 
@@ -63,6 +66,27 @@ def _parse_date(value: str):
     except ValueError:
         return None
 
+
+def gerar_mensagem_vendedor(codigo):
+    link = build_public_url("rifas_public.rifas_home", ref=codigo)
+
+    return f"""Oi 😊 tudo bem?
+
+Estou participando de uma ação entre fiéis da igreja 🙏
+Se você puder ajudar, pode adquirir sua rifa direto por aqui:
+
+👉 {link}
+
+Os números são gerados automaticamente pelo sistema, de forma rápida e segura 👍
+
+Você preenche seus dados no próprio link, o sistema já gera o QR Code do Pix, você faz o pagamento e pode enviar o comprovante ali mesmo na tela.
+
+📌 Importante:
+Comprando pelo link, não precisa canhoto nem bloco — já fica tudo registrado automaticamente.
+
+Qualquer ajuda já faz muita diferença 🙌
+Deus abençoe!
+"""
 
 @rifas_admin_bp.route("/admin/rifas", methods=["GET"])
 @acesso_rifas_required
@@ -359,6 +383,7 @@ def admin_equipes_vendedores():
                     nome=request.form.get("nome_vendedor", ""),
                     codigo=request.form.get("codigo_vendedor", ""),
                     equipe_id=request.form.get("equipe_id", ""),
+                    telefone=request.form.get("telefone_vendedor"),
                 )
                 db.session.commit()
                 flash("Vendedor cadastrado com sucesso.", "success")
@@ -383,6 +408,7 @@ def admin_equipes_vendedores():
                     nome=request.form.get("nome_vendedor"),
                     codigo=request.form.get("codigo_vendedor"),
                     equipe_id=request.form.get("equipe_id"),
+                    telefone=request.form.get("telefone_vendedor"),  # 🔥 FALTAVA ISSO
                 )
                 db.session.commit()
                 flash("Vendedor atualizado", "success")
@@ -408,29 +434,54 @@ def admin_equipes_vendedores():
         db.select(Equipe).order_by(Equipe.nome.asc())
     ).scalars().all()
 
-    vendedores = db.session.execute(
-        db.select(Vendedor).order_by(Vendedor.nome.asc(), Vendedor.codigo.asc())
-    ).scalars().all()
+    # 🔥 pegar parâmetro da URL
+    ordenar = request.args.get("ordenar", "nome")
+
+    query = db.select(Vendedor)
+
+    if ordenar == "codigo":
+        query = query.order_by(Vendedor.codigo.asc())
+    else:
+        query = query.order_by(Vendedor.nome.asc())
+
+    vendedores = db.session.execute(query).scalars().all()
 
     vendedores_view = []
     for vendedor in vendedores:
         link_relativo = generate_vendor_link(vendedor.codigo)
         link_absoluto = build_public_url("rifas_public.rifas_home", ref=vendedor.codigo)
 
+        mensagem = gerar_mensagem_vendedor(vendedor.codigo)
+        mensagem_encoded = urllib.parse.quote(mensagem)
+
+        # 🔥 WHATSAPP INTELIGENTE
+        whatsapp_link = None
+
+        if vendedor.telefone:
+            telefone = ''.join(filter(str.isdigit, vendedor.telefone))
+            if telefone:
+                whatsapp_link = f"https://wa.me/55{telefone}?text={mensagem_encoded}"
+        else:
+            # fallback (abre escolha de contato)
+            whatsapp_link = f"https://wa.me/?text={mensagem_encoded}"
+            
         vendedores_view.append({
             "id": vendedor.id,
             "nome": vendedor.nome,
             "codigo": vendedor.codigo,
+            "telefone": vendedor.telefone,
             "equipe_id": vendedor.equipe_id,
             "equipe_nome": vendedor.equipe.nome if vendedor.equipe else "-",
             "link_relativo": link_relativo,
             "link_absoluto": link_absoluto,
-        })
+            "whatsapp_link": whatsapp_link,  # 🔥 AQUI
+        })        
 
     dados["equipes_lista"] = equipes
     dados["vendedores_lista"] = vendedores_view
 
     return render_template("admin_equipes_vendedores.html", **dados)
+
 
 
 @rifas_admin_bp.route("/admin/rifas/resumo.json", methods=["GET"])

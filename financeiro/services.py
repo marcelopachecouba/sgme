@@ -728,3 +728,11 @@ def save_extrato(extrato_id, data_item, descricao, valor, conta_id):
     db.session.add(extrato)
     db.session.commit()
     return extrato
+
+from urllib.parse import quote
+
+def gerar_link_whatsapp_cliente(telefone, mensagem):
+    telefone = ''.join(filter(str.isdigit, telefone or ""))
+    if not telefone:
+        return None
+    return f"https://wa.me/55{telefone}?text={quote(mensagem)}"

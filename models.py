@@ -861,22 +861,24 @@ class Vendedor(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=_uuid_str)
     nome = db.Column(db.String(120), nullable=False)
     codigo = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    telefone = db.Column(db.String(20))  # 👈 COLOQUE AQUI
     equipe_id = db.Column(db.String(36), db.ForeignKey("equipes.id"), nullable=False, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     equipe = db.relationship("Equipe", back_populates="vendedores", lazy="joined")
+
     pagamentos = db.relationship(
         "PagamentoRifa",
         back_populates="vendedor_rel",
         lazy="select",
         foreign_keys="PagamentoRifa.vendedor_codigo",
     )
-    blocos = db.relationship("BlocoRifa", back_populates="vendedor", lazy="select")
 
+    blocos = db.relationship("BlocoRifa", back_populates="vendedor", lazy="select")
+    
     @property
     def link_publico(self) -> str:
-        return f"/rifas?ref={self.codigo}"
-
+        return build_public_url("rifas_public.rifas_home", ref=self.codigo)
 
 class BlocoRifa(db.Model):
     __tablename__ = "blocos_rifas"
