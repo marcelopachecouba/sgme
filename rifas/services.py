@@ -560,45 +560,39 @@ def _public_static_path(subdir: str, filename: str) -> str:
     return f"/{base}/{subdir}/{filename}" if subdir else f"/{base}/{filename}"
 
 
-def _save_receipt_cloudinary(*, arquivo) -> str:
+def _save_receipt_cloudinary(*, arquivo):
     import cloudinary
     import cloudinary.uploader
 
-    cloudinary_url = (
-        current_app.config.get("CLOUDINARY_URL")
-        or os.environ.get("CLOUDINARY_URL")
-        or ""
-    ).strip()
-    cloud_name = (
-        current_app.config.get("CLOUDINARY_CLOUD_NAME")
-        or os.environ.get("CLOUDINARY_CLOUD_NAME")
-        or ""
-    ).strip()
-    api_key = (
-        current_app.config.get("CLOUDINARY_API_KEY")
-        or os.environ.get("CLOUDINARY_API_KEY")
-        or ""
-    ).strip()
-    api_secret = (
-        current_app.config.get("CLOUDINARY_API_SECRET")
-        or os.environ.get("CLOUDINARY_API_SECRET")
-        or ""
-    ).strip()
+    try:
+        if not arquivo:
+            return None, None
 
-    if not cloudinary_url and not all([cloud_name, api_key, api_secret]):
-        raise RifaError(
-            "Cloudinary nao configurado."
+        cloudinary_url = (
+            current_app.config.get("CLOUDINARY_URL")
+            or os.environ.get("CLOUDINARY_URL")
         )
 
-    if cloudinary_url:
-        cloudinary.config(cloudinary_url=cloudinary_url)
-    else:
-        cloudinary.config(
-            cloud_name=cloud_name,
-            api_key=api_key,
-            api_secret=api_secret,
-        )
+        if cloudinary_url:
+            cloudinary.config(cloudinary_url=cloudinary_url)
+        else:
+            cloudinary.config(
+                cloud_name=current_app.config.get("CLOUDINARY_CLOUD_NAME"),
+                api_key=current_app.config.get("CLOUDINARY_API_KEY"),
+                api_secret=current_app.config.get("CLOUDINARY_API_SECRET"),
+            )
 
+        filename = secure_filename(arquivo.filename)
+
+        if not filename:
+            return None, None
+
+        ext = Path(filename).suffix.lower()
+
+        if ext not in ALLOWED_RECEIPT_EXTENSIONS:
+            raise RifaError("Formato não permitido")
+
+        # 🔥 upload sempre executa
         upload = cloudinary.uploader.upload(
             arquivo.stream,
             folder="rifas/comprovantes",
@@ -606,12 +600,14 @@ def _save_receipt_cloudinary(*, arquivo) -> str:
         )
 
         url = upload.get("secure_url")
-        format = upload.get("format")  # 🔥 EXTENSÃO REAL
+        extensao = upload.get("format")
 
-        return url, format
+        return url, extensao
 
-    return upload.get("secure_url")
-
+    except Exception as e:
+        print("ERRO CLOUDINARY:", str(e))
+        return None, None
+    
 def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     ensure_rifas_schema()
 
@@ -628,31 +624,32 @@ def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
     if suffix not in ALLOWED_RECEIPT_EXTENSIONS:
         raise RifaError("Formato de comprovante nao permitido.")
 
-    comprovante_url = None
-
     try:
-        comprovante_url = _save_receipt_cloudinary(arquivo=arquivo)
+        url, extensao = _save_receipt_cloudinary(arquivo=arquivo)
+
+        if not url:
+            raise RifaError("Erro ao enviar comprovante")
+
+        pagamento.comprovante_path = url
+        pagamento.comprovante_ext = extensao
+        pagamento.comprovante_nome = filename
+        pagamento.comprovante_enviado_em = _utcnow()
+        pagamento.status = STATUS_COMPROVANTE
+
+        db.session.commit()
+
+        logger.info(
+            "Comprovante enviado pagamento=%s url=%s",
+            pagamento.id,
+            pagamento.comprovante_path
+        )
+
+        return pagamento
+
     except Exception as e:
+        db.session.rollback()
         raise RifaError(f"Erro ao enviar comprovante: {str(e)}")
-
-    if not comprovante_url:
-        raise RifaError("Falha ao obter URL do comprovante")
-
-    pagamento.comprovante_path = comprovante_url
-    pagamento.comprovante_nome = filename
-    pagamento.comprovante_enviado_em = _utcnow()
-    pagamento.status = STATUS_COMPROVANTE
-
-    db.session.commit()
-
-    logger.info(
-        "Comprovante enviado pagamento=%s url=%s",
-        pagamento.id,
-        pagamento.comprovante_path
-    )
-
-    return pagamento
-
+    
 def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None = None, observacoes_admin: str | None = None) -> PagamentoRifa:
     # 🔍 1. Buscar pagamento
     pagamento = None
