@@ -587,7 +587,7 @@ def _save_receipt_cloudinary(*, arquivo) -> str:
 
     if not cloudinary_url and not all([cloud_name, api_key, api_secret]):
         raise RifaError(
-            "Cloudinary nao configurado. Defina CLOUDINARY_URL ou CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET."
+            "Cloudinary nao configurado."
         )
 
     if cloudinary_url:
@@ -599,11 +599,17 @@ def _save_receipt_cloudinary(*, arquivo) -> str:
             api_secret=api_secret,
         )
 
-    upload = cloudinary.uploader.upload(
-        arquivo.stream,
-        folder="rifas/comprovantes",
-        resource_type="auto"
-    )
+        upload = cloudinary.uploader.upload(
+            arquivo.stream,
+            folder="rifas/comprovantes",
+            resource_type="auto"
+        )
+
+        url = upload.get("secure_url")
+        format = upload.get("format")  # 🔥 EXTENSÃO REAL
+
+        return url, format
+
     return upload.get("secure_url")
 
 def save_receipt(*, pagamento_id: str, arquivo) -> PagamentoRifa:
@@ -1245,3 +1251,36 @@ Deus abençoe 🙌
         whatsapp_link = f"https://wa.me/55{telefone}?text={quote(mensagem)}"
 
         print("LEMBRETE:", whatsapp_link)
+
+def gerar_url_cloudinary(public_id, extensao):
+    base = "https://res.cloudinary.com/dwlsuncxm"
+
+    if extensao == "pdf":
+        return f"{base}/raw/upload/{public_id}.pdf"
+    else:
+        return f"{base}/image/upload/{public_id}.{extensao}"
+
+def gerar_novas_rifas_pagamento(pagamento):
+    from rifas.models import Rifa
+
+    # 🔥 1. LIBERAR RIFAS ANTIGAS
+    for rifa in pagamento.rifas:
+        rifa.status = "disponivel"
+        rifa.pagamento_id = None
+        rifa.cliente_id = None
+
+    # 🔥 2. GERAR NOVAS RIFAS AUTOMÁTICAS
+    novas = db.session.execute(
+        db.select(Rifa).where(
+            Rifa.campanha_id == pagamento.campanha_id,
+            Rifa.status == "disponivel"
+        ).limit(pagamento.quantidade_rifas)
+    ).scalars().all()
+
+    if len(novas) < pagamento.quantidade_rifas:
+        raise Exception("Não há rifas suficientes disponíveis")
+
+    for rifa in novas:
+        rifa.status = "reservado"
+        rifa.pagamento_id = pagamento.id
+        rifa.cliente_id = pagamento.cliente_id

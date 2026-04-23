@@ -92,13 +92,16 @@
                         <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
 
                         <td>
-                            {% if pagamento.comprovante_path %}
-                                <a href="{{ pagamento.comprovante_path }}" target="_blank">Ver</a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                        {% if pagamento.comprovante_path %}
 
+                            <a href="{{ pagamento.comprovante_path }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                📄 Abrir comprovante
+                            </a>
+
+                        {% else %}
+                            <span class="text-secondary">não enviado</span>
+                        {% endif %}                            
+                        </td>
                         <td>{{ pagamento.created_at | hora_br }}</td>
 
                         <td>

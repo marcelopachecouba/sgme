@@ -40,7 +40,7 @@
                     {% elif pagamento.expira_em and pagamento.expira_em < now %}
                         <span class="badge bg-danger">Expirado</span>
                     {% else %}
-                        <span class="badge bg-success">No prazo</span>
+                        <span class="badge bg-primary">No prazo</span>
                     {% endif %}
                     
                     </div>                    
@@ -55,21 +55,70 @@
 
         <div class="card mb-4">
             <div class="card-body">
-                <h2 class="h5 mb-3">Comprovante enviado</h2>
+
+                <h2 class="h5 mb-3">Comprovante</h2>
+
                 {% if pagamento.comprovante_path %}
-                    {% if pagamento.comprovante_path.endswith('.pdf') %}
-                    <a class="btn btn-outline-primary" href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">Abrir comprovante em PDF</a>
-                    {% else %}
-                    <a href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">
-                        <img src="{{ pagamento.comprovante_path }}" alt="Comprovante" class="img-fluid rounded border">
-                    </a>
+
+                    <!-- VER COMPROVANTE -->
+                        <div class="mb-2 text-center">
+
+                            <!-- 🔥 IMAGEM GRANDE -->
+                            <img src="{{ pagamento.comprovante_path }}" 
+                                class="img-fluid rounded border shadow mb-2"
+                                style="max-height: 700px; width: 100%; object-fit: contain; cursor: zoom-in;"
+                                onclick="window.open('{{ pagamento.comprovante_path }}', '_blank')"
+                                onerror="this.style.display='none'; document.getElementById('btn-comprovante').style.display='block';">
+
+                            <!-- 🔥 BOTÃO FALLBACK -->
+                            <a id="btn-comprovante"
+                            href="{{ pagamento.comprovante_path }}" 
+                            target="_blank" 
+                            class="btn btn-outline-primary w-100"
+                            style="display:none;">
+                                📄 Abrir comprovante em tela cheia
+                            </a>
+
+                        </div>
+                        
+                    <!-- REMOVER (só se não estiver pago) -->
+                    {% if pagamento.status not in ["pago"] %}
+                    <form method="post" onsubmit="return confirm('Remover comprovante?')" class="mb-2">
+                        <input type="hidden" name="acao" value="remover_comprovante">
+
+                        <button class="btn btn-danger w-100">
+                            🗑️ Remover comprovante
+                        </button>
+                    </form>
                     {% endif %}
+
                 {% else %}
-                <p class="text-secondary mb-0">Nenhum comprovante enviado ainda.</p>
+
+                    <p class="text-secondary mb-2">
+                        Nenhum comprovante enviado ainda.
+                    </p>
+
                 {% endif %}
+
+
+                <!-- 🔥 ENVIO (sempre visível se não estiver pago) -->
+                {% if pagamento.status != "pago" %}
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="acao" value="enviar_comprovante_admin">
+
+                    <input type="file" name="comprovante"
+                        accept="image/*,.pdf"
+                        class="form-control mb-2"
+                        required>
+
+                    <button class="btn btn-success w-100">
+                        📎 Enviar comprovante (Admin)
+                    </button>
+                </form>
+                {% endif %}
+
             </div>
         </div>
-
         <div class="card">
             <div class="card-body">
                 <h2 class="h5 mb-3">Liberar pagamento</h2>
@@ -134,6 +183,28 @@
                 <img class="img-fluid border rounded p-3 bg-white mb-3" src="data:image/png;base64,{{ pagamento.qr_code_base64 }}" alt="QR Code PIX">
                 {% endif %}
                 <div class="small text-break bg-light p-3 rounded">{{ pagamento.copia_cola_pix }}</div>
+
+        {% if pagamento.txid %}
+        <div class="mt-3">
+
+            <label class="form-label fw-bold">TXID</label>
+
+            <div class="input-group">
+                <input type="text"
+                    class="form-control"
+                    value="{{ pagamento.txid }}"
+                    readonly>
+
+                <button class="btn btn-outline-secondary"
+                        onclick="navigator.clipboard.writeText('{{ pagamento.txid }}')">
+                    📋 Copiar
+                </button>
+            </div>
+
+        </div>
+        {% endif %}
+
+
             </div>
         </div>
         <div class="card">
@@ -166,16 +237,21 @@
                     </li>
 
                     {% endif %}                    
-                    
-
+                   
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         Comprovante
+
                         {% if pagamento.comprovante_path %}
-                        <a href="{{ pagamento.comprovante_path }}" target="_blank" rel="noreferrer">Abrir</a>
+
+                            <a href="{{ pagamento.comprovante_path }}" 
+                            target="_blank" 
+                            class="btn btn-outline-primary btn-sm">
+                                📄 Abrir comprovante
+                            </a>
                         {% else %}
-                        <span class="text-secondary">nao enviado</span>
+                            <span class="text-secondary">não enviado</span>
                         {% endif %}
-                    </li>
+                    </li>                    
                 </ul>
             </div>
         </div>

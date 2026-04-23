@@ -1,71 +1,56 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
-{% include "rifas_menu.html" %}
 
-<h1 class="h3 mb-4">Relatório de Rifas</h1>
-
-<!-- FILTRO -->
-<form method="get" class="row g-2 mb-4">
-    <div class="col-md-3">
-        <select name="status" class="form-control">
-            <option value="">Todos</option>
-            <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
-            <option value="pago" {% if status == 'pago' %}selected{% endif %}>Pago</option>
-            <option value="cancelado" {% if status == 'cancelado' %}selected{% endif %}>Cancelado</option>
-            <option value="comprovante" {% if status == 'comprovante' %}selected{% endif %}>Comprovante</option>
-        </select>
-    </div>
-
-    <div class="col-md-3">
-        <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
-    </div>
-
-    <div class="col-md-3">
-        <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
-    </div>
-
-    <div class="col-md-3">
-        <button class="btn btn-primary w-100">Filtrar</button>
-    </div>
-</form>
-
-<!-- CARDS -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card"><div class="card-body">
-            <div class="text-secondary">Clientes</div>
-            <div class="display-6">{{ stats.clientes }}</div>
-        </div></div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card"><div class="card-body">
-            <div class="text-secondary">Pagamentos</div>
-            <div class="display-6">{{ stats.pagamentos }}</div>
-        </div></div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card"><div class="card-body">
-            <div class="text-secondary">Receita Confirmada</div>
-            <div class="display-6">R$ {{ "%.2f"|format(stats.total_pago) }}</div>
-        </div></div>
-    </div>
-</div>
-
-<!-- RESUMO FILTRADO -->
 <div class="row mb-4">
-    <div class="col-md-6">
-        <div class="alert alert-success">
-            💰 Total filtrado: R$ {{ "%.2f"|format(total_valor) }}
+
+    <!-- TOTAL ARRECADADO -->
+    <div class="col-md-3">
+        <div class="card kpi-card bg-success text-white">
+            <div class="card-body">
+                <small>💰 Total Arrecadado</small>
+                <h4 class="fw-bold mb-0">
+                    R$ {{ "%.2f"|format(relatorio_equipes | sum(attribute='valor_total')) }}
+                </h4>
+            </div>
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="alert alert-info">
-            🎟️ Total de rifas: {{ total_quantidade }}
+    <!-- TOTAL RIFAS -->
+    <div class="col-md-3">
+        <div class="card kpi-card bg-primary text-white">
+            <div class="card-body">
+                <small>🎟️ Total de Rifas</small>
+                <h4 class="fw-bold mb-0">
+                    {{ relatorio_equipes | sum(attribute='total_rifas') }}
+                </h4>
+            </div>
         </div>
     </div>
+
+    <!-- TOTAL EQUIPES -->
+    <div class="col-md-3">
+        <div class="card kpi-card bg-dark text-white">
+            <div class="card-body">
+                <small>👥 Equipes</small>
+                <h4 class="fw-bold mb-0">
+                    {{ relatorio_equipes | length }}
+                </h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOTAL VENDEDORES -->
+    <div class="col-md-3">
+        <div class="card kpi-card bg-warning text-dark">
+            <div class="card-body">
+                <small>🧑‍💼 Vendedores</small>
+                <h4 class="fw-bold mb-0">
+                    {{ vendedores_por_equipe.values() | sum(start=[]) | length }}
+                </h4>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- RELATÓRIO POR EQUIPE -->
@@ -77,9 +62,9 @@
         <table class="table table-bordered">
             <thead class="table-dark">
                 <tr>
-                    <th>Equipe</th>
-                    <th>Rifas</th>
-                    <th>Total (R$)</th>
+                    <th class="col-nome">Equipe</th>
+                    <th class="col-numero">Rifas</th>
+                    <th class="col-valor">Total (R$)</th>
                 </tr>
             </thead>
             <tbody>
@@ -156,19 +141,10 @@
 <!-- TABELA -->
 <div class="card mb-4">
     <div class="card-body">
-        <h2 class="h5 mb-3">Pagamentos</h2>
+        
 
         <div class="table-responsive">
             <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Status</th>
-                        <th>Quantidade</th>
-                        <th>Valor</th>
-                        <th>Data</th>
-                    </tr>
-                </thead>
                 <tbody>
                     {% for p in pagamentos %}
                     <tr>
@@ -197,31 +173,11 @@
 <!-- CAMPANHAS -->
 <div class="card">
     <div class="card-body">
-        <h2 class="h5 mb-3">Campanhas cadastradas</h2>
+       
 
         <div class="table-responsive">
             <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Sorteio</th>
-                        <th>Valor</th>
-                        <th>Quantidade</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
                 <tbody>
-                    {% for campanha in campanhas %}
-                    <tr>
-                        <td>{{ campanha.titulo }}</td>
-                        <td>{{ campanha.data_sorteio.strftime("%d/%m/%Y") }}</td>
-                        <td>R$ {{ "%.2f"|format(campanha.valor_rifa|float) }}</td>
-                        <td>{{ campanha.quantidade_total }}</td>
-                        <td>{{ 'Ativa' if campanha.ativa else 'Inativa' }}</td>
-                    </tr>
-                    {% endfor %}
-
-
                     <script>
                     function toggle(id) {
                         const row = document.getElementById("detalhe-" + id);
@@ -262,3 +218,41 @@ function toggle(id) {
 }
 </script>
 {% endblock %}
+
+<style>
+.kpi-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    height: 100%;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+}
+
+.kpi-card small {
+    opacity: 0.8;
+    font-size: 13px;
+}
+
+.kpi-card h4 {
+    font-size: 22px;
+}
+
+
+/* ===== ALINHAMENTO PROFISSIONAL ===== */
+.col-nome { width: 50%; text-align: left; }
+.col-numero { width: 15%; text-align: center; }
+.col-valor { width: 20%; text-align: right; font-weight: 600; color: #198754; }
+.col-data { width: 15%; text-align: center; }
+
+
+/* remove “dança” da tabela */
+table {
+    table-layout: fixed;
+}
+</style>
+

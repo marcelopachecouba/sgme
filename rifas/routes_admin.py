@@ -1,4 +1,7 @@
-﻿import urllib.parse
+﻿from sqlalchemy import func
+from rifas.models import PagamentoRifa, Equipe
+from rifas.models import Vendedor
+import urllib.parse
 from rifas.services import update_team, delete_team, update_vendor, delete_vendor
 from rifas.services import cancelar_pagamento
 from rifas.services import acesso_rifas_required
@@ -140,26 +143,116 @@ def admin_pagamentos():
     )
 
 
-@rifas_admin_bp.route("/admin/pagamentos/<payment_id>", methods=["GET"])
+@rifas_admin_bp.route("/admin/pagamentos/<payment_id>", methods=["GET", "POST"])
 @acesso_rifas_required
-
 def admin_pagamento_detalhe(payment_id):
+
+    # 🔥 TRATAMENTO DE AÇÕES (POST)
+    if request.method == "POST":
+        acao = (request.form.get("acao") or "").strip()
+
+        # 🔥 NOVO FLUXO
+        if acao == "enviar_comprovante_admin":
+            pagamento = db.session.get(PagamentoRifa, payment_id)
+            arquivo = request.files.get("comprovante")
+
+            if not pagamento:
+                flash("Pagamento não encontrado.", "danger")
+                return redirect(request.url)
+
+            # 🔥 BLOQUEIO AQUI
+                if pagamento.status == "pago":
+                    flash("Pagamento já confirmado. Não pode alterar.", "danger")
+                    return redirect(request.url)
+
+                arquivo = request.files.get("comprovante")                
+
+            if not arquivo:
+                flash("Selecione um arquivo.", "danger")
+                return redirect(request.url)
+
+            # 🔥 CAPTURA AQUI (ANTES DE ALTERAR QUALQUER COISA)
+            status_anterior = pagamento.status
+
+            # 🔥 upload
+            from rifas.services import _save_receipt_cloudinary
+            url, extensao = _save_receipt_cloudinary(arquivo=arquivo)
+
+            pagamento.comprovante_path = url
+            pagamento.comprovante_ext = extensao  # 🔥 NOVO CAMPO
+
+
+            # 🔥 REGRA DE NEGÓCIO
+            if status_anterior == "cancelado":
+                from rifas.services import gerar_novas_rifas_pagamento
+                gerar_novas_rifas_pagamento(pagamento)
+
+            # 🔥 só agora muda status
+            pagamento.status = "comprovante"
+
+            db.session.commit()
+
+            flash("Comprovante enviado com sucesso!", "success")
+
+            return redirect(request.url)
+
+
+        if acao == "remover_comprovante":
+            pagamento = db.session.get(PagamentoRifa, payment_id)
+
+            if not pagamento:
+                flash("Pagamento não encontrado.", "danger")
+                return redirect(request.url)
+            
+            # 🔥 BLOQUEIO AQUI TAMBÉM
+            if pagamento.status == "pago":
+                flash("Pagamento já confirmado. Não pode alterar.", "danger")
+                return redirect(request.url)            
+
+            # 🔥 REMOVE DO CLOUDINARY (opcional)
+            try:
+                import cloudinary.uploader
+
+                if pagamento.comprovante_path:
+                    nome = pagamento.comprovante_path.split("/")[-1].split(".")[0]
+                    public_id = f"rifas/comprovantes/{nome}"
+
+                    cloudinary.uploader.destroy(public_id, resource_type="image")
+
+            except Exception as e:
+                print("Erro ao remover Cloudinary:", e)
+
+            # 🔥 LIMPA E VOLTA STATUS
+            pagamento.comprovante_path = None
+            pagamento.status = "pendente"
+
+            db.session.commit()
+
+            flash("Comprovante removido e status voltou para pendente.", "warning")
+
+            return redirect(request.url)
+
+    # 🔥 CARREGAR DADOS
     dados = _base_context()
+
     try:
         detalhe = payment_detail_data(payment_id)
         dados.update(detalhe)
 
         pagamento = dados.get("pagamento")
 
+        # 🔥 URL DO COMPROVANTE (SIMPLES E CORRETA)
+        dados["comprovante_url"] = pagamento.comprovante_path if pagamento else None
+
+        # 🔥 EXPIRAÇÃO
         if pagamento and pagamento.created_at:
             pagamento.expira_em = pagamento.created_at + timedelta(minutes=60)
         else:
             pagamento.expira_em = None
 
-        # 🔥 AQUI ESTAVA FALTANDO
+        # 🔥 WHATSAPP
         from rifas.services import payment_whatsapp_link
-        whatsapp_link = payment_whatsapp_link(pagamento)
-        dados["whatsapp_link"] = whatsapp_link
+        dados["whatsapp_link"] = payment_whatsapp_link(pagamento)
 
     except RifaError as exc:
         flash(str(exc), "danger")
@@ -277,6 +370,55 @@ def admin_relatorio():
 
     # 🔥 base context
     dados = _base_context()
+
+    # 🔥 RELATÓRIO POR EQUIPE
+
+    
+
+    relatorio_equipes = db.session.execute(
+        db.select(
+            func.coalesce(Equipe.id, "SEM_EQUIPE").label("equipe_id"),
+            func.coalesce(Equipe.nome, "Sem equipe").label("equipe"),
+            func.sum(PagamentoRifa.quantidade_rifas).label("total_rifas"),
+            func.sum(PagamentoRifa.valor_total).label("valor_total"),
+        )
+        .select_from(PagamentoRifa)
+        .join(Equipe, PagamentoRifa.equipe_id == Equipe.id, isouter=True)  # 🔥 LEFT JOIN
+        .where(PagamentoRifa.status == "pago")
+        .group_by(Equipe.id, Equipe.nome)
+        .order_by(func.sum(PagamentoRifa.valor_total).desc())
+    ).all()
+    dados["relatorio_equipes"] = relatorio_equipes
+
+    
+
+    relatorio_vendedores = db.session.execute(
+        db.select(
+            func.coalesce(PagamentoRifa.equipe_id, "SEM_EQUIPE").label("equipe_id"),
+            func.coalesce(Vendedor.nome, "Sem vendedor").label("vendedor"),
+            func.sum(PagamentoRifa.quantidade_rifas).label("total_rifas"),
+            func.sum(PagamentoRifa.valor_total).label("valor_total"),
+        )
+        .select_from(PagamentoRifa)
+        .join(Vendedor, PagamentoRifa.vendedor_codigo == Vendedor.codigo, isouter=True)
+        .where(PagamentoRifa.status == "pago")
+        .group_by(PagamentoRifa.equipe_id, Vendedor.nome)
+    ).all()
+
+    dados["relatorio_vendedores"] = relatorio_vendedores
+
+    from collections import defaultdict
+
+    vendedores_por_equipe = defaultdict(list)
+
+    for v in relatorio_vendedores:
+        vendedores_por_equipe[str(v.equipe_id)].append(v)
+
+    dados["vendedores_por_equipe"] = vendedores_por_equipe
+
+    
+
+
 
     # 🔥 sobrescreve corretamente (SEM DUPLICIDADE)
     dados["pagamentos"] = pagamentos

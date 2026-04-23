@@ -1,4 +1,5 @@
-﻿from pathlib import Path
+﻿from extensions import db, login_manager
+from pathlib import Path
 from urllib.parse import quote
 from flask import Blueprint, jsonify, render_template, request, send_file, session
 from models import PagamentoRifa, ClienteRifa
@@ -16,6 +17,7 @@ from rifas.services import (
     purchase_rifas,
     save_receipt,
 )
+
 
 
 rifas_public_bp = Blueprint("rifas_public", __name__)
@@ -259,3 +261,51 @@ def consultar_pedido():
         })
 
     return jsonify({"erro": "Informe o pedido ou telefone"}), 400
+
+from flask import render_template
+from rifas.models import PagamentoRifa, Equipe, Vendedor
+from collections import defaultdict
+from sqlalchemy import func
+
+@rifas_public_bp.route("/relatorio")
+def relatorio_publico():
+
+    # 🔥 RELATÓRIO EQUIPES
+    relatorio_equipes = db.session.execute(
+        db.select(
+            func.coalesce(Equipe.id, "SEM_EQUIPE").label("equipe_id"),
+            func.coalesce(Equipe.nome, "Sem equipe").label("equipe"),
+            func.sum(PagamentoRifa.quantidade_rifas).label("total_rifas"),
+            func.sum(PagamentoRifa.valor_total).label("valor_total"),
+        )
+        .select_from(PagamentoRifa)
+        .join(Equipe, PagamentoRifa.equipe_id == Equipe.id, isouter=True)
+        .where(PagamentoRifa.status == "pago")
+        .group_by(Equipe.id, Equipe.nome)
+    ).all()
+
+    # 🔥 RELATÓRIO VENDEDORES
+    relatorio_vendedores = db.session.execute(
+        db.select(
+            func.coalesce(PagamentoRifa.equipe_id, "SEM_EQUIPE").label("equipe_id"),
+            func.coalesce(Vendedor.nome, "Sem vendedor").label("vendedor"),
+            func.sum(PagamentoRifa.quantidade_rifas).label("total_rifas"),
+            func.sum(PagamentoRifa.valor_total).label("valor_total"),
+        )
+        .select_from(PagamentoRifa)
+        .join(Vendedor, PagamentoRifa.vendedor_codigo == Vendedor.codigo, isouter=True)
+        .where(PagamentoRifa.status == "pago")
+        .group_by(PagamentoRifa.equipe_id, Vendedor.nome)
+    ).all()
+
+    # 🔥 AGRUPAMENTO
+    vendedores_por_equipe = defaultdict(list)
+
+    for v in relatorio_vendedores:
+        vendedores_por_equipe[str(v.equipe_id)].append(v)
+
+    return render_template(
+        "relatorio_publico.html",
+        relatorio_equipes=relatorio_equipes,
+        vendedores_por_equipe=vendedores_por_equipe
+    )
