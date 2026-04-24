@@ -233,7 +233,7 @@
                             <h1>{{ campanha.titulo }}</h1>
                             {% if vendedor_ref and vendedor_nome %}
                             <div class="alert alert-info mt-3 mb-0">
-                                Compra vinculada automaticamente ao vendedor <strong>{{ vendedor_nome }}</strong> ({{ vendedor_ref }}).
+                                Vendedor <strong>{{ vendedor_nome }}</strong> ({{ vendedor_ref }}).
                             </div>
                             {% endif %}
                             {% if mostrar_data_sorteio %}
@@ -388,6 +388,10 @@
                 botao.focus();
             }
 
+            document.querySelectorAll(".btn-enviar-comprovante").forEach((item) => {
+                item.classList.remove("d-none");
+            });
+
             event.preventDefault();
             event.returnValue = mensagemComprovantePendente;
             return mensagemComprovantePendente;
@@ -406,6 +410,10 @@
             if (botao) {
                 botao.classList.remove("d-none");
             }
+
+            document.querySelectorAll(".btn-enviar-comprovante").forEach((item) => {
+                item.classList.remove("d-none");
+            });
         });
 
         function renderError(message) {
@@ -482,10 +490,9 @@
                 status.innerHTML = `<div class="alert alert-success">✅ Comprovante enviado com sucesso!</div>`;
             }
 
-            const botao = document.getElementById("enviar-comprovante");
-            if (botao) {
+            document.querySelectorAll(".btn-enviar-comprovante").forEach((botao) => {
                 botao.classList.add("d-none");
-            }
+            });
             comprovantePendente = false;
         }
 
@@ -501,9 +508,14 @@
                 </div>
 
                 <div class="alert alert-warning text-center mt-3">
-                     ⚠️ Seu pagamento ainda não foi confirmado.<br>
-                      Envie o comprovante para garantir sua rifa.
+                     ⚠️Envie o comprovante para garantir sua rifa.
                 </div>                
+
+                <div class="d-grid mt-3">
+                    <button id="enviar-comprovante" class="btn btn-primary btn-enviar-comprovante">
+                        Enviar comprovante
+                    </button>
+                </div>
 
                 <div class="row g-4 align-items-start mt-1">
                     <div class="col-md-5">
@@ -513,10 +525,7 @@
                     </div>
 
                     <div class="col-md-7">
-                        <p><strong>Pedido:</strong> ${data.pagamento_id}</p>
-                        <p><strong>Comprador:</strong> ${data.comprador_nome || "-"}</p>
                         <p><strong>Qtde rifas:</strong> ${data.quantidade_rifas}</p>
-                        <p style="color:red;"><strong>Guarde este número para enviar o comprovante depois</strong></p>
                         <p><strong>Números:</strong> ${data.numeros.map(n => String(n).padStart(4,"0")).join(", ")}</p>
                         <p><strong>Valor:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
                         <p class="text-danger fw-bold">
@@ -525,7 +534,12 @@
 
                         <div class="pix-box mb-3">${data.copia_cola_pix}</div>
 
-                        <button id="copiar-pix" class="btn btn-dark mb-3">Copiar PIX</button>
+                        <div class="d-flex flex-column flex-sm-row gap-2 mb-3">
+                            <button id="copiar-pix" class="btn btn-dark flex-fill">Copiar PIX</button>
+                            <button type="button" class="btn btn-primary flex-fill btn-enviar-comprovante">
+                                Enviar comprovante
+                            </button>
+                        </div>
 
                         <div class="file-box">
                                 <div id="aviso-comprovante-pendente" class="alert alert-danger">
@@ -535,10 +549,6 @@
                                 <input id="comprovante-arquivo" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf" style="display:none;">
 
                                 <img id="preview-img" class="img-fluid mt-2 d-none"/>
-
-                                <button id="enviar-comprovante" class="btn btn-primary mt-2 w-100">
-                                    Enviar comprovante
-                                </button>
 
                                 <div id="status-comprovante" class="mt-2"></div>
                            
@@ -554,8 +564,9 @@
                 alert("PIX copiado com sucesso!");
             });
 
-            document.getElementById("enviar-comprovante")
-                ?.addEventListener("click", () => document.getElementById("comprovante-arquivo").click());
+            document.querySelectorAll(".btn-enviar-comprovante").forEach((botao) => {
+                botao.addEventListener("click", () => document.getElementById("comprovante-arquivo").click());
+            });
 
             document.getElementById("comprovante-arquivo")
             ?.addEventListener("change", function() {
