@@ -551,10 +551,19 @@
                 <div class="result-banner">
                     <div class="tag-status">Pagamento ${data.status}</div>
                     <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Escaneie o QR Code, pague e envie o comprovante pelo Botão abaixo</h2>
-                    <p class="mb-0"><strong>Campanha:</strong> ${data.campanha_titulo}</p>
+                   <!-- <p class="mb-0"><strong>Campanha:</strong> ${data.campanha_titulo}</p> -->
+                    <button type="button" class="btn btn-primary flex-fill btn-enviar-comprovante">
+                        Enviar comprovante
+                    </button>
                 </div>
 
+                
+
                 <div class="row g-4 align-items-start mt-1">
+                    <p class="text-danger fw-bold">
+                       ⏳ Este QR Code expira em 60 minutos
+                    </p>
+        
                     <div class="col-md-5">
                         <div class="qr-box">
                             <img class="img-fluid" src="data:image/png;base64,${data.qr_code_base64}" />
@@ -562,9 +571,6 @@
                     </div>
 
                     <div class="col-md-7">
-                        <p class="text-danger fw-bold">
-                            ⏳ Este QR Code expira em 60 minutos
-                        </p>
 
                         <!-- <div class="pix-box mb-3">${data.copia_cola_pix}</div> -->
 
