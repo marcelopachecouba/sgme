@@ -5,7 +5,7 @@ import urllib.parse
 from rifas.services import update_team, delete_team, update_vendor, delete_vendor
 from rifas.services import cancelar_pagamento
 from rifas.services import acesso_rifas_required
-from flask import request, session, render_template, redirect, url_for, flash
+from flask import current_app, request, session, render_template, redirect, url_for, flash
 from rifas.services import payment_whatsapp_link
 from datetime import timedelta  # 🔥 IMPORTAR LÁ EM CIMA
 from datetime import datetime
@@ -246,7 +246,7 @@ def admin_pagamento_detalhe(payment_id):
 
         # 🔥 EXPIRAÇÃO
         if pagamento and pagamento.created_at:
-            pagamento.expira_em = pagamento.created_at + timedelta(minutes=60)
+            pagamento.expira_em = pagamento.created_at + timedelta(minutes=current_app.config.get("RIFA_RESERVA_MINUTOS", 60))
         else:
             pagamento.expira_em = None
 

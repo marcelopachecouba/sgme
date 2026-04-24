@@ -225,7 +225,7 @@
             <div class="row g-4 align-items-stretch">
                 <div class="col-lg-5">
                     <div class="content-card h-100">
-                        <span class="section-pill">Compra online</span>
+                        <span class="section-pill">Compra online - Matriz Nossa Senhora Aparecida</span>
                         {% if schema_message %}
                         <div class="alert alert-warning mt-3 mb-0">{{ schema_message }}</div>
                         {% elif campanha %}
@@ -286,10 +286,6 @@
                                 <label class="form-label">Telefone</label>
                                 <input class="form-control" name="telefone" id="telefone" required>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" name="email">
-                            </div>
                             
                             {% if mostrar_vendedor %}
                             <div class="col-12">
@@ -298,7 +294,7 @@
                             </div>
                             {% endif %}
 
-                            <div class="col-12">
+                            <div class="col-md-6">
                                 <label class="form-label">Quantidade de rifas</label>
                                 <input type="number" min="1" class="form-control" name="quantidade_rifas" required>
                             </div>
@@ -307,11 +303,13 @@
                                     Gerar PIX e reservar numeros
                                 </button>
                             </div>
+                            {% if mostrar_whatsapp %}
                             <div class="col-12">
                                 <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-success w-100 mt-2">
                                     💬 Falar com a Paróquia no WhatsApp
                                 </a>
                             </div>
+                            {% endif %}
 
                         </form>
                         {% else %}
@@ -322,8 +320,7 @@
                         <div class="mt-4">
                             <h5>🔎 Consultar pedido</h5>
 
-                            <input type="text" id="pedido_id" class="form-control mb-2" placeholder="Digite o número do pedido">
-                            <input type="text" id="telefone_consulta" class="form-control mb-2" placeholder="Ou digite o telefone usado na compra">
+                            <input type="text" id="telefone_consulta" class="form-control mb-2" placeholder="Digite o telefone usado na compra">
 
                             <button class="btn btn-dark w-100 mb-3" onclick="consultarPedido()">
                                 Consultar pedido
@@ -342,7 +339,7 @@
                             
                             <h2 class="h3 mt-3 mb-2 fw-bold">
                                 Garanta já seus números!<br>
-                                Envie o comprovante e libere sua participação.
+                                Envie o comprovante no proprio link e libere sua participação.
                             </h2>
 
                             <p class="mb-2">
@@ -379,24 +376,88 @@
         const resultado = document.getElementById("resultado");
         const feedback = document.getElementById("form-feedback");
         const btn = form ? form.querySelector("button[type='submit']") : null;
+        let comprovantePendente = false;
+        const mensagemComprovantePendente = "O comprovante ainda nao foi enviado. A rifa nao sera contabilizada sem o comprovante.";
+
+        window.addEventListener("beforeunload", (event) => {
+            if (!comprovantePendente) return;
+
+            const botao = document.getElementById("enviar-comprovante");
+            if (botao) {
+                botao.classList.remove("d-none");
+                botao.focus();
+            }
+
+            event.preventDefault();
+            event.returnValue = mensagemComprovantePendente;
+            return mensagemComprovantePendente;
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (!comprovantePendente || !document.hidden) return;
+
+            const aviso = document.getElementById("aviso-comprovante-pendente");
+            const botao = document.getElementById("enviar-comprovante");
+
+            if (aviso) {
+                aviso.innerHTML = mensagemComprovantePendente;
+            }
+
+            if (botao) {
+                botao.classList.remove("d-none");
+            }
+        });
 
         function renderError(message) {
             feedback.innerHTML = `<div class="alert alert-danger mb-0">${message}</div>`;
         }
 
-        async function enviarComprovante(pagamentoId) {
-            const campo = document.getElementById("comprovante-arquivo");
+        function validarArquivoComprovante(campo, previewId = null) {
+            const file = campo?.files?.[0];
+            const preview = previewId ? document.getElementById(previewId) : null;
+
+            if (!file) return null;
+
+            const formatos = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+            if (!formatos.includes(file.type)) {
+                alert("Selecione uma imagem ou PDF do comprovante.");
+                campo.value = "";
+                return null;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Arquivo muito grande (max 5MB)");
+                campo.value = "";
+                return null;
+            }
+
+            if (preview && file.type.startsWith("image/")) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove("d-none");
+                preview.style.maxHeight = "200px";
+            } else if (preview) {
+                preview.classList.add("d-none");
+            }
+
+            return file;
+        }
+
+        async function enviarComprovante(pagamentoId, inputId = "comprovante-arquivo", statusId = "status-comprovante", previewId = "preview-img") {
+            const campo = document.getElementById(inputId);
 
             if (!campo || !campo.files.length) {
                 alert("Selecione o comprovante antes de enviar.");
                 return;
             }
 
+            const arquivo = validarArquivoComprovante(campo, previewId);
+            if (!arquivo) return;
+
             const formData = new FormData();
-            formData.append("comprovante", campo.files[0]);
+            formData.append("comprovante", arquivo);
 
             // 🔥 LOADING AQUI
-            const status = document.getElementById("status-comprovante");
+            const status = document.getElementById(statusId);
             if (status) {
                 status.innerHTML = `<div class="alert alert-warning">⏳ Enviando comprovante...</div>`;
             }
@@ -419,16 +480,23 @@
             // só mostra sucesso se realmente não houver erro
             if (status) {
                 status.innerHTML = `<div class="alert alert-success">✅ Comprovante enviado com sucesso!</div>`;
-            }            
+            }
+
+            const botao = document.getElementById("enviar-comprovante");
+            if (botao) {
+                botao.classList.add("d-none");
+            }
+            comprovantePendente = false;
         }
 
         function renderSuccess(data) {
+            comprovantePendente = true;
             feedback.innerHTML = `<div class="alert alert-success mb-0">Pagamento gerado com sucesso.</div>`;
 
             resultado.innerHTML = `
                 <div class="result-banner">
                     <div class="tag-status">Pagamento ${data.status}</div>
-                    <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Escaneie o QR Code e envie o comprovante</h2>
+                    <h2 class="h3 mt-3 mb-2 fw-bold text-uppercase">Escaneie o QR Code e envie o comprovante pelo link abaixo</h2>
                     <p class="mb-0"><strong>Campanha:</strong> ${data.campanha_titulo}</p>
                 </div>
 
@@ -446,6 +514,8 @@
 
                     <div class="col-md-7">
                         <p><strong>Pedido:</strong> ${data.pagamento_id}</p>
+                        <p><strong>Comprador:</strong> ${data.comprador_nome || "-"}</p>
+                        <p><strong>Qtde rifas:</strong> ${data.quantidade_rifas}</p>
                         <p style="color:red;"><strong>Guarde este número para enviar o comprovante depois</strong></p>
                         <p><strong>Números:</strong> ${data.numeros.map(n => String(n).padStart(4,"0")).join(", ")}</p>
                         <p><strong>Valor:</strong> R$ ${data.valor_total.toFixed(2).replace(".", ",")}</p>
@@ -458,15 +528,15 @@
                         <button id="copiar-pix" class="btn btn-dark mb-3">Copiar PIX</button>
 
                         <div class="file-box">
-
-                                <div id="upload-box" style="cursor:pointer; border:2px dashed #0b57b6; padding:20px; border-radius:10px; text-align:center;">
-                                    📁 Clique para anexar comprovante
-                                    <input id="comprovante-arquivo" type="file" style="display:none;">
+                                <div id="aviso-comprovante-pendente" class="alert alert-danger">
+                                    O comprovante ainda nao foi enviado. Se fechar esta tela agora, a rifa nao sera contabilizada.
                                 </div>
+
+                                <input id="comprovante-arquivo" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf" style="display:none;">
 
                                 <img id="preview-img" class="img-fluid mt-2 d-none"/>
 
-                                <button id="enviar-comprovante" class="btn btn-primary mt-2">
+                                <button id="enviar-comprovante" class="btn btn-primary mt-2 w-100">
                                     Enviar comprovante
                                 </button>
 
@@ -484,37 +554,12 @@
                 alert("PIX copiado com sucesso!");
             });
 
-            // clique upload
-            document.getElementById("upload-box")?.addEventListener("click", () => {
-                document.getElementById("comprovante-arquivo").click();});
-                
-
             document.getElementById("enviar-comprovante")
-                ?.addEventListener("click", () => enviarComprovante(data.pagamento_id));
+                ?.addEventListener("click", () => document.getElementById("comprovante-arquivo").click());
 
             document.getElementById("comprovante-arquivo")
             ?.addEventListener("change", function() {
-
-                const file = this.files[0];
-                const preview = document.getElementById("preview-img");
-
-                if (!file) return;
-
-                if (!file.type.startsWith("image/")) {
-                    alert("Selecione uma imagem JPG ou PNG");
-                    this.value = "";
-                    return;
-                }
-
-                if (file.size > 5 * 1024 * 1024) {
-                    alert("Arquivo muito grande (máx 5MB)");
-                    this.value = "";
-                    return;
-                }
-
-                preview.src = URL.createObjectURL(file);
-                preview.classList.remove("d-none");
-                preview.style.maxHeight = "200px";
+                enviarComprovante(data.pagamento_id);
             });
 
         }
@@ -634,45 +679,11 @@
 
             return null;
         }
-        async function enviarComprovanteManual() {
-            const pedidoId = document.getElementById("pedido_id").value;
-            const arquivo = document.getElementById("comprovante_manual").files[0];
-
-            if (!pedidoId) {
-                alert("Informe o número do pedido");
-                return;
-            }
-
-            if (!arquivo) {
-                alert("Selecione o comprovante");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("comprovante", arquivo);
-
-            const response = await fetch(`/rifas/pagamento/${pedidoId}/comprovante`, {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.erro || "Erro ao enviar comprovante");
-                return;
-            }
-
-            document.getElementById("resultado-pedido").innerHTML +=
-                `<div class="alert alert-success mt-2">Comprovante enviado com sucesso!</div>`;
-        }
-
         async function consultarPedido() {
-            const pedidoId = document.getElementById("pedido_id").value;
             const telefone = document.getElementById("telefone_consulta").value;
 
-            if (!pedidoId && !telefone) {
-                alert("Informe o pedido ou telefone");
+            if (!telefone) {
+                alert("Informe o telefone usado na compra");
                 return;
             }
 
@@ -680,7 +691,6 @@
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    pedido_id: pedidoId,
                     telefone: telefone
                 })
             });
@@ -707,6 +717,7 @@
                         <div class="card-body">
 
                             <p><strong>Pedido:</strong> ${p.id}</p>
+                            <p><strong>Comprador:</strong> ${p.cliente?.nome || "-"}</p>
 
                             <p><strong>Status:</strong> 
                                 ${status === "pendente" ? "🟡 Pendente" : ""}
@@ -727,7 +738,7 @@
                                 </div>
                             ` : ""}
 
-                            <p><strong>Quantidade:</strong> ${p.quantidade_rifas}</p>
+                            <p><strong>Qtde rifas:</strong> ${p.quantidade_rifas}</p>
                             <p><strong>Valor:</strong> R$ ${p.valor_total.toFixed(2).replace(".", ",")}</p>
 
                             ${status === "comprovante" ? `
@@ -744,9 +755,10 @@
 
                             ${
                                 podeEnviar ? `
-                                <input type="file" id="file-${p.id}" class="form-control mt-2">
-                                <button class="btn btn-primary w-100 mt-2"
-                                    onclick="enviarComprovantePedido('${p.id}')">
+                                <input type="file" id="file-${p.id}" accept=".png,.jpg,.jpeg,.webp,.pdf" style="display:none;">
+                                <div id="status-${p.id}" class="mt-2"></div>
+                                <button id="btn-comprovante-${p.id}" class="btn btn-primary w-100 mt-2"
+                                    onclick="abrirComprovantePedido('${p.id}')">
                                     Enviar comprovante
                                 </button>
                                 ` : ""
@@ -757,10 +769,22 @@
                 `;
             });
             document.getElementById("resultado-pedido").innerHTML = html;
+
+            data.pedidos.forEach(p => {
+                const input = document.getElementById(`file-${p.id}`);
+                if (input) {
+                    input.addEventListener("change", () => enviarComprovantePedido(p.id));
+                }
+            });
+        }
+
+        function abrirComprovantePedido(pedidoId) {
+            document.getElementById(`file-${pedidoId}`)?.click();
         }
 
         async function enviarComprovantePedido(pedidoId) {
-            const arquivo = document.getElementById(`file-${pedidoId}`).files[0];
+            const campo = document.getElementById(`file-${pedidoId}`);
+            const arquivo = validarArquivoComprovante(campo);
 
             if (!arquivo) {
                 alert("Selecione o comprovante");
@@ -770,6 +794,11 @@
             const formData = new FormData();
             formData.append("comprovante", arquivo);
 
+            const status = document.getElementById(`status-${pedidoId}`);
+            if (status) {
+                status.innerHTML = `<div class="alert alert-warning">Enviando comprovante...</div>`;
+            }
+
             const response = await fetch(`/rifas/pagamento/${pedidoId}/comprovante`, {
                 method: "POST",
                 body: formData
@@ -778,14 +807,27 @@
             const data = await response.json();
 
             if (!response.ok) {
-                alert(data.erro || "Erro ao enviar comprovante");
+                if (status) {
+                    status.innerHTML = `<div class="alert alert-danger">${data.erro || "Erro ao enviar comprovante"}</div>`;
+                } else {
+                    alert(data.erro || "Erro ao enviar comprovante");
+                }
                 return;
             }
 
-            alert("Comprovante enviado com sucesso!");
+            if (status) {
+                status.innerHTML = `<div class="alert alert-success">Comprovante enviado com sucesso!</div>`;
+            } else {
+                alert("Comprovante enviado com sucesso!");
+            }
+
+            const botao = document.getElementById(`btn-comprovante-${pedidoId}`);
+            if (botao) {
+                botao.classList.add("d-none");
+            }
 
             // 🔄 Atualiza lista
-            consultarPedido();
+            setTimeout(consultarPedido, 1200);
         }
 
         const telInput = document.getElementById("telefone_consulta");

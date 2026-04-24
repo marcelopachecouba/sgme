@@ -50,6 +50,8 @@ class PurchaseResult:
     external_id: str
     numeros: list[int]
     valor_total: float
+    comprador_nome: str
+    quantidade_rifas: int
     status: str
     campanha_titulo: str
 
@@ -513,6 +515,8 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
         external_id=pagamento.external_id or "",
         numeros=[rifa.numero for rifa in rifas],
         valor_total=float(valor_total),
+        comprador_nome=cliente.nome,
+        quantidade_rifas=quantidade_rifas,
         status=pagamento.status,
         campanha_titulo=campanha.titulo,
     )
@@ -783,7 +787,6 @@ def payment_summary(pagamento: PagamentoRifa) -> dict:
             "id": pagamento.cliente.id,
             "nome": pagamento.cliente.nome,
             "telefone": pagamento.cliente.telefone,
-            "email": pagamento.cliente.email,
         } if pagamento.cliente else None,
         "campanha": {
             "id": pagamento.campanha.id,
@@ -968,7 +971,8 @@ def cancelar_pagamento(*, pagamento_id: str) -> PagamentoRifa:
 def cancelar_pagamentos_expirados():
 
     agora = datetime.utcnow()
-    limite = agora - timedelta(minutes=60)
+    reserva_minutos = int(current_app.config.get("RIFA_RESERVA_MINUTOS", 60))
+    limite = agora - timedelta(minutes=reserva_minutos)
 
     pagamentos = db.session.execute(
         db.select(PagamentoRifa).where(

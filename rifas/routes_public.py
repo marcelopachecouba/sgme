@@ -35,6 +35,7 @@ def rifas_home():
     dados["mostrar_vendidos"] = False  # 👈 AQUI
     dados["mostrar_data_sorteio"] = False  # 👈 NOVO
     dados["mostrar_vendedor"] = False
+    dados["mostrar_whatsapp"] = False
 
     # Mantem o vendedor da landing page vinculado ao restante da jornada.
     ref = (request.args.get("ref") or "").strip().upper()
@@ -71,7 +72,7 @@ def comprar_rifa():
 
     try:
         quantidade = int(data.get("quantidade_rifas", 0))
-        telefone = data.get("telefone", "")
+        telefone = ''.join(filter(str.isdigit, data.get("telefone", "")))
 
         # 🔒 ANTI DUPLICIDADE (MESMO TELEFONE + PENDENTE)
         
@@ -97,7 +98,7 @@ def comprar_rifa():
             nome=data.get("nome", ""),
             telefone=telefone,
             endereco=data.get("endereco", ""),
-            email = data.get("email") or None,
+            email=None,
             vendedor=session.get("rifa_ref_vendedor") or data.get("vendedor", ""),
             quantidade_rifas=quantidade,
         )
@@ -230,19 +231,10 @@ def webhook_pix():
 def consultar_pedido():
     data = request.get_json(silent=True) or request.form
 
-    pedido_id = (data.get("pedido_id") or "").strip()
     telefone = (data.get("telefone") or "").strip()
 
     from extensions import db
 
-    # 🔎 CONSULTA POR PEDIDO (mantém igual)
-    if pedido_id:
-        pagamento = get_payment(pedido_id)
-        if not pagamento:
-            return jsonify({"erro": "Pedido não encontrado"}), 404
-        return jsonify({"pedidos": [payment_summary(pagamento)]})
-
-    # 🔎 CONSULTA POR TELEFONE (AGORA LISTA TODOS)
     if telefone:
         telefone_limpo = ''.join(filter(str.isdigit, telefone))
 
@@ -260,7 +252,7 @@ def consultar_pedido():
             "pedidos": [payment_summary(p) for p in pagamentos]
         })
 
-    return jsonify({"erro": "Informe o pedido ou telefone"}), 400
+    return jsonify({"erro": "Informe o telefone usado na compra"}), 400
 
 from flask import render_template
 from rifas.models import PagamentoRifa, Equipe, Vendedor

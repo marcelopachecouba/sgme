@@ -82,7 +82,7 @@ class Config:
     RIFA_PUBLIC_TITLE = os.environ.get('RIFA_PUBLIC_TITLE', 'Rifas Online SGME').strip()
     RIFA_VALOR_UNITARIO = float(os.environ.get('RIFA_VALOR_UNITARIO', '10'))
     RIFA_TOTAL_NUMEROS = int(os.environ.get('RIFA_TOTAL_NUMEROS', '1000'))
-    RIFA_RESERVA_MINUTOS = int(os.environ.get('RIFA_RESERVA_MINUTOS', '30'))
+    RIFA_RESERVA_MINUTOS = int(os.environ.get('RIFA_RESERVA_MINUTOS', '60'))
     RIFA_STORAGE_MODE = os.environ.get('RIFA_STORAGE_MODE', 'local').strip().lower()
     RIFA_PDF_DIR = os.environ.get('RIFA_PDF_DIR', str(Path('instance') / 'rifas')).strip()
     RIFA_SUPABASE_URL = os.environ.get('RIFA_SUPABASE_URL', '').strip()

@@ -203,7 +203,7 @@ def get_pix_gateway():
         return MercadoPagoPixGateway(access_token)
 
     if provider == "sicoob":
-        return SicoobPixGateway()
+        return SicrediPixGateway()
 
     if provider in {"manual", "mock"}:
         return MockPixGateway()
@@ -289,3 +289,142 @@ class SicoobPixGateway:
             copia_cola_pix=data.get("qrCode", ""),
             raw_response=data
         )
+
+import requests
+import base64
+from datetime import datetime, timedelta
+from decimal import Decimal
+from flask import current_app
+
+class SicrediPixGateway:
+
+    def __init__(self):
+        self.client_id = current_app.config.get("SICREDI_CLIENT_ID")
+        self.client_secret = current_app.config.get("SICREDI_CLIENT_SECRET")
+        self.token_url = current_app.config.get("SICREDI_TOKEN_URL")
+        self.base_url = current_app.config.get("SICREDI_API_URL")
+
+        self.pix_key = current_app.config.get("PIX_CHAVE")
+
+        self.cert = (
+            current_app.config.get("SICREDI_CERT_PATH"),
+            current_app.config.get("SICREDI_KEY_PATH"),
+        )
+
+        self._token = None
+        self._token_expira = None
+
+    # 🔐 ================= TOKEN =================
+    def _get_token(self):
+        if self._token and self._token_expira and datetime.utcnow() < self._token_expira:
+            return self._token
+
+        response = requests.post(
+            self.token_url,
+            auth=(self.client_id, self.client_secret),
+            data={"grant_type": "client_credentials"},
+            cert=self.cert,
+            timeout=20,
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"Erro ao obter token Sicredi: {response.text}")
+
+        data = response.json()
+
+        self._token = data["access_token"]
+        self._token_expira = datetime.utcnow() + timedelta(seconds=data.get("expires_in", 300) - 30)
+
+        return self._token
+
+    def _headers(self):
+        return {
+            "Authorization": f"Bearer {self._get_token()}",
+            "Content-Type": "application/json",
+        }
+
+    # 💰 ================= CRIAR COBRANÇA =================
+    def create_charge(self, amount: Decimal, payer_name: str, payer_email: str, description: str):
+        txid = self._generate_txid()
+
+        payload = {
+            "calendario": {
+                "expiracao": 3600
+            },
+            "devedor": {
+                "nome": payer_name,
+                "email": payer_email or ""
+            },
+            "valor": {
+                "original": f"{amount:.2f}"
+            },
+            "chave": self.pix_key,
+            "solicitacaoPagador": description
+        }
+
+        url = f"{self.base_url}/v2/cob/{txid}"
+
+        response = requests.put(
+            url,
+            json=payload,
+            headers=self._headers(),
+            cert=self.cert,
+            timeout=20
+        )
+
+        if response.status_code not in [200, 201]:
+            raise Exception(f"Erro ao criar cobrança Pix: {response.text}")
+
+        data = response.json()
+
+        # 🔥 gerar QR Code via endpoint
+        loc_id = data.get("loc", {}).get("id")
+
+        qr_response = requests.get(
+            f"{self.base_url}/v2/loc/{loc_id}/qrcode",
+            headers=self._headers(),
+            cert=self.cert,
+            timeout=20
+        )
+
+        if qr_response.status_code != 200:
+            raise Exception("Erro ao gerar QR Code")
+
+        qr_data = qr_response.json()
+
+        return type("Charge", (), {
+            "qr_code_base64": qr_data.get("imagemQrcode"),
+            "copia_cola_pix": qr_data.get("qrcode"),
+            "external_id": txid
+        })
+
+    # 🔍 ================= CONSULTAR =================
+    def get_charge(self, txid: str):
+        response = requests.get(
+            f"{self.base_url}/v2/cob/{txid}",
+            headers=self._headers(),
+            cert=self.cert,
+            timeout=20
+        )
+
+        if response.status_code != 200:
+            raise Exception(f"Erro ao consultar cobrança: {response.text}")
+
+        return response.json()
+
+    # 🔁 ================= WEBHOOK =================
+    def parse_webhook(self, payload: dict):
+        """
+        Retorna: (txid, status)
+        """
+        if "pix" in payload:
+            pix = payload["pix"][0]
+            txid = pix.get("txid")
+            return txid, "pago"
+
+        return None, "desconhecido"
+
+    # 🔧 ================= UTIL =================
+    def _generate_txid(self):
+        import uuid
+        return uuid.uuid4().hex[:25].upper()

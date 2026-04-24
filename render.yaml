@@ -46,7 +46,7 @@ services:
       - key: RIFA_TOTAL_NUMEROS
         value: "1000"
       - key: RIFA_RESERVA_MINUTOS
-        value: "30"
+        value: "60"
       - key: RIFA_PDF_DIR
         value: instance/rifas
       - key: RIFA_UPLOAD_DIR
