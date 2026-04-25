@@ -428,3 +428,20 @@ class SicrediPixGateway:
     def _generate_txid(self):
         import uuid
         return uuid.uuid4().hex[:25].upper()
+
+import os
+from uuid import uuid4
+
+def gerar_qr_code_arquivo(conteudo):
+    import qrcode
+
+    pasta = "static/qrcodes"
+    os.makedirs(pasta, exist_ok=True)
+
+    nome = f"{uuid4().hex}.png"
+    caminho = os.path.join(pasta, nome)
+
+    img = qrcode.make(conteudo)
+    img.save(caminho)
+
+    return f"/static/qrcodes/{nome}"

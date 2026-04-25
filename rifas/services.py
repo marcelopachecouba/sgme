@@ -13,6 +13,7 @@ from pathlib import Path
 
 from flask import current_app
 from sqlalchemy import func, inspect
+from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from extensions import db
@@ -481,7 +482,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
         valor_total=valor_total,
         quantidade_rifas=quantidade_rifas,
         status="pendente",
-        qr_code_base64=charge.qr_code_base64,
+        qr_code_base64=None,
         copia_cola_pix=charge.copia_cola_pix,
         external_id=charge.external_id,
         txid=txid,
@@ -510,7 +511,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
 
     return PurchaseResult(
         pagamento_id=pagamento.id,
-        qr_code_base64=pagamento.qr_code_base64 or "",
+        qr_code_base64="",
         copia_cola_pix=pagamento.copia_cola_pix or "",
         external_id=pagamento.external_id or "",
         numeros=[rifa.numero for rifa in rifas],
@@ -874,45 +875,61 @@ def payment_detail_data(pagamento_id: str) -> dict:
 
 def admin_dashboard_data() -> dict:
     ensure_rifas_schema()
-    pagamentos = db.session.execute(
-        db.select(PagamentoRifa).order_by(PagamentoRifa.created_at.desc())
-    ).scalars().all()
-    clientes = db.session.execute(
-        db.select(ClienteRifa).order_by(ClienteRifa.created_at.desc())
-    ).scalars().all()
+
+    pagamentos_count = db.session.scalar(db.select(func.count(PagamentoRifa.id))) or 0
+    clientes_count = db.session.scalar(db.select(func.count(ClienteRifa.id))) or 0
+
     rifas = db.session.execute(
         db.select(Rifa).order_by(Rifa.campanha_id.asc(), Rifa.numero.asc())
+        .options(joinedload(Rifa.cliente))
+        .limit(150)
     ).scalars().all()
     campanhas = list_campaigns()
     campanha_ativa = next((item for item in campanhas if item.ativa), None)
 
-    total_pago = sum(float(item.valor_total) for item in pagamentos if item.status == STATUS_PAGO)
-    disponiveis = sum(1 for item in rifas if item.status == STATUS_DISPONIVEL)
-    reservadas = sum(1 for item in rifas if item.status == STATUS_RESERVADO)
-    pagas = sum(1 for item in rifas if item.status == STATUS_PAGO)
+    total_pago = db.session.scalar(
+        db.select(func.coalesce(func.sum(PagamentoRifa.valor_total), 0)).where(PagamentoRifa.status == STATUS_PAGO)
+    ) or 0
+    disponiveis = db.session.scalar(
+        db.select(func.count(Rifa.id)).where(Rifa.status == STATUS_DISPONIVEL)
+    ) or 0
+    reservadas = db.session.scalar(
+        db.select(func.count(Rifa.id)).where(Rifa.status == STATUS_RESERVADO)
+    ) or 0
+    pagas = db.session.scalar(
+        db.select(func.count(Rifa.id)).where(Rifa.status == STATUS_PAGO)
+    ) or 0
 
-    ranking_map = {}
-    for pagamento in pagamentos:
-        if pagamento.status != STATUS_PAGO or not pagamento.cliente:
-            continue
-        chave = pagamento.cliente.id
-        if chave not in ranking_map:
-            ranking_map[chave] = {
-                "cliente": pagamento.cliente,
-                "quantidade": 0,
-                "valor_total": 0.0,
-            }
-        ranking_map[chave]["quantidade"] += pagamento.quantidade_rifas
-        ranking_map[chave]["valor_total"] += float(pagamento.valor_total)
+    ranking_rows = db.session.execute(
+        db.select(
+            ClienteRifa.id.label("cliente_id"),
+            ClienteRifa.nome.label("cliente_nome"),
+            func.coalesce(func.sum(PagamentoRifa.quantidade_rifas), 0).label("quantidade"),
+            func.coalesce(func.sum(PagamentoRifa.valor_total), 0).label("valor_total"),
+        )
+        .join(ClienteRifa, PagamentoRifa.cliente_id == ClienteRifa.id)
+        .where(PagamentoRifa.status == STATUS_PAGO)
+        .group_by(ClienteRifa.id, ClienteRifa.nome)
+        .order_by(
+            func.coalesce(func.sum(PagamentoRifa.quantidade_rifas), 0).desc(),
+            func.coalesce(func.sum(PagamentoRifa.valor_total), 0).desc(),
+            ClienteRifa.nome.asc(),
+        )
+        .limit(10)
+    ).all()
 
-    ranking_compradores = sorted(
-        ranking_map.values(),
-        key=lambda item: (-item["quantidade"], -item["valor_total"], item["cliente"].nome),
-    )[:10]
+    ranking_compradores = [
+        {
+            "cliente": {"id": row.cliente_id, "nome": row.cliente_nome},
+            "quantidade": int(row.quantidade or 0),
+            "valor_total": float(row.valor_total or 0),
+        }
+        for row in ranking_rows
+    ]
 
     return {
-        "pagamentos": pagamentos,
-        "clientes": clientes,
+        "pagamentos": [],
+        "clientes": [],
         "rifas": rifas,
         "campanhas": campanhas,
         "campanha_ativa": campanha_ativa,
@@ -922,8 +939,8 @@ def admin_dashboard_data() -> dict:
             "disponiveis": disponiveis,
             "reservadas": reservadas,
             "pagas": pagas,
-            "clientes": len(clientes),
-            "pagamentos": len(pagamentos),
+            "clientes": clientes_count,
+            "pagamentos": pagamentos_count,
         },
     }
 

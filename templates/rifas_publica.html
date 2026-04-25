@@ -543,6 +543,20 @@
             renderConfirmacaoComprovante();
         }
 
+        function gerarQRCode(codigoPix) {
+            const el = document.getElementById("qrcode");
+            if (!el) return;
+
+            el.innerHTML = "";
+
+            new QRCode(el, {
+                text: codigoPix,
+                width: 200,
+                height: 200
+            });
+        }
+
+
         function renderSuccess(data) {
             comprovantePendente = true;
             feedback.innerHTML = `<div class="alert alert-success mb-0">Pix gerado com sucesso.</div>`;
@@ -567,9 +581,9 @@
                     </p>
         
                     <div class="col-md-5">
-                        <div class="qr-box">
-                            <img class="img-fluid" src="data:image/png;base64,${data.qr_code_base64}" />
-                        </div>
+                        <div class="qr-box text-center">
+                            <div id="qrcode"></div>
+                        </div>                        
                     </div>
 
                     <div class="col-md-7">
@@ -603,6 +617,8 @@
                     </div>
                 </div>
             `;
+
+            gerarQRCode(data.copia_cola_pix);
 
             document.getElementById("copiar-pix")
             ?.addEventListener("click", () => {
@@ -905,6 +921,7 @@
         });
 
     </script>
-
+    <!-- QR CODE LIB -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>

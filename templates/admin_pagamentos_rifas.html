@@ -39,6 +39,28 @@
 
 </form>
 
+{% if total_pagamentos is defined %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-secondary small">
+        Mostrando até {{ por_pagina }} pagamento(s) por página. Total filtrado: {{ total_pagamentos }}.
+    </div>
+
+    <div class="btn-group">
+        <a class="btn btn-outline-secondary btn-sm {% if pagina <= 1 %}disabled{% endif %}"
+           href="{{ url_for('rifas_admin.admin_pagamentos', status=status, data_inicio=data_inicio, data_fim=data_fim, pagina=pagina-1) }}">
+            Anterior
+        </a>
+        <span class="btn btn-outline-secondary btn-sm disabled">
+            Página {{ pagina }} de {{ total_paginas }}
+        </span>
+        <a class="btn btn-outline-secondary btn-sm {% if pagina >= total_paginas %}disabled{% endif %}"
+           href="{{ url_for('rifas_admin.admin_pagamentos', status=status, data_inicio=data_inicio, data_fim=data_fim, pagina=pagina+1) }}">
+            Próxima
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <!-- 🔥 BOTÃO LIMPEZA -->
 <div class="d-flex justify-content-end mb-3">
     <button class="btn btn-danger" onclick="abrirModalLimpeza()">

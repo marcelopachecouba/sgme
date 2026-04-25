@@ -60,7 +60,7 @@ def registrar_agendamentos(scheduler, app):
     scheduler.add_job(
         executar_expiracao_rifas,
         trigger="interval",
-        minutes=5,
+        minutes=60,
         args=[app],
         max_instances=1,
         replace_existing=True,

@@ -17,6 +17,7 @@ from utils.auth import admin_required
 from extensions import db  # ✅ ADICIONADO
 from models import ClienteRifa, Equipe, Ministro, PagamentoRifa, Vendedor
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from rifas.services import (
     RifaError,
     RifaSchemaMissingError,
@@ -109,6 +110,8 @@ def admin_pagamentos():
     status = request.args.get("status")
     data_inicio_str = request.args.get("data_inicio")
     data_fim_str = request.args.get("data_fim")
+    pagina = max(int(request.args.get("pagina", 1) or 1), 1)
+    por_pagina = 50
 
     query = db.select(PagamentoRifa)
 
@@ -124,17 +127,31 @@ def admin_pagamentos():
         data_fim = data_fim.replace(hour=23, minute=59, second=59)
         query = query.where(PagamentoRifa.created_at <= data_fim)
 
+    total_pagamentos = db.session.scalar(
+        db.select(func.count()).select_from(query.subquery())
+    ) or 0
+    total_paginas = max((total_pagamentos + por_pagina - 1) // por_pagina, 1)
+    pagina = min(pagina, total_paginas)
+
     pagamentos = db.session.execute(
-        query.order_by(PagamentoRifa.created_at.desc())
+        query.options(
+            joinedload(PagamentoRifa.campanha),
+            joinedload(PagamentoRifa.cliente),
+        )
+        .order_by(PagamentoRifa.created_at.desc())
+        .limit(por_pagina)
+        .offset((pagina - 1) * por_pagina)
     ).scalars().all()
 
-    dados = _base_context()
-
-    # 🔥 sobrescreve pagamentos
+    dados = {}
     dados["pagamentos"] = pagamentos
     dados["status"] = status
     dados["data_inicio"] = data_inicio_str
     dados["data_fim"] = data_fim_str
+    dados["pagina"] = pagina
+    dados["por_pagina"] = por_pagina
+    dados["total_paginas"] = total_paginas
+    dados["total_pagamentos"] = total_pagamentos
 
     return render_template(
         "admin_pagamentos_rifas.html",

@@ -243,6 +243,7 @@ def consultar_pedido():
             .join(ClienteRifa)
             .where(ClienteRifa.telefone == telefone_limpo)
             .order_by(PagamentoRifa.created_at.desc())
+            .limit(10)
         ).scalars().all()
 
         if not pagamentos:

@@ -20,13 +20,13 @@ def start_scheduler(app):
     scheduler.add_job(
         func=job_expirar_pagamentos,
         trigger="interval",
-        minutes=5  # 🔥 roda a cada 5 minutos
+        minutes=60  # 🔥 roda a cada 5 minutos
     )
 
     scheduler.add_job(
         func=lembrar_comprovante,
         trigger="interval",
-        minutes=5
+        minutes=60
     )
 
     scheduler.start()
