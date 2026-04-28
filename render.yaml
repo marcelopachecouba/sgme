@@ -22,7 +22,7 @@ services:
       - key: PUBLIC_BASE_URL
         sync: false
       - key: PIX_PROVIDER
-        value: mock
+        value: sicredi
       - key: PIX_CHAVE
         value: "01172466000480"
       - key: PIX_MERCHANT_NAME
