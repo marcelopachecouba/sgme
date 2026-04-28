@@ -787,3 +787,47 @@ def acesso_rifas_secretaria():
         flash("Login admin inválido para acesso às rifas.", "danger")
 
     return render_template("acesso_rifas.html")    
+
+@rifas_admin_bp.route("/teste-sicredi")
+def teste_sicredi():
+    import os
+    import requests
+    import base64
+    from flask import jsonify
+
+    client_id = os.getenv("SICREDI_CLIENT_ID")
+    client_secret = os.getenv("SICREDI_CLIENT_SECRET")
+
+    cert = (
+        os.getenv("SICREDI_CERT_PATH"),
+        os.getenv("SICREDI_KEY_PATH")
+    )
+
+    auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+
+    headers = {
+        "Authorization": f"Basic {auth}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = {
+        "grant_type": "client_credentials",
+        "scope": "cob.write cob.read webhook.write webhook.read pix.read"
+    }
+
+    try:
+        response = requests.post(
+            os.getenv("SICREDI_TOKEN_URL"),
+            headers=headers,
+            data=data,
+            cert=cert,
+            timeout=30
+        )
+
+        return jsonify({
+            "status_code": response.status_code,
+            "resposta": response.text
+        })
+
+    except Exception as e:
+        return jsonify({"erro": str(e)})
