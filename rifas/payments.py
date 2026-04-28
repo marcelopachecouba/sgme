@@ -202,7 +202,7 @@ def get_pix_gateway():
             return MockPixGateway()
         return MercadoPagoPixGateway(access_token)
 
-    if provider == "sicoob":
+    if provider == "sicredi":
         return SicrediPixGateway()
 
     if provider in {"manual", "mock"}:
@@ -211,84 +211,6 @@ def get_pix_gateway():
     # fallback segurança
     logger.warning(f"PIX_PROVIDER desconhecido: {provider}, usando manual.")
     return MockPixGateway()
-
-
-class SicoobPixGateway:
-
-    def parse_webhook(self, payload: dict):
-        pix_list = payload.get("pix", [])
-
-        if not pix_list:
-            return None, None
-
-        pix = pix_list[0]
-        txid = pix.get("txid")
-
-        return txid, "pago"
-
-    def create_charge(self, *, amount, payer_name, payer_email, description):
-        token = get_sicoob_token()
-
-        base_url = current_app.config.get("SICOOB_BASE_URL")
-        chave_pix = current_app.config.get("PIX_CHAVE")
-
-        cert_path = current_app.config.get("SICOOB_CERT_PATH")
-        key_path = current_app.config.get("SICOOB_KEY_PATH")
-
-        if not all([base_url, chave_pix, cert_path, key_path]):
-            raise Exception("Configuração do Sicoob incompleta.")
-
-        txid = uuid.uuid4().hex[:25].upper()
-
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-
-        cert = (cert_path, key_path)
-
-        # 🔥 1. CRIAR COBRANÇA
-        url = f"{base_url}/cob/{txid}"
-
-        payload = {
-            "calendario": {"expiracao": 3600},
-            "valor": {"original": f"{float(amount):.2f}"},
-            "chave": chave_pix,
-            "solicitacaoPagador": description[:140]
-        }
-
-        response = requests.put(
-            url,
-            json=payload,
-            headers=headers,
-            cert=cert,
-            timeout=30
-        )
-
-        if response.status_code not in (200, 201):
-            raise Exception(f"Erro ao criar cobrança Sicoob: {response.text}")
-
-        # 🔥 2. GERAR QR CODE
-        url_qr = f"{base_url}/cob/{txid}/qrcode"
-
-        response_qr = requests.get(
-            url_qr,
-            headers=headers,
-            cert=cert,
-            timeout=30
-        )
-
-        if response_qr.status_code != 200:
-            raise Exception(f"Erro ao gerar QR Code Sicoob: {response_qr.text}")
-
-        data = response_qr.json()
-
-        return PixCharge(
-            external_id=txid,
-            qr_code_base64=data.get("imagemQrcode", ""),
-            copia_cola_pix=data.get("qrCode", ""),
-            raw_response=data
-        )
 
 import requests
 import base64
@@ -299,6 +221,8 @@ from flask import current_app
 class SicrediPixGateway:
 
     def __init__(self):
+        self._token = None
+        self._token_expira = None
         self.client_id = current_app.config.get("SICREDI_CLIENT_ID")
         self.client_secret = current_app.config.get("SICREDI_CLIENT_SECRET")
         self.token_url = current_app.config.get("SICREDI_TOKEN_URL")
@@ -311,9 +235,16 @@ class SicrediPixGateway:
             current_app.config.get("SICREDI_KEY_PATH"),
         )
 
-        self._token = None
-        self._token_expira = None
+        # 🔒 VALIDAÇÃO PRODUÇÃO
+        if not all([self.client_id, self.client_secret, self.token_url, self.base_url]):
+            raise Exception("Configuração Sicredi incompleta")
 
+        if not all(self.cert):
+            raise Exception("Certificado Sicredi não configurado")
+
+        if not self.pix_key:
+            raise Exception("Chave PIX não configurada")
+    
     # 🔐 ================= TOKEN =================
     def _get_token(self):
         if self._token and self._token_expira and datetime.utcnow() < self._token_expira:
@@ -328,7 +259,8 @@ class SicrediPixGateway:
         )
 
         if response.status_code != 200:
-            raise Exception(f"Erro ao obter token Sicredi: {response.text}")
+            logger.error(f"Sicredi erro consulta: {response.text}")
+            raise Exception("Erro ao autenticar Sicredi")
 
         data = response.json()
 
@@ -362,54 +294,76 @@ class SicrediPixGateway:
             "solicitacaoPagador": description
         }
 
-        url = f"{self.base_url}/v2/cob/{txid}"
+        url = f"{self.base_url}/cob/{txid}"
 
-        response = requests.put(
-            url,
-            json=payload,
-            headers=self._headers(),
-            cert=self.cert,
-            timeout=20
-        )
+        try:
+            response = requests.put(
+                url,
+                json=payload,
+                headers=self._headers(),
+                cert=self.cert,
+                timeout=20
+            )
+        except requests.exceptions.Timeout:
+            logger.error("Timeout Sicredi ao criar cobrança")
+            raise Exception("Sicredi indisponível")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Erro conexão Sicredi: {str(e)}")
+            raise Exception("Erro de conexão com Sicredi")
 
         if response.status_code not in [200, 201]:
-            raise Exception(f"Erro ao criar cobrança Pix: {response.text}")
+            logger.error(f"Sicredi erro cobrança: {response.text}")
+            raise Exception("Erro ao criar cobrança Pix")
 
         data = response.json()
+
+        logger.info(f"Sicredi PIX criado | txid={txid} | valor={amount} | nome={payer_name}")
 
         # 🔥 gerar QR Code via endpoint
         loc_id = data.get("loc", {}).get("id")
 
-        qr_response = requests.get(
-            f"{self.base_url}/v2/loc/{loc_id}/qrcode",
-            headers=self._headers(),
-            cert=self.cert,
-            timeout=20
-        )
+        if not loc_id:
+            logger.error(f"Sicredi sem loc_id: {data}")
+            raise Exception("Erro ao gerar QR Code")        
+
+        try:
+            qr_response = requests.get(
+                f"{self.base_url}/loc/{loc_id}/qrcode",
+                headers=self._headers(),
+                cert=self.cert,
+                timeout=20
+            )
+        except requests.exceptions.Timeout:
+            logger.error("Timeout Sicredi ao gerar QR Code")
+            raise Exception("Erro ao gerar QR Code")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Erro conexão Sicredi QR: {str(e)}")
+            raise Exception("Erro de conexão com Sicredi")
 
         if qr_response.status_code != 200:
-            raise Exception("Erro ao gerar QR Code")
+            logger.error(f"Sicredi erro QR: {qr_response.text}")
+            raise Exception("Erro ao gerar QR Code")        
 
         qr_data = qr_response.json()
 
-        return type("Charge", (), {
-            "qr_code_base64": qr_data.get("imagemQrcode"),
-            "copia_cola_pix": qr_data.get("qrcode"),
-            "external_id": txid
-        })
-
+        return PixCharge(
+            external_id=txid,
+            qr_code_base64=qr_data.get("imagemQrcode"),
+            copia_cola_pix=qr_data.get("qrcode"),
+            raw_response=data
+        )
     # 🔍 ================= CONSULTAR =================
     def get_charge(self, txid: str):
         response = requests.get(
-            f"{self.base_url}/v2/cob/{txid}",
+            f"{self.base_url}/cob/{txid}",
             headers=self._headers(),
             cert=self.cert,
             timeout=20
         )
 
         if response.status_code != 200:
-            raise Exception(f"Erro ao consultar cobrança: {response.text}")
-
+            logger.error(f"Sicredi erro consulta: {response.text}")
+            raise Exception("Erro ao autenticar Sicredi")
         return response.json()
 
     # 🔁 ================= WEBHOOK =================
@@ -417,12 +371,23 @@ class SicrediPixGateway:
         """
         Retorna: (txid, status)
         """
-        if "pix" in payload:
-            pix = payload["pix"][0]
-            txid = pix.get("txid")
-            return txid, "pago"
+        pix_list = payload.get("pix")
 
-        return None, "desconhecido"
+        if not isinstance(pix_list, list) or not pix_list:
+            logger.warning(f"Webhook inválido (sem pix): {payload}")
+            return None, "ignorado"
+
+        pix = pix_list[0]
+
+        txid = pix.get("txid")
+
+        if not txid:
+            logger.warning(f"Webhook sem txid: {payload}")
+            return None, "ignorado"
+
+        return txid, "pago"
+
+        #return None, "desconhecido"
 
     # 🔧 ================= UTIL =================
     def _generate_txid(self):

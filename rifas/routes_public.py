@@ -207,25 +207,27 @@ def pagamento_pdf_publico(payment_id):
     )
 
 
-@rifas_public_bp.route("/rifas/webhook/pix", methods=["POST"])
-@rifas_public_bp.route("/webhook/pix", methods=["POST"])
-def webhook_pix():
-    payload = request.get_json(silent=True) or {}
-    raw_body = request.get_data() or b""
-    assinatura = request.headers.get("X-Webhook-Signature", "")
-    try:
-        from extensions import db
-        pagamento = process_webhook(payload, raw_body, assinatura)
-        db.session.commit()
-        return jsonify({"status": "ok", "pagamento_id": pagamento.id})
-    except RifaSchemaMissingError as exc:
-        from extensions import db
-        db.session.rollback()
-        return jsonify({"erro": str(exc)}), 503
-    except RifaError as exc:
-        from extensions import db
-        db.session.rollback()
-        return jsonify({"erro": str(exc)}), 400
+#@rifas_public_bp.route("/rifas/webhook/pix", methods=["POST"])
+#@rifas_public_bp.route("/webhook/pix", methods=["POST"])
+#def webhook_pix():
+    #payload = request.get_json(silent=True) or {}
+    #raw_body = request.get_data() or b""
+    #assinatura = request.headers.get("X-Webhook-Signature", "")
+    #try:
+        #from extensions import db
+        #pagamento = process_webhook(payload, raw_body, assinatura)
+        #db.session.commit()
+        #return jsonify({"status": "ok", "pagamento_id": pagamento.id})
+    #except RifaSchemaMissingError as exc:
+        #from extensions import db
+        #db.session.rollback()
+        #return jsonify({"erro": str(exc)}), 503
+    #except RifaError as exc:
+        #from extensions import db
+        #db.session.rollback()
+        #return jsonify({"erro": str(exc)}), 400
+
+
 
 @rifas_public_bp.route("/rifas/consultar", methods=["POST"])
 def consultar_pedido():
