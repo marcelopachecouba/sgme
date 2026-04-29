@@ -1,10 +1,12 @@
 from datetime import datetime
-from flask import request, jsonify
-from app import db
+from flask import request, jsonify, Blueprint
+from extensions import db
 from rifas.models import PagamentoRifa, Rifa
 import logging
 
 logger = logging.getLogger(__name__)
+
+api_bp = Blueprint("api", __name__)
 
 @api_bp.route("/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
@@ -14,19 +16,21 @@ def webhook_pix_sicredi():
         logger.warning("Webhook vazio")
         return jsonify({"msg": "ok"}), 200
 
-    logger.info(f"Webhook recebido: {payload}")
+    logger.info("Webhook recebido Sicredi")
 
     try:
-        # 🔎 padrão Sicredi
         pix_list = payload.get("pix", [])
 
         if not pix_list:
             return jsonify({"msg": "ignorado"}), 200
 
         for pix in pix_list:
-            txid = pix.get("txid")
+            txid = (pix.get("txid") or "").strip().upper()
 
             if not txid:
+                continue
+
+            if pix.get("valor") is None:
                 continue
 
             pagamento = db.session.execute(
@@ -37,16 +41,13 @@ def webhook_pix_sicredi():
                 logger.warning(f"Pagamento não encontrado txid={txid}")
                 continue
 
-            # 🔒 idempotência (não processar duas vezes)
             if pagamento.status == "pago":
                 logger.info(f"Webhook duplicado txid={txid}")
                 continue
 
-            # ✅ marca como pago
             pagamento.status = "pago"
             pagamento.data_pagamento = datetime.utcnow()
 
-            # 🔥 libera rifas
             rifas = db.session.execute(
                 db.select(Rifa).where(Rifa.pagamento_id == pagamento.id)
             ).scalars().all()
@@ -55,6 +56,7 @@ def webhook_pix_sicredi():
                 rifa.status = "pago"
 
         db.session.commit()
+        logger.info("Webhook processado com sucesso")
 
         return jsonify({"msg": "ok"}), 200
 
