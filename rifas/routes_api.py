@@ -37,6 +37,10 @@ def pagamento_status(payment_id):
 
 from decimal import Decimal
 
+from datetime import datetime
+from decimal import Decimal
+import json
+
 @rifas_api_bp.route("/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
     payload = request.get_json(silent=True)
@@ -48,34 +52,34 @@ def webhook_pix_sicredi():
     pix_list = payload.get("pix", [])
     logger.info(f"Webhook recebido Sicredi | itens={len(pix_list)}")
 
-    try:
-        if not pix_list:
-            return jsonify({"msg": "ignorado"}), 200
+    if not pix_list:
+        return jsonify({"msg": "ignorado"}), 200
 
+    try:
         for pix in pix_list:
             txid = (pix.get("txid") or "").strip().upper()
 
-            if not txid:
+            if not txid or pix.get("valor") is None:
                 continue
 
-            if pix.get("valor") is None:
-                continue
-
+            # 🔒 lock no registro
             pagamento = db.session.execute(
-                db.select(PagamentoRifa).where(PagamentoRifa.txid == txid)
+                db.select(PagamentoRifa)
+                .where(PagamentoRifa.txid == txid)
+                .with_for_update()
             ).scalar_one_or_none()
 
             if not pagamento:
                 logger.warning(f"Pagamento não encontrado txid={txid}")
                 continue
 
-            # 🔒 idempotência por status
+            # 🔒 idempotência
             if pagamento.status == "pago":
                 logger.info(f"Webhook duplicado txid={txid}")
                 continue
 
-            # 🔒 idempotência extra (endToEndId)
             end_to_end = pix.get("endToEndId")
+
             if end_to_end and pagamento.end_to_end_id == end_to_end:
                 logger.info(f"Webhook duplicado endToEndId={end_to_end}")
                 continue
@@ -90,7 +94,6 @@ def webhook_pix_sicredi():
             except:
                 pagamento.valor_pago = Decimal("0.00")
 
-
             pagamento.banco_payload = json.dumps(pix, ensure_ascii=False)
             pagamento.end_to_end_id = end_to_end
 
@@ -102,8 +105,9 @@ def webhook_pix_sicredi():
             for rifa in rifas:
                 rifa.status = "pago"
 
+            logger.info(f"Pagamento confirmado txid={txid} valor={pagamento.valor_pago}")
+
         db.session.commit()
-        logger.info(f"Webhook OK txid={txid} valor={pix.get('valor')}")
 
         return jsonify({"msg": "ok"}), 200
 
@@ -111,4 +115,3 @@ def webhook_pix_sicredi():
         db.session.rollback()
         logger.error(f"Erro webhook: {str(e)}")
         return jsonify({"msg": "erro"}), 500
-       

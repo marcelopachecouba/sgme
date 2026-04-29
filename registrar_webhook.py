@@ -9,7 +9,7 @@ gateway = SicrediPixGateway()
 url = f"{gateway.base_url}/webhook/{gateway.pix_key}"
 
 payload = {
-    "webhookUrl": "https://sgme.onrender.com/webhook/pix/sicredi"
+    "webhookUrl": "https://sgme.onrender.com/api/webhook/pix/sicredi"
 }
 
 response = requests.put(
