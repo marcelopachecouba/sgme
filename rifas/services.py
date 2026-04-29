@@ -402,7 +402,7 @@ def get_public_page_data() -> dict:
     }
 
 
-def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vendedor: str, quantidade_rifas: int):
+def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vendedor: str, quantidade_rifas: int, cpf=None):
     ensure_rifas_schema()
     nome = _normalizar_texto(nome).upper()
     email = _normalizar_texto(email).lower()
@@ -412,6 +412,12 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
     
     
     gateway = get_pix_gateway()
+
+
+    # 🔒 CPF obrigatório apenas para Pix automático (Sicredi)
+    if gateway.__class__.__name__ == "SicrediPixGateway":
+        if not cpf:
+            raise RifaError("CPF obrigatório para pagamento via Pix")
 
     campanha = db.session.execute(
         db.select(RifaCampanha).where(RifaCampanha.ativa.is_(True)).order_by(RifaCampanha.created_at.desc())
@@ -474,8 +480,18 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
         payer_name=nome,
         payer_email=email,
         description=f"{campanha.titulo} - {quantidade_rifas} rifa(s)",
+        payer_document=cpf,
     )
-    txid = ''.join(filter(str.isalnum, (charge.external_id or '')))[:25].upper()
+    import uuid
+
+    raw_txid = ''.join(filter(str.isalnum, (charge.external_id or ''))).upper()
+
+    if len(raw_txid) < 26:
+        txid = uuid.uuid4().hex[:32].upper()
+    else:
+        txid = raw_txid[:32]
+
+
     pagamento = PagamentoRifa(
         campanha_id=campanha.id,
         cliente_id=cliente.id,
@@ -489,6 +505,7 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
         vendedor=vendedor,
         vendedor_codigo=vendedor_resolvido,
         equipe_id=equipe_id,
+        cpf=cpf,
     )
 
     db.session.add(pagamento)

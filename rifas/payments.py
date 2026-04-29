@@ -120,7 +120,7 @@ def generate_pix_payload(key, amount, txid):
 
 class MockPixGateway:
     def create_charge(self, *, amount: float, payer_name: str, payer_email: str, description: str) -> PixCharge:
-        external_id = uuid.uuid4().hex[:25].upper()
+        external_id = uuid.uuid4().hex[:32].upper()
         chave_pix = current_app.config.get("PIX_CHAVE", "01172466000480")
         copia_cola = generate_pix_payload(
             key=chave_pix,
@@ -276,17 +276,30 @@ class SicrediPixGateway:
         }
 
     # 💰 ================= CRIAR COBRANÇA =================
-    def create_charge(self, amount: Decimal, payer_name: str, payer_email: str, description: str):
-        txid = self._generate_txid()
+   
+    def create_charge(self, amount, payer_name, payer_email, description, payer_document=None):
+        import uuid
 
+        txid = uuid.uuid4().hex[:32].upper()
+
+        # 🔧 monta devedor corretamente
+        devedor = {
+            "nome": payer_name,
+            "email": payer_email or ""
+        }
+
+        if payer_document:
+            if len(payer_document) == 11:
+                devedor["cpf"] = payer_document
+            elif len(payer_document) == 14:
+                devedor["cnpj"] = payer_document
+
+        # 🔧 payload correto
         payload = {
             "calendario": {
                 "expiracao": 3600
             },
-            "devedor": {
-                "nome": payer_name,
-                "email": payer_email or ""
-            },
+            "devedor": devedor,
             "valor": {
                 "original": f"{amount:.2f}"
             },
@@ -319,39 +332,59 @@ class SicrediPixGateway:
 
         logger.info(f"Sicredi PIX criado | txid={txid} | valor={amount} | nome={payer_name}")
 
-        # 🔥 gerar QR Code via endpoint
-        loc_id = data.get("loc", {}).get("id")
-
-        if not loc_id:
-            logger.error(f"Sicredi sem loc_id: {data}")
-            raise Exception("Erro ao gerar QR Code")        
-
+        # 🔄 buscar cobrança atualizada (forma confiável)
         try:
-            qr_response = requests.get(
-                f"{self.base_url}/loc/{loc_id}/qrcode",
+            cob_response = requests.get(
+                f"{self.base_url}/cob/{txid}",
                 headers=self._headers(),
                 cert=self.cert,
                 timeout=20
             )
-        except requests.exceptions.Timeout:
-            logger.error("Timeout Sicredi ao gerar QR Code")
-            raise Exception("Erro ao gerar QR Code")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Erro conexão Sicredi QR: {str(e)}")
-            raise Exception("Erro de conexão com Sicredi")
+            logger.error(f"Erro ao buscar cobrança: {str(e)}")
+            raise Exception("Erro ao buscar cobrança Pix")
 
-        if qr_response.status_code != 200:
-            logger.error(f"Sicredi erro QR: {qr_response.text}")
-            raise Exception("Erro ao gerar QR Code")        
+        if cob_response.status_code != 200:
+            logger.error(f"Sicredi erro GET cob: {cob_response.text}")
+            raise Exception("Erro ao buscar cobrança")
 
-        qr_data = qr_response.json()
+        cob_data = cob_response.json()
+
+        # 🔎 tenta pegar direto
+        pix_copia_cola = cob_data.get("pixCopiaECola")
+        qr_base64 = None
+
+        # 🔁 fallback via location
+        if not pix_copia_cola:
+            location = cob_data.get("loc", {}).get("location")
+
+            if location:
+                try:
+                    qr_response = requests.get(
+                        f"{location}/qrcode",
+                        headers=self._headers(),
+                        cert=self.cert,
+                        timeout=20
+                    )
+
+                    if qr_response.status_code == 200:
+                        qr_data = qr_response.json()
+                        pix_copia_cola = qr_data.get("qrcode")
+                        qr_base64 = qr_data.get("imagemQrcode")
+                except requests.exceptions.RequestException:
+                    pass
+
+        # 🔒 fallback final (não quebra sistema)
+        if not pix_copia_cola:
+            logger.warning(f"QR ainda não disponível: {cob_data}")
 
         return PixCharge(
             external_id=txid,
-            qr_code_base64=qr_data.get("imagemQrcode"),
-            copia_cola_pix=qr_data.get("qrcode"),
+            qr_code_base64=qr_base64,
+            copia_cola_pix=pix_copia_cola,
             raw_response=data
         )
+    
     # 🔍 ================= CONSULTAR =================
     def get_charge(self, txid: str):
         response = requests.get(
@@ -392,7 +425,7 @@ class SicrediPixGateway:
     # 🔧 ================= UTIL =================
     def _generate_txid(self):
         import uuid
-        return uuid.uuid4().hex[:25].upper()
+        return uuid.uuid4().hex[:32].upper()
 
 import os
 from uuid import uuid4

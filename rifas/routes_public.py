@@ -94,6 +94,8 @@ def comprar_rifa():
                 "erro": "Você já possui um pagamento pendente. Finalize antes de gerar outro."
             }), 400
 
+        cpf = ''.join(filter(str.isdigit, data.get("cpf", "")))
+
         resultado = purchase_rifas(
             nome=data.get("nome", ""),
             telefone=telefone,
@@ -101,6 +103,7 @@ def comprar_rifa():
             email=None,
             vendedor=session.get("rifa_ref_vendedor") or data.get("vendedor", ""),
             quantidade_rifas=quantidade,
+            cpf=cpf,
         )
 
         db.session.commit()

@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask import url_for
 import uuid
 from datetime import date
 from datetime import datetime
@@ -820,6 +820,7 @@ class ClienteRifa(db.Model):
     email = db.Column(db.String(150), nullable=True, index=True)
 
     endereco = db.Column(db.String(255))
+    
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     
     pagamentos = db.relationship("PagamentoRifa", back_populates="cliente", lazy="select")
@@ -878,8 +879,8 @@ class Vendedor(db.Model):
     
     @property
     def link_publico(self) -> str:
-        return build_public_url("rifas_public.rifas_home", ref=self.codigo)
-
+        return url_for("rifas_public.rifas_home", ref=self.codigo, _external=True)
+    
 class BlocoRifa(db.Model):
     __tablename__ = "blocos_rifas"
 
@@ -928,10 +929,11 @@ class PagamentoRifa(db.Model):
     vendedor = db.Column(db.String(120))
     vendedor_codigo = db.Column(db.String(50), db.ForeignKey("vendedores.codigo"), index=True)
     equipe_id = db.Column(db.String(36), db.ForeignKey("equipes.id"), index=True)
-    txid = db.Column(db.String(25), unique=True, index=True)
+    txid = db.Column(db.String(35), unique=True, index=True)
     origem_pagamento = db.Column(db.String(20))
     impresso = db.Column(db.Boolean, default=False)
     impresso_em = db.Column(db.DateTime)
+    cpf = db.Column(db.String(14), nullable=True, index=True)
 
     __table_args__ = (
     db.Index('idx_txid_status', 'txid', 'status'),

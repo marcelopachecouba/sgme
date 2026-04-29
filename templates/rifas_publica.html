@@ -274,6 +274,12 @@
                             </div>
                         </div>
                         <form id="rifa-form" class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">CPF</label>
+                                <input class="form-control" name="cpf" id="cpf">
+                            </div>
+
                             <div class="col-12">
                                 <label class="form-label">Nome completo</label>
                                 <input class="form-control" name="nome" required>
@@ -583,6 +589,12 @@
                     <div class="col-md-5">
                         <div class="qr-box text-center">
                             <div id="qrcode"></div>
+
+                            <div id="pix-copia" class="pix-box mt-3 text-center">
+                                <small>Ou copie o código Pix:</small><br>
+                                <strong id="pix-texto"></strong>
+                            </div>
+
                         </div>                        
                     </div>
 
@@ -618,24 +630,35 @@
                 </div>
             `;
 
+            if (!data.copia_cola_pix) {
+                alert("Erro ao gerar Pix. Tente novamente.");
+                return;
+            }
+
             gerarQRCode(data.copia_cola_pix);
+
+            const pixTexto = document.getElementById("pix-texto");
+            if (pixTexto) {
+                pixTexto.innerText = data.copia_cola_pix;
+            }
 
             document.getElementById("copiar-pix")
             ?.addEventListener("click", () => {
-                navigator.clipboard.writeText(data.copia_cola_pix);
-
-                alert("PIX copiado com sucesso!");
+                navigator.clipboard.writeText(data.copia_cola_pix)
+                    .then(() => console.log("PIX copiado"))
+                    .catch(() => alert("Erro ao copiar PIX"));
             });
 
             document.querySelectorAll(".btn-enviar-comprovante").forEach((botao) => {
-                botao.addEventListener("click", () => document.getElementById("comprovante-arquivo").click());
+                botao.addEventListener("click", () => {
+                    document.getElementById("comprovante-arquivo").click();
+                });
             });
 
             document.getElementById("comprovante-arquivo")
             ?.addEventListener("change", function() {
                 enviarComprovante(data.pagamento_id);
             });
-
         }
 
         if (form) {

@@ -798,11 +798,12 @@ def teste_sicredi():
     client_id = os.getenv("SICREDI_CLIENT_ID")
     client_secret = os.getenv("SICREDI_CLIENT_SECRET")
 
+    
     cert = (
         os.getenv("SICREDI_CERT_PATH"),
-        os.getenv("SICREDI_KEY_PATH")
+        os.getenv("SICREDI_KEY_PATH"),
     )
-
+    
     auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
 
     headers = {
