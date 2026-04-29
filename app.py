@@ -3,7 +3,10 @@ load_dotenv()
 
 import os
 import cloudinary
-from rifas.routes_api import api_bp as rifas_api_bp
+
+from rifas.routes_api import rifas_api_bp
+from routes.api_routes import api_bp
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, send_from_directory
 from flask_migrate import Migrate
@@ -14,7 +17,6 @@ from extensions import db, login_manager
 from models import Ministro
 from mural.mural_routes import mural_bp
 from routes.admin_routes import admin_bp
-from routes.api_routes import api_bp
 from routes.auth_routes import auth_bp
 from routes.avisos_routes import avisos_bp
 from routes.busca_routes import busca_bp
@@ -164,7 +166,6 @@ def create_app(config_override=None):
         _iniciar_scheduler(app)
 
     return app
-
 
 app = create_app()
 

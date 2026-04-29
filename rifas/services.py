@@ -1331,3 +1331,23 @@ def gerar_novas_rifas_pagamento(pagamento):
         rifa.status = "reservado"
         rifa.pagamento_id = pagamento.id
         rifa.cliente_id = pagamento.cliente_id
+
+def montar_mensagem_pagamento(pagamento):
+    campanha = pagamento.campanha.titulo
+    numeros = ", ".join(str(r.numero).zfill(4) for r in pagamento.rifas)
+    valor = f"{pagamento.valor_total:.2f}".replace(".", ",")
+    data = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
+
+    return f"""
+🎉 *Pagamento confirmado com sucesso!*
+
+Olá *{pagamento.cliente.nome}*, tudo bem? 😊
+
+Sua participação na *{campanha}* foi confirmada! 🙌
+
+🎟️ *Seus números:* {numeros}
+💰 *Valor pago:* R$ {valor}
+📅 *Sorteio final:* {data}
+
+🙏 Muito obrigado por participar e boa sorte! 🍀
+"""

@@ -1,3 +1,4 @@
+
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request
@@ -5,6 +6,8 @@ from flask_login import login_required, current_user
 from models import Escala, Missa
 from utils.auth import admin_required
 from services.whatsapp_service import enviar_lembretes_whatsapp
+
+from flask import Blueprint
 
 api_bp = Blueprint("api", __name__)
 

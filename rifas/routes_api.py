@@ -4,15 +4,46 @@ from extensions import db
 from rifas.models import PagamentoRifa, Rifa
 import logging
 import json
+from rifas.services import montar_mensagem_pagamento
+
 logger = logging.getLogger(__name__)
 
-api_bp = Blueprint("rifas_api", __name__)
+
+from flask import Blueprint
+
+
+rifas_api_bp = Blueprint("rifas_api", __name__, url_prefix="/api")
+
+
+@rifas_api_bp.route("/pagamento/status/<payment_id>")
+def pagamento_status(payment_id):
+    pagamento = db.session.execute(
+        db.select(PagamentoRifa).where(PagamentoRifa.id == payment_id)
+    ).scalar_one_or_none()
+
+    if not pagamento:
+        return jsonify({"erro": "nao encontrado"}), 404
+
+    return jsonify({
+        "status": pagamento.status,
+        "tipo": pagamento.tipo_pagamento,
+        "mensagem": montar_mensagem_pagamento(pagamento)
+    })
+
+
+
 
 from decimal import Decimal
 
-@api_bp.route("/webhook/pix/sicredi", methods=["POST"])
+@rifas_api_bp.route("/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
     payload = request.get_json(silent=True)
+
+    secret = request.headers.get("X-Webhook-Secret")
+
+    if secret != os.getenv("WEBHOOK_SECRET"):
+        logger.warning("Webhook inválido")
+        return jsonify({"msg": "unauthorized"}), 403    
 
     if not payload:
         logger.warning("Webhook vazio")
@@ -58,7 +89,12 @@ def webhook_pix_sicredi():
             pagamento.tipo_pagamento = "pix_auto"
             pagamento.data_pagamento = datetime.utcnow()
 
-            pagamento.valor_pago = Decimal(pix.get("valor"))
+            try:
+                pagamento.valor_pago = Decimal(str(pix.get("valor")))
+            except:
+                pagamento.valor_pago = Decimal("0.00")
+
+
             pagamento.banco_payload = json.dumps(pix, ensure_ascii=False)
             pagamento.end_to_end_id = end_to_end
 
@@ -71,7 +107,7 @@ def webhook_pix_sicredi():
                 rifa.status = "pago"
 
         db.session.commit()
-        logger.info("Webhook processado com sucesso")
+        logger.info(f"Webhook OK txid={txid} valor={pix.get('valor')}")
 
         return jsonify({"msg": "ok"}), 200
 
@@ -79,39 +115,4 @@ def webhook_pix_sicredi():
         db.session.rollback()
         logger.error(f"Erro webhook: {str(e)}")
         return jsonify({"msg": "erro"}), 500
-        
-@api_bp.route("/rifas/status/<int:pagamento_id>")
-def status_pagamento(pagamento_id):
-    pagamento = db.session.get(PagamentoRifa, pagamento_id)
-
-    if not pagamento:
-        return {"status": "erro"}, 404
-
-    if pagamento.status == "pago":
-        campanha = pagamento.campanha.titulo
-
-        rifas = db.session.execute(
-            db.select(Rifa).where(Rifa.pagamento_id == pagamento.id)
-        ).scalars().all()
-
-        numeros = ", ".join([str(r.numero).zfill(4) for r in rifas])
-
-        valor = f"{pagamento.valor_total:.2f}".replace(".", ",")
-        data_sorteio = pagamento.campanha.data_sorteio.strftime("%d/%m/%Y")
-
-        mensagem = (
-            f"🎉 Pagamento confirmado com sucesso!\n\n"
-            f"Olá {pagamento.cliente.nome}, tudo bem? 😊\n\n"
-            f"Sua participação na {campanha} foi confirmada!\n\n"
-            f"🎟️ Seus números: {numeros}\n"
-            f"💰 Valor pago: R$ {valor}\n"
-            f"📅 Sorteio final: {data_sorteio}\n\n"
-            f"🙏 Muito obrigado e boa sorte! 🍀"
-        )
-
-        return {
-            "status": "pago",
-            "mensagem": mensagem
-        }
-
-    return {"status": pagamento.status}
+       
