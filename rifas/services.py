@@ -251,6 +251,7 @@ def create_team(*, nome: str, ativa: bool = True) -> Equipe:
         equipe = Equipe(nome=nome_normalizado, ativa=ativa)
         db.session.add(equipe)
         db.session.flush()
+        db.session.commit()
         return equipe
 
     equipe.ativa = ativa
@@ -280,6 +281,7 @@ def create_vendor(*, nome: str, codigo: str, equipe_id: str, telefone: str = Non
     vendedor = Vendedor(nome=nome_normalizado, codigo=codigo_normalizado, equipe_id=equipe.id,telefone=telefone)
     db.session.add(vendedor)
     db.session.flush()
+    db.session.commit()
     return vendedor
 
 
@@ -358,6 +360,7 @@ def create_bloco_rifa(
         rifa.status = STATUS_BLOCO
 
     db.session.flush()
+    db.session.commit()
     return bloco
 
 
@@ -525,6 +528,8 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
         quantidade_rifas,
         [rifa.numero for rifa in rifas],
     )
+    
+    db.session.commit()
 
     return PurchaseResult(
         pagamento_id=pagamento.id,
@@ -760,6 +765,8 @@ def confirm_payment(*, external_id: str | None = None, pagamento_id: str | None 
 
     logger.info(f"Pagamento confirmado com sucesso: {pagamento.id}")
 
+    db.session.commit()  # 🔥 ESSENCIAL
+
     return pagamento
 
 def process_webhook(payload: dict, raw_body: bytes, signature: str | None) -> PagamentoRifa:
@@ -785,7 +792,12 @@ def process_webhook(payload: dict, raw_body: bytes, signature: str | None) -> Pa
         return pagamento
 
     if status.lower() in ["pago", "paid", "approved"]:
-        return confirm_payment(pagamento_id=pagamento.id)
+        try:
+            return confirm_payment(pagamento_id=pagamento.id)
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Erro webhook: {str(e)}")
+            raise
 
     raise RifaError("Webhook sem confirmacao de pagamento.")
 
@@ -1033,8 +1045,8 @@ def cancelar_pagamentos_expirados():
 
         p.status = "cancelado"
 
-    #if pagamentos:
-     #   db.session.commit()
+    if pagamentos:
+        db.session.commit()
 
 
 def limpeza_completa_rifas():

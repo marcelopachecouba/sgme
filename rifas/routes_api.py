@@ -1,58 +1,64 @@
-from flask import request, jsonify
 from datetime import datetime
-from extensions import db
-from models import PagamentoRifa, Rifa
-from rifas.payments import SicrediPixGateway
+from flask import request, jsonify
+from app import db
+from rifas.models import PagamentoRifa, Rifa
 import logging
-
-from flask import Blueprint
-
-api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 logger = logging.getLogger(__name__)
 
-from rifas.services import process_webhook, validate_webhook_signature
-
 @api_bp.route("/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
-
-    # 🔒 RAW BODY (OBRIGATÓRIO)
-    raw_body = request.get_data()
-    signature = request.headers.get("X-Webhook-Signature")
-
-    # 🔒 SEGURANÇA
-    if not validate_webhook_signature(raw_body, signature):
-        logger.warning(f"Webhook assinatura inválida IP={request.remote_addr}")
-        return jsonify({"msg": "assinatura invalida"}), 403
-
-    # 🔽 PAYLOAD
     payload = request.get_json(silent=True)
 
     if not payload:
-        logger.warning("Webhook vazio recebido")
-        return jsonify({"msg": "payload vazio"}), 200
+        logger.warning("Webhook vazio")
+        return jsonify({"msg": "ok"}), 200
 
-    # 🔍 LOG BÁSICO (debug produção)
-    user_agent = request.headers.get("User-Agent", "")
-    logger.info(f"Webhook recebido IP={request.remote_addr} UA={user_agent}")
+    logger.info(f"Webhook recebido: {payload}")
 
     try:
-        # 🔥 PROCESSAMENTO CENTRAL (ESSENCIAL)
-        pagamento = process_webhook(payload, raw_body, signature)
+        # 🔎 padrão Sicredi
+        pix_list = payload.get("pix", [])
+
+        if not pix_list:
+            return jsonify({"msg": "ignorado"}), 200
+
+        for pix in pix_list:
+            txid = pix.get("txid")
+
+            if not txid:
+                continue
+
+            pagamento = db.session.execute(
+                db.select(PagamentoRifa).where(PagamentoRifa.txid == txid)
+            ).scalar_one_or_none()
+
+            if not pagamento:
+                logger.warning(f"Pagamento não encontrado txid={txid}")
+                continue
+
+            # 🔒 idempotência (não processar duas vezes)
+            if pagamento.status == "pago":
+                logger.info(f"Webhook duplicado txid={txid}")
+                continue
+
+            # ✅ marca como pago
+            pagamento.status = "pago"
+            pagamento.data_pagamento = datetime.utcnow()
+
+            # 🔥 libera rifas
+            rifas = db.session.execute(
+                db.select(Rifa).where(Rifa.pagamento_id == pagamento.id)
+            ).scalars().all()
+
+            for rifa in rifas:
+                rifa.status = "pago"
 
         db.session.commit()
-
-        logger.info(
-            f"Pagamento confirmado via webhook | txid={pagamento.txid} | id={pagamento.id}"
-        )
 
         return jsonify({"msg": "ok"}), 200
 
     except Exception as e:
         db.session.rollback()
-
-        logger.error(
-            f"Erro webhook Sicredi | erro={str(e)} | payload={payload}"
-        )
-
-        return jsonify({"msg": "erro interno"}), 500
+        logger.error(f"Erro webhook: {str(e)}")
+        return jsonify({"msg": "erro"}), 500

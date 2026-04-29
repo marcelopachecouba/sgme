@@ -218,32 +218,47 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from flask import current_app
 
+import os
+
 class SicrediPixGateway:
 
     def __init__(self):
+        self.client_id = os.getenv("SICREDI_CLIENT_ID")
+        self.client_secret = os.getenv("SICREDI_CLIENT_SECRET")
+        self.token_url = os.getenv("SICREDI_TOKEN_URL")
+        self.base_url = os.getenv("SICREDI_API_URL")
+        self.pix_key = os.getenv("PIX_CHAVE")
+
+        cert_path = os.getenv("SICREDI_CERT_PATH")
+        key_path = os.getenv("SICREDI_KEY_PATH")
+
+        self.cert = (cert_path, key_path) if cert_path and key_path else None
+
+        # 🔍 DEBUG (pode remover depois)
+        print("DEBUG SICREDI INIT:")
+        print("CLIENT_ID:", self.client_id)
+        print("SECRET:", self.client_secret)
+        print("TOKEN_URL:", self.token_url)
+        print("API_URL:", self.base_url)
+        print("CERT:", cert_path)
+        print("KEY:", key_path)
+        print("PIX:", self.pix_key)
+
+        # 🔒 VALIDAÇÃO
+        if not all([
+            self.client_id,
+            self.client_secret,
+            self.token_url,
+            self.base_url,
+            self.pix_key,
+            cert_path,
+            key_path
+        ]):
+            raise Exception("Configuração Sicredi incompleta")    
+        # 🔐 TOKEN CACHE (ESSENCIAL)
         self._token = None
-        self._token_expira = None
-        self.client_id = current_app.config.get("SICREDI_CLIENT_ID")
-        self.client_secret = current_app.config.get("SICREDI_CLIENT_SECRET")
-        self.token_url = current_app.config.get("SICREDI_TOKEN_URL")
-        self.base_url = current_app.config.get("SICREDI_API_URL")
+        self._token_expira = None    
 
-        self.pix_key = current_app.config.get("PIX_CHAVE")
-
-        self.cert = (
-            current_app.config.get("SICREDI_CERT_PATH"),
-            current_app.config.get("SICREDI_KEY_PATH"),
-        )
-
-        # 🔒 VALIDAÇÃO PRODUÇÃO
-        if not all([self.client_id, self.client_secret, self.token_url, self.base_url]):
-            raise Exception("Configuração Sicredi incompleta")
-
-        if not all(self.cert):
-            raise Exception("Certificado Sicredi não configurado")
-
-        if not self.pix_key:
-            raise Exception("Chave PIX não configurada")
     
     # 🔐 ================= TOKEN =================
     def _get_token(self):

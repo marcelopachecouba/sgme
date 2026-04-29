@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import cloudinary
 
@@ -36,6 +39,7 @@ from routes.notificacoes_routes import notificacao_bp
 from routes.observacoes_lembrete_routes import observacoes_lembrete_bp
 from datetime import timedelta
 
+import os
 
 scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
 migrate = Migrate()
@@ -159,7 +163,6 @@ def create_app(config_override=None):
         _iniciar_scheduler(app)
 
     return app
-
 
 
 app = create_app()
