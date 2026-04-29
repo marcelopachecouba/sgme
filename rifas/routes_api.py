@@ -41,7 +41,7 @@ from datetime import datetime
 from decimal import Decimal
 import json
 
-@rifas_api_bp.route("/webhook/pix/sicredi", methods=["POST"])
+@rifas_api_bp.route("/api/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
     payload = request.get_json(silent=True)
 

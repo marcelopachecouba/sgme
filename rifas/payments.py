@@ -442,6 +442,23 @@ class SicrediPixGateway:
     def _generate_txid(self):
         import uuid
         return uuid.uuid4().hex[:32].upper()
+    
+
+    def consultar_cobranca(self, txid):
+        url = f"{self.base_url}/cob/{txid}"
+
+        response = requests.get(
+            url,
+            headers=self._headers(),
+            cert=self.cert,
+            timeout=20
+        )
+
+        if response.status_code != 200:
+            return None
+
+        return response.json()
+
 
 import os
 from uuid import uuid4

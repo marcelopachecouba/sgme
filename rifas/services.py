@@ -421,6 +421,10 @@ def purchase_rifas(*, nome: str, telefone: str, email: str, endereco: str, vende
     if gateway.__class__.__name__ == "SicrediPixGateway":
         if not cpf:
             raise RifaError("CPF obrigatório para pagamento via Pix")
+    
+    cpf = ''.join(filter(str.isdigit, cpf or ""))
+    if not cpf or not validar_cpf(cpf):
+        raise RifaError("CPF inválido. Verifique e tente novamente.")       
 
     campanha = db.session.execute(
         db.select(RifaCampanha).where(RifaCampanha.ativa.is_(True)).order_by(RifaCampanha.created_at.desc())
@@ -1351,3 +1355,70 @@ Sua participação na *{campanha}* foi confirmada! 🙌
 
 🙏 Muito obrigado por participar e boa sorte! 🍀
 """
+
+def validar_cpf(cpf: str) -> bool:
+    if not cpf:
+        return False
+
+    cpf = ''.join(filter(str.isdigit, cpf))
+
+    if len(cpf) != 11:
+        return False
+
+    # elimina CPFs inválidos tipo 11111111111
+    if cpf == cpf[0] * 11:
+        return False
+
+    # 1º dígito
+    soma = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    dig1 = (soma * 10 % 11) % 10
+
+    # 2º dígito
+    soma = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    dig2 = (soma * 10 % 11) % 10
+
+    return cpf[-2:] == f"{dig1}{dig2}"
+
+def verificar_pagamentos_pendentes():
+    gateway = get_pix_gateway()
+
+    pagamentos = db.session.execute(
+            db.select(PagamentoRifa).where(
+                PagamentoRifa.status == "pendente",
+                PagamentoRifa.created_at >= datetime.utcnow() - timedelta(hours=2)
+            )
+        ).scalars().all()
+
+    for pagamento in pagamentos:
+        if not pagamento.txid:
+            continue
+
+        try:
+            data = gateway.consultar_cobranca(pagamento.txid)
+
+            if not data:
+                continue
+
+            status = (data.get("status") or "").upper()
+
+            if status in ["CONCLUIDA", "LIQUIDADA"]:
+
+                pagamento.status = "pago"
+                pagamento.tipo_pagamento = "pix_auto"
+                pagamento.data_pagamento = datetime.utcnow()
+
+                pagamento.banco_payload = json.dumps(data)
+
+                rifas = db.session.execute(
+                    db.select(Rifa).where(Rifa.pagamento_id == pagamento.id)
+                ).scalars().all()
+
+                for rifa in rifas:
+                    rifa.status = "pago"
+
+                logger.info(f"[RECONCILIACAO] Pago via consulta txid={pagamento.txid}")
+
+        except Exception as e:
+            logger.error(f"Erro ao consultar txid={pagamento.txid}: {str(e)}")
+
+    db.session.commit()
