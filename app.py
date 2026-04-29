@@ -3,7 +3,7 @@ load_dotenv()
 
 import os
 import cloudinary
-
+from rifas.routes_api import api_bp as rifas_api_bp
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, send_from_directory
 from flask_migrate import Migrate
@@ -63,6 +63,7 @@ def _registrar_blueprints(app):
         mural_bp,
         busca_bp,
         api_bp,
+        rifas_api_bp,  # 🔥 ADICIONAR ESTE
         superadmin_bp,
         minhas_escalas_bp,
         push_bp,
