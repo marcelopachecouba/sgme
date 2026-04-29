@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-api_bp = Blueprint("api", __name__)
+api_bp = Blueprint("rifas_api", __name__)
 
 @api_bp.route("/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
