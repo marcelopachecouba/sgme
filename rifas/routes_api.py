@@ -24,12 +24,16 @@ def pagamento_status(payment_id):
     if not pagamento:
         return jsonify({"erro": "nao encontrado"}), 404
 
+    try:
+        mensagem = montar_mensagem_pagamento(pagamento)
+    except Exception as e:
+        mensagem = None
+
     return jsonify({
         "status": pagamento.status,
         "tipo": pagamento.tipo_pagamento,
-        "mensagem": montar_mensagem_pagamento(pagamento)
+        "mensagem": mensagem
     })
-
 
 
 
@@ -38,12 +42,6 @@ from decimal import Decimal
 @rifas_api_bp.route("/webhook/pix/sicredi", methods=["POST"])
 def webhook_pix_sicredi():
     payload = request.get_json(silent=True)
-
-    secret = request.headers.get("X-Webhook-Secret")
-
-    if secret != os.getenv("WEBHOOK_SECRET"):
-        logger.warning("Webhook inválido")
-        return jsonify({"msg": "unauthorized"}), 403    
 
     if not payload:
         logger.warning("Webhook vazio")
