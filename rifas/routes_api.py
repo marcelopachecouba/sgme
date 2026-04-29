@@ -64,9 +64,7 @@ def webhook_pix_sicredi():
 
             # 🔒 lock no registro
             pagamento = db.session.execute(
-                db.select(PagamentoRifa)
-                .where(PagamentoRifa.txid == txid)
-                .with_for_update()
+                db.select(PagamentoRifa).where(PagamentoRifa.txid == txid)
             ).scalar_one_or_none()
 
             if not pagamento:
