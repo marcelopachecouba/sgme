@@ -663,11 +663,29 @@
             });
 
             // 🔄 MONITORA PAGAMENTO AUTOMÁTICO (PIX)
-            const intervaloPagamento = setInterval(() => {
-                fetch(`/api/pagamento/status/${data.pagamento_id}`)
+            let tentativas = 0;
 
-                    .then(r => r.json())
+            const intervaloPagamento = setInterval(() => {
+
+                tentativas++;
+
+                // 🔥 evita loop infinito (5 minutos)
+                if (tentativas > 60) {
+                    clearInterval(intervaloPagamento);
+                    console.warn("Timeout aguardando pagamento");
+                    return;
+                }
+
+                const API_BASE = "/api";
+                fetch(`${API_BASE}/pagamento/status/${data.pagamento_id}`)
+
+                    .then(r => {
+                        if (!r.ok) throw new Error("Erro HTTP");
+                        return r.json();
+                    })
                     .then(res => {
+
+                        console.log("STATUS PIX:", res);
 
                         if (res.status === "pago") {
 
@@ -677,10 +695,12 @@
 
                             resultado.innerHTML = `
                                 <div class="result-banner text-center">
-                                    <div class="tag-status">🟢 PAGO</div>
+                                    <div class="tag-status">
+                                        🟢 PAGO (${res.tipo === 'pix_auto' ? 'PIX automático' : 'manual'})
+                                    </div>
 
                                     <h2 class="h3 mt-3 mb-3 fw-bold text-success">
-                                        🎉 Pagamento confirmado automaticamente!
+                                        🎉 Pagamento confirmado com sucesso!
                                     </h2>
 
                                     <div class="alert alert-success mt-3 text-start">
@@ -692,9 +712,15 @@
                                         }
                                     </div>
 
-                                    <div class="mt-4">
+                                    <div class="mt-4 d-flex gap-2 justify-content-center">
                                         <a href="/rifas" class="btn btn-primary">
                                             Nova compra
+                                        </a>
+
+                                        <a href="https://wa.me/?text=${encodeURIComponent(res.mensagem || '')}" 
+                                        target="_blank"
+                                        class="btn btn-success">
+                                            💬 Compartilhar no WhatsApp
                                         </a>
                                     </div>
                                 </div>
@@ -702,10 +728,11 @@
                         }
 
                     })
-                    .catch(() => console.log("Erro ao verificar pagamento"));
+                    .catch(err => {
+                        console.error("Erro ao verificar pagamento:", err);
+                    });
 
             }, 5000);
-
         }
 
         if (form) {

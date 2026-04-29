@@ -10,8 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 from flask import Blueprint
-
-
 rifas_api_bp = Blueprint("rifas_api", __name__, url_prefix="/api")
 
 

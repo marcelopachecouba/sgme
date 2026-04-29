@@ -47,6 +47,7 @@ scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
 migrate = Migrate()
 
 
+
 def _registrar_blueprints(app):
     blueprints = [
         auth_bp,
