@@ -934,6 +934,10 @@ class PagamentoRifa(db.Model):
     impresso = db.Column(db.Boolean, default=False)
     impresso_em = db.Column(db.DateTime)
     cpf = db.Column(db.String(14), nullable=True, index=True)
+    tipo_pagamento = db.Column(db.String(20), default="manual")
+    valor_pago = db.Column(db.Numeric(10,2))
+    banco_payload = db.Column(db.Text)
+    end_to_end_id = db.Column(db.String(100))
 
     __table_args__ = (
     db.Index('idx_txid_status', 'txid', 'status'),

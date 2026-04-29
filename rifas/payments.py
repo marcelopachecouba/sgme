@@ -427,7 +427,8 @@ class SicrediPixGateway:
 
         pix = pix_list[0]
 
-        txid = pix.get("txid")
+        #txid = pix.get("txid")
+        txid = (pix.get("txid") or "").upper().strip()
 
         if not txid:
             logger.warning(f"Webhook sem txid: {payload}")

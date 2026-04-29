@@ -10,6 +10,14 @@
 </div>
 
 <div class="row g-4">
+    {% if pagamento.status == 'pago' and pagamento.tipo_pagamento == 'pix_auto' %}
+    <div class="col-12">
+        <div class="alert alert-success text-center fw-bold">
+              ✅ Pagamento confirmado automaticamente via PIX (Sicredi)
+        </div>
+    </div>
+    {% endif %}
+
     <div class="col-lg-7">
         <div class="card mb-4">
             <div class="card-body">
@@ -17,7 +25,35 @@
                     <div class="col-md-6"><strong>Cliente:</strong> {{ pagamento.cliente.nome }}</div>
                     <div class="col-md-6"><strong>Telefone:</strong> {{ pagamento.cliente.telefone }}</div>
                     <div class="col-md-6"><strong>Campanha:</strong> {{ pagamento.campanha.titulo if pagamento.campanha else '-' }}</div>
-                    <div class="col-md-6"><strong>Status:</strong> {{ pagamento.status }}</div>
+                    
+                    <div class="col-md-6">
+                        <strong>Status:</strong>
+
+                        {% if pagamento.status == 'pago' and pagamento.tipo_pagamento == 'pix_auto' %}
+                            <span class="badge bg-success">🟢 Pago Online</span>
+                        {% elif pagamento.status == 'pago' %}
+                            <span class="badge bg-primary">✔ Pago Manual</span>
+                        {% elif pagamento.status == 'pendente' %}
+                            <span class="badge bg-warning">⏳ Pendente</span>
+                        {% elif pagamento.status == 'comprovante' %}
+                            <span class="badge bg-info">📄 Comprovante enviado</span>
+                        {% elif pagamento.status == 'cancelado' %}
+                            <span class="badge bg-danger">❌ Cancelado</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ pagamento.status }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <strong>Origem:</strong>
+
+                        {% if pagamento.tipo_pagamento == 'pix_auto' %}
+                            💳 Banco (Pix automático)
+                        {% else %}
+                            📄 Manual (Comprovante)
+                        {% endif %}
+                    </div>                    
+
                     <div class="col-md-6"><strong>Vendedor:</strong> {{ pagamento.vendedor or '-' }}</div>
                     <div class="col-md-6"><strong>Equipe:</strong> {{ pagamento.equipe.nome if pagamento.equipe else '-' }}</div>
                     
@@ -35,14 +71,15 @@
                     <div class="col-md-6">
                         <strong>Status tempo:</strong>
                         
-                    {% if pagamento.status == 'pago' %}
-                        <span class="badge bg-success">Pago</span>
+                    {% if pagamento.status == 'pago' and pagamento.tipo_pagamento == 'pix_auto' %}
+                        <span class="badge bg-success">Pago via banco</span>
+                    {% elif pagamento.status == 'pago' %}
+                        <span class="badge bg-success">Pago manual</span>
                     {% elif pagamento.expira_em and pagamento.expira_em < now %}
                         <span class="badge bg-danger">Expirado</span>
                     {% else %}
                         <span class="badge bg-primary">No prazo</span>
-                    {% endif %}
-                    
+                    {% endif %}                    
                     </div>                    
 
                     <div class="col-md-6"><strong>Quantidade:</strong> {{ pagamento.quantidade_rifas }}</div>
@@ -52,6 +89,48 @@
                 </div>
             </div>
         </div>
+
+        {% if pagamento.tipo_pagamento == 'pix_auto' %}
+        <div class="card mb-4 border-success">
+            <div class="card-body">
+
+                <h2 class="h5 mb-3 text-success">💳 Dados do pagamento (Banco)</h2>
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <strong>Valor pago:</strong><br>
+                        R$ {{ "%.2f"|format((pagamento.valor_pago or pagamento.valor_total)|float) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <strong>Data pagamento:</strong><br>
+                        {{ pagamento.data_pagamento | hora_br if pagamento.data_pagamento else '-' }}
+                    </div>
+
+                    <div class="col-md-12">
+                        <strong>TXID:</strong><br>
+                        {{ pagamento.txid }}
+                    </div>
+
+                </div>
+
+                {% if pagamento.banco_payload %}
+                <hr>
+                <details>
+                    <summary><strong>🔍 Detalhes técnicos (Banco)</strong></summary>
+                    <pre style="max-height:200px;overflow:auto;">
+        {{ pagamento.banco_payload }}
+                    </pre>
+                </details>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
+
+
 
         <div class="card mb-4">
             <div class="card-body">
@@ -102,7 +181,7 @@
 
 
                 <!-- 🔥 ENVIO (sempre visível se não estiver pago) -->
-                {% if pagamento.status != "pago" %}
+                {% if pagamento.status != "pago" and pagamento.tipo_pagamento != "pix_auto" %}
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="acao" value="enviar_comprovante_admin">
 
@@ -136,14 +215,18 @@
 
                     <!-- ✅ MARCAR COMO PAGO -->
                     <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_aprovar', payment_id=pagamento.id) }}">
-                        <button class="btn btn-success btn-sm"
-                            {% if pagamento.status == 'pago' %}disabled{% endif %}>
-                            ✔️ Marcar como pago
-                        </button>
+
+                            <button class="btn btn-success btn-sm"
+                                {% if pagamento.status == 'pago' or pagamento.tipo_pagamento == 'pix_auto' %}
+                                    disabled title="Pagamento já confirmado automaticamente"
+                                {% endif %}
+                            >
+                                ✔️ Marcar como pago
+                            </button>
                     </form>
 
                     <!-- ✅ CANCELAR -->
-                    {% if pagamento.status != 'cancelado' %}
+                    {% if pagamento.status != 'cancelado' and pagamento.tipo_pagamento != 'pix_auto' %}
                     <form method="post" action="{{ url_for('rifas_admin.admin_pagamento_cancelar', payment_id=pagamento.id) }}">
                         <button type="submit" class="btn btn-danger btn-sm"
                             onclick="return confirm('Tem certeza que deseja cancelar este pagamento?')">
@@ -179,10 +262,14 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h2 class="h5 mb-3">PIX gerado</h2>
-                {% if pagamento.qr_code_base64 %}
+                {% if pagamento.qr_code_base64 and pagamento.status != 'pago' %}
                 <img class="img-fluid border rounded p-3 bg-white mb-3" src="data:image/png;base64,{{ pagamento.qr_code_base64 }}" alt="QR Code PIX">
                 {% endif %}
-                <div class="small text-break bg-light p-3 rounded">{{ pagamento.copia_cola_pix }}</div>
+                {% if pagamento.status != 'pago' %}
+                <div class="small text-break bg-light p-3 rounded">
+                    {{ pagamento.copia_cola_pix }}
+                </div>
+                {% endif %}                
 
         {% if pagamento.txid %}
         <div class="mt-3">
@@ -257,4 +344,6 @@
         </div>
     </div>
 </div>
+
+
 {% endblock %}

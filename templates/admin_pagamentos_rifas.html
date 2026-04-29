@@ -85,6 +85,7 @@
                         <th>Comprovante</th>
                         <th>Data</th>
                         <th>Ação</th>
+                        <th>Origem</th>
                         <th>Impressão</th>
                     </tr>
                 </thead>
@@ -100,18 +101,24 @@
 
                         <td>
                             <span class="badge text-bg-{% if pagamento.status == 'pago' %}success{% elif pagamento.status == 'pendente' %}warning{% elif pagamento.status == 'comprovante' %}info{% elif pagamento.status == 'cancelado' %}danger{% else %}secondary{% endif %}">
-                                {{
-                                '✔ Pago' if pagamento.status == 'pago'
-                                else '⏳ Pendente' if pagamento.status == 'pendente'
-                                else '📄 Comprovante enviado' if pagamento.status == 'comprovante'
-                                else '❌ Cancelado' if pagamento.status == 'cancelado'
-                                else pagamento.status
-                                }}
+                                {% if pagamento.status == 'pago' and pagamento.tipo_pagamento == 'pix_auto' %}
+                                    🟢 Pago (Online)
+                                {% elif pagamento.status == 'pago' %}
+                                    ✔ Pago (Manual)
+                                {% elif pagamento.status == 'pendente' %}
+                                    ⏳ Pendente
+                                {% elif pagamento.status == 'comprovante' %}
+                                    📄 Comprovante enviado
+                                {% elif pagamento.status == 'cancelado' %}
+                                    ❌ Cancelado
+                                {% else %}
+                                    {{ pagamento.status }}
+                                {% endif %}                                
                             </span>
                         </td>
 
                         <td>{{ pagamento.quantidade_rifas }}</td>
-                        <td>R$ {{ "%.2f"|format(pagamento.valor_total|float) }}</td>
+                        <td> R$ {{ "%.2f"|format((pagamento.valor_pago or pagamento.valor_total)|float) }}</td>
 
                         <td>
                         {% if pagamento.comprovante_path %}
@@ -131,6 +138,14 @@
                                href="{{ url_for('rifas_admin.admin_pagamento_detalhe', payment_id=pagamento.id) }}">
                                 Abrir
                             </a>
+                        </td>
+
+                        <td>
+                            {% if pagamento.tipo_pagamento == "pix_auto" %}
+                                💳 Pix
+                            {% else %}
+                                📄 Manual
+                            {% endif %}
                         </td>
 
                         <td>

@@ -659,6 +659,49 @@
             ?.addEventListener("change", function() {
                 enviarComprovante(data.pagamento_id);
             });
+
+            // 🔄 MONITORA PAGAMENTO AUTOMÁTICO (PIX)
+            const intervaloPagamento = setInterval(() => {
+                fetch(`/rifas/status/${data.pagamento_id}`)
+                    .then(r => r.json())
+                    .then(res => {
+
+                        if (res.status === "pago") {
+
+                            clearInterval(intervaloPagamento); // para o loop
+
+                            comprovantePendente = false;
+
+                            resultado.innerHTML = `
+                                <div class="result-banner text-center">
+                                    <div class="tag-status">PAGAMENTO CONFIRMADO</div>
+
+                                    <h2 class="h3 mt-3 mb-3 fw-bold text-success">
+                                        🎉 Pagamento confirmado automaticamente!
+                                    </h2>
+
+                                    <div class="alert alert-success mt-3 text-start">
+                                        ${res.mensagem
+                                            .replace(/\n/g, "<br>")
+                                            .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
+                                        }
+
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <a href="/rifas" class="btn btn-primary">
+                                            Nova compra
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                    })
+                    .catch(() => console.log("Erro ao verificar pagamento"));
+
+            }, 5000);
+
         }
 
         if (form) {
