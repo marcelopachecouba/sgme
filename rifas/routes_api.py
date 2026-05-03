@@ -30,7 +30,8 @@ def pagamento_status(payment_id):
     return jsonify({
         "status": pagamento.status,
         "tipo": pagamento.tipo_pagamento,
-        "mensagem": mensagem
+        "mensagem": mensagem,
+        "telefone": pagamento.cliente.telefone
     })
 
 

@@ -8,6 +8,12 @@
 <div class="alert alert-warning">{{ schema_message }}</div>
 {% endif %}
 
+<form method="post" action="{{ url_for('rifas_admin.verificar_pix_manual') }}">
+    <button type="submit" class="btn btn-warning btn-sm mb-3">
+        🔄 Verificar pagamentos Pix agora
+    </button>
+</form>
+
 <!-- 🔥 FILTRO -->
 <form method="get" class="row g-2 mb-3">
 
@@ -66,15 +72,24 @@
     <button class="btn btn-danger" onclick="abrirModalLimpeza()">
         🧹 Limpeza completa
     </button>
+
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="marcarNaoImpressos()">
+        ✔ Marcar não impressos
+    </button>
 </div>
+    
 
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-
+            <form method="post" action="{{ url_for('rifas_admin.imprimir_lote_rifas') }}">
             <table class="table table-striped align-middle">
                 <thead>
                     <tr>
+                        <th>
+                            <input type="checkbox" onclick="toggleTodos(this)">
+                        </th>                        
+
                         <th>ID</th>
                         <th>Campanha</th>
                         <th>Cliente</th>
@@ -93,6 +108,17 @@
                 <tbody>
                     {% for pagamento in pagamentos %}
                     <tr {% if pagamento.status == 'comprovante' %}class="table-info"{% endif %}>
+                        
+                        <td>
+                        {% if pagamento.status == 'pago' %}
+
+                            <input type="checkbox"
+                                name="pagamentos_ids"
+                                value="{{ pagamento.id }}"
+                                {% if pagamento.impresso %}disabled{% endif %}>                            
+
+                        {% endif %}
+                        </td>
 
                         <td class="small">{{ pagamento.id }}</td>
                         <td>{{ pagamento.campanha.titulo if pagamento.campanha else "-" }}</td>
@@ -177,6 +203,11 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <button class="btn btn-success mt-3">
+                🖨️ Imprimir selecionados
+            </button>
+
+            </form>
 
         </div>
     </div>
@@ -248,6 +279,35 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+</script>
+
+<script>
+function toggleTodos(source) {
+    const checkboxes = document.querySelectorAll('input[name="pagamentos_ids"]');
+    checkboxes.forEach(cb => {
+        if (!cb.disabled) {
+            cb.checked = source.checked;
+        }
+    });
+}
+</script>
+<script>
+function marcarNaoImpressos() {
+    const checkboxes = document.querySelectorAll('input[name="pagamentos_ids"]');
+
+    checkboxes.forEach(cb => {
+        const linha = cb.closest("tr");
+
+        // verifica se tem badge "Impresso"
+        const impresso = linha.innerText.includes("Impresso");
+
+        if (!impresso && !cb.disabled) {
+            cb.checked = true;
+        } else {
+            cb.checked = false;
+        }
+    });
+}
 </script>
 
 {% endblock %}

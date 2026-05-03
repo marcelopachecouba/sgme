@@ -1266,6 +1266,8 @@ def gerar_link_whatsapp(codigo):
 
     return f"https://wa.me/?text={mensagem_encoded}"
 
+    
+
 from datetime import datetime, timedelta
 from urllib.parse import quote
 

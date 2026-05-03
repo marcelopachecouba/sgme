@@ -18,6 +18,7 @@ from extensions import db  # ✅ ADICIONADO
 from models import ClienteRifa, Equipe, Ministro, PagamentoRifa, Vendedor
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
+from rifas.pdf_generator import generate_tickets_pdf_lote
 from rifas.services import (
     RifaError,
     RifaSchemaMissingError,
@@ -383,7 +384,7 @@ def admin_relatorio():
     ).scalars().all()
 
     total_valor = sum(float(p.valor_total) for p in pagamentos if p.status == "pago")
-    total_quantidade = sum(p.quantidade_rifas for p in pagamentos)
+    total_quantidade = sum(p.quantidade_rifas for p in pagamentos if p.status == "pago")
 
     # 🔥 base context
     dados = _base_context()
@@ -832,3 +833,52 @@ def teste_sicredi():
 
     except Exception as e:
         return jsonify({"erro": str(e)})
+
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+@rifas_admin_bp.route("/pagamentos/verificar_pix", methods=["POST"])
+def verificar_pix_manual():
+    from rifas.services import verificar_pagamentos_pendentes
+
+    try:
+        verificar_pagamentos_pendentes()
+        return redirect(url_for("rifas_admin.admin_pagamentos"))
+    except Exception as e:
+        logger.error(f"Erro verificação manual: {str(e)}")
+        return redirect(url_for("rifas_admin.admin_pagamentos"))
+    
+
+@rifas_admin_bp.route("/admin/rifas/imprimir-lote", methods=["POST"])
+def imprimir_lote_rifas():
+
+    ids = request.form.getlist("pagamentos_ids")
+
+    if not ids:
+        flash("Selecione pelo menos um pagamento.", "warning")
+        return redirect(url_for("rifas_admin.admin_pagamentos"))
+
+    pagamentos = db.session.execute(
+        db.select(PagamentoRifa)
+        .where(PagamentoRifa.id.in_(ids))
+        .where(PagamentoRifa.impresso == False)  # 🔥 evita reimpressão
+    ).scalars().all()
+
+    if not pagamentos:
+        flash("Nenhum pagamento disponível para impressão.", "warning")
+        return redirect(url_for("rifas_admin.admin_pagamentos"))
+
+    # 🔥 GERA PDF
+    caminho_pdf = generate_tickets_pdf_lote(pagamentos)
+
+    # ✅ AQUI É O LUGAR CERTO 👇
+    for p in pagamentos:
+        p.impresso = True
+        p.impresso_em = datetime.utcnow()
+
+    db.session.commit()
+
+    return send_file(caminho_pdf, as_attachment=True)
