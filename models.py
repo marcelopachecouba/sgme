@@ -976,3 +976,119 @@ class Rifa(db.Model):
     campanha = db.relationship("RifaCampanha", back_populates="rifas", lazy="joined")
     cliente = db.relationship("ClienteRifa", back_populates="rifas", lazy="joined")
     pagamento = db.relationship("PagamentoRifa", back_populates="rifas", lazy="joined")
+
+from extensions import db
+
+class Comunidade(db.Model):
+
+    __tablename__ = "comunidades"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    nome = db.Column(db.String(100), nullable=False)
+
+    codigo = db.Column(db.String(20), unique=True)
+
+    txid = db.Column(db.String(30), unique=True)
+
+    chave_pix = db.Column(db.String(150))
+
+    responsavel = db.Column(db.String(100))
+
+    telefone = db.Column(db.String(20))
+
+    cor = db.Column(db.String(20), default="#198754")
+
+    ativa = db.Column(db.Boolean, default=True)
+
+    tipo_id = db.Column(db.Integer,db.ForeignKey("tipos_arrecadacao.id"))
+
+    tipo = db.relationship("TipoArrecadacao")
+
+
+    def __repr__(self):
+        return self.nome
+
+class TipoArrecadacao(db.Model):
+
+    __tablename__ = "tipos_arrecadacao"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    descricao = db.Column(db.String(50), nullable=False)
+
+    ativo = db.Column(db.Boolean, default=True)
+
+class OfertaRecebida(db.Model):
+
+    __tablename__ = "ofertas_recebidas"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    endtoendid = db.Column(
+        db.String(100)
+    )
+
+    txid = db.Column(
+        db.String(35)
+    )
+
+    comunidade_id = db.Column(
+        db.Integer,
+        db.ForeignKey("comunidades.id")
+    )
+
+    tipo_id = db.Column(
+        db.Integer,
+        db.ForeignKey("tipos_arrecadacao.id")
+    )
+
+    valor = db.Column(
+        db.Numeric(10,2)
+    )
+
+    datahora = db.Column(
+        db.DateTime
+    )
+
+    pagador = db.Column(
+        db.String(200)
+    )
+
+    cpf_cnpj = db.Column(
+        db.String(20)
+    )
+
+    chave_pix = db.Column(
+        db.String(150)
+    )
+
+    payload = db.Column(
+        db.JSON
+    )
+
+    conciliado = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    endtoendid = db.Column(
+    db.String(100)
+    )
+
+    codigo_autenticacao = db.Column(
+        db.String(100)
+    )
+
+    comunidade = db.relationship(
+    "Comunidade",
+    foreign_keys=[comunidade_id]
+    )
+
+    tipo = db.relationship(
+        "TipoArrecadacao",
+        foreign_keys=[tipo_id]
+    )

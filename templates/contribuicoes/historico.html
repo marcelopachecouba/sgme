@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-0">Historico de {{ dizimista.nome }}</h3>
+      {% if total_anual is defined %}<div class="text-muted">Total {{ ano }}: R$ {{ "%.2f"|format(total_anual) }}</div>{% endif %}
+    </div>
+    <div class="btn-group">
+      {% if ano is defined %}<a class="btn btn-outline-success" href="{{ url_for('contribuicoes.demonstrativo_pdf', dizimista_id=dizimista.id, ano=ano) }}">Demonstrativo PDF</a>{% endif %}
+      <a class="btn btn-success" href="{{ url_for('contribuicoes.contribuicao', dizimista_id=dizimista.id) }}">Nova contribuicao</a>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Competencia</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for item in contribuicoes %}
+        <tr>
+          <td>{{ (item.data_pagamento or item.data_geracao)|hora_br }}</td>
+          <td>{{ item.categoria.descricao }}</td>
+          <td>{{ item.competencia }}</td>
+          <td>R$ {{ "%.2f"|format(item.valor) }}</td>
+          <td><span class="badge bg-{{ 'success' if item.status == 'pago' else 'warning' }}">{{ item.status }}</span></td>
+          <td>{% if item.status == 'pago' %}<a class="btn btn-sm btn-outline-success" href="{{ url_for('contribuicoes.comprovante', contribuicao_id=item.id) }}">Comprovante</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">{{ "Relatorios" if relatorio is defined else "Dashboard de Contribuicoes" }}</h3>
+    <div class="btn-group">
+      <a class="btn btn-outline-success" href="{{ url_for('contribuicoes.ranking') }}">Ranking</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('contribuicoes.relatorio_excel', **filtros) }}">Excel</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('contribuicoes.relatorio_pdf', **filtros) }}">PDF</a>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
+    {% for label, key in [("Dizimos","dizimo"),("Doacoes","doacao"),("Ofertas","oferta"),("Campanhas","campanha"),("Construcao","construcao"),("Geral","geral")] %}
+    <div class="col-md-2 col-6">
+      <div class="card shadow-sm"><div class="card-body"><div class="text-muted">{{ label }}</div><strong>R$ {{ "%.2f"|format(totais[key]) }}</strong></div></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if relatorio is defined %}
+  <form class="row g-2 mb-3">
+    <div class="col-md-2"><input name="inicio" type="date" class="form-control" value="{{ request.args.get('inicio','') }}"></div>
+    <div class="col-md-2"><input name="fim" type="date" class="form-control" value="{{ request.args.get('fim','') }}"></div>
+    <div class="col-md-1"><input name="mes" type="number" min="1" max="12" class="form-control" placeholder="Mes" value="{{ request.args.get('mes','') }}"></div>
+    <div class="col-md-1"><input name="ano" type="number" class="form-control" placeholder="Ano" value="{{ request.args.get('ano','') }}"></div>
+    <div class="col-md-2"><select name="categoria_id" class="form-select"><option value="">Tipo</option>{% for c in categorias %}<option value="{{ c.id }}" {{ 'selected' if request.args.get('categoria_id') == c.id|string else '' }}>{{ c.descricao }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><select name="comunidade_id" class="form-select"><option value="">Comunidade</option>{% for c in comunidades %}<option value="{{ c.id }}" {{ 'selected' if request.args.get('comunidade_id') == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><select name="dizimista_id" class="form-select"><option value="">Contribuinte</option>{% for d in dizimistas %}<option value="{{ d.id }}" {{ 'selected' if request.args.get('dizimista_id') == d.id|string else '' }}>{{ d.nome }}</option>{% endfor %}</select></div>
+    <div class="col-md-12 text-end"><button class="btn btn-success">Filtrar</button></div>
+  </form>
+  {% endif %}
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead><tr><th>Data</th><th>Contribuinte</th><th>Comunidade</th><th>Tipo</th><th>Valor</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for item in recentes %}
+        <tr>
+          <td>{{ (item.data_pagamento or item.data_geracao)|hora_br }}</td>
+          <td>{{ item.dizimista.nome }}</td>
+          <td>{{ item.comunidade.nome if item.comunidade else "" }}</td>
+          <td>{{ item.categoria.descricao }}</td>
+          <td>R$ {{ "%.2f"|format(item.valor) }}</td>
+          <td><span class="badge bg-{{ 'success' if item.status == 'pago' else 'warning' }}">{{ item.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

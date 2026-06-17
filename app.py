@@ -1,3 +1,4 @@
+from Contribuicoes import contribuicoes_bp
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -41,6 +42,10 @@ from routes.notificacoes_routes import notificacao_bp
 from routes.observacoes_lembrete_routes import observacoes_lembrete_bp
 from datetime import timedelta
 
+from Ofertas import ofertas_bp
+
+
+
 import os
 
 scheduler = BackgroundScheduler(timezone=Config.SCHEDULER_TIMEZONE)
@@ -74,6 +79,11 @@ def _registrar_blueprints(app):
         observacoes_lembrete_bp,
         rifas_public_bp,
         rifas_admin_bp,
+        ofertas_bp,
+        contribuicoes_bp
+
+
+        
     ]
 
     for blueprint in blueprints:

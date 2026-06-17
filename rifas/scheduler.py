@@ -1,3 +1,5 @@
+from Contribuicoes.services import verificar_contribuicoes_pendentes
+from Ofertas.routes import importar_pix_automatico
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from extensions import db
@@ -68,6 +70,79 @@ def start_scheduler(app):
         minutes=2
     )
 
+    scheduler.add_job(
+        func=job_importar_ofertas,
+        args=[app],
+        trigger="cron",
+        hour="6,12,18,21",
+        minute=0,
+        id="importacao_ofertas"
+    )
+
+    #scheduler.add_job(
+        #func=job_verificar_contribuicoes,
+        #args=[app],
+        #trigger="interval",
+        #minutes=1,
+        #id="contribuicoes_pix",
+        #replace_existing=True,
+    #)
+
+
+    scheduler.add_job(
+        verificar_contribuicoes_pendentes,
+        "interval",
+        minutes=60,
+        id="contribuicoes_pix",
+        replace_existing=True
+    )    
+
     scheduler.start()
 
     print("🚀 Scheduler iniciado com sucesso")
+
+def job_importar_ofertas(app):
+
+    with app.app_context():
+
+        print(
+            f"[{datetime.utcnow()}] Importando PIX das ofertas..."
+        )
+
+        try:
+
+            importar_pix_automatico()
+
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print(
+                "Erro importação ofertas:",
+                str(e)
+            )
+
+def job_verificar_contribuicoes(app):
+
+    with app.app_context():
+
+        print(
+            f"[{datetime.utcnow()}] Verificando contribuições..."
+        )
+
+        try:
+
+            verificar_contribuicoes_pendentes()
+
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print(
+                "Erro contribuições:",
+                str(e)
+            )

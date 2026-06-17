@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <h4 class="mb-0">
+                    Cadastro de Comunidades
+                </h4>
+
+                <a
+                    href="{{ url_for('ofertas.comunidade_nova') }}"
+                    class="btn btn-success">
+
+                    Nova Comunidade
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="card-body">
+
+            <table class="table table-bordered table-hover table-striped">
+
+                <thead class="table-dark">
+
+                    <tr>
+
+                        <th width="60">ID</th>
+
+                        <th>Comunidade</th>
+
+                        <th width="180">Tipo</th>
+
+                        <th width="140">TXID</th>
+
+                        <th>Responsável</th>
+
+                        <th width="140">Telefone</th>
+
+                        <th width="90">Status</th>
+
+                        <th width="260">Ações</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                {% for c in lista %}
+
+                    <tr>
+
+                        <td>
+
+                            {{ c.id }}
+
+                        </td>
+
+                        <td>
+
+                            {{ c.nome }}
+
+                        </td>
+
+                        <td>
+
+                            {% if c.tipo %}
+
+                                {{ c.tipo.descricao }}
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {{ c.txid }}
+
+                        </td>
+
+                        <td>
+
+                            {{ c.responsavel }}
+
+                        </td>
+
+                        <td>
+
+                            {{ c.telefone }}
+
+                        </td>
+
+                        <td>
+
+                            {% if c.ativa %}
+
+                                <span class="badge bg-success">
+                                    Ativa
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-danger">
+                                    Inativa
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="{{ url_for('ofertas.editar_comunidade',id=c.id) }}"
+                                class="btn btn-primary btn-sm">
+
+                                Editar
+
+                            </a>
+
+                            <a
+                                href="{{ url_for('ofertas.excluir_comunidade',id=c.id) }}"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm('Deseja excluir esta comunidade?');">
+
+                                Excluir
+
+                            </a>
+
+                            <a
+                                href="{{ url_for('ofertas.gerar_qrcode',id=c.id) }}"
+                                class="btn btn-success btn-sm">
+
+                                QRCode
+
+                            </a>
+
+                            <a
+                                href="{{ url_for('ofertas.imprimir_qrcode', id=c.id) }}"
+                                target="_blank"
+                                class="btn btn-primary btn-sm">
+
+                                🖨 Imprimir
+
+                            </a>
+                            
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                {% if lista|length == 0 %}
+
+                    <tr>
+
+                        <td colspan="8" class="text-center">
+
+                            Nenhuma comunidade cadastrada.
+
+                        </td>
+
+                    </tr>
+
+                {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

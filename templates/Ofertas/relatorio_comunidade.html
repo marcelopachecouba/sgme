@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-3">
+
+<div class="card shadow">
+
+<div class="card-header bg-success text-white">
+
+<h4>Resumo por Comunidade</h4>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST">
+
+<div class="row">
+
+<div class="col-md-3">
+
+<label>Data Inicial</label>
+
+<input
+type="date"
+name="data_inicial"
+class="form-control">
+
+</div>
+
+<div class="col-md-3">
+
+<label>Data Final</label>
+
+<input
+type="date"
+name="data_final"
+class="form-control">
+
+</div>
+
+<div class="col-md-2">
+
+<br>
+
+<button
+class="btn btn-success">
+
+Pesquisar
+
+</button>
+
+</div>
+
+</div>
+
+</form>
+
+<hr>
+
+<table class="table table-bordered table-striped">
+
+<thead>
+
+<tr>
+
+<th>Comunidade</th>
+
+<th class="text-center">Qtd. PIX</th>
+
+<th class="text-end">Total Recebido</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for item in lista %}
+
+<tr>
+
+<td>{{ item.nome }}</td>
+
+<td class="text-center">
+
+{{ item.quantidade }}
+
+</td>
+
+<td class="text-end">
+
+R$ {{ "%.2f"|format(item.total or 0) }}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+<tfoot>
+
+<tr class="table-success">
+
+<th colspan="2">
+
+TOTAL GERAL
+
+</th>
+
+<th class="text-end">
+
+R$ {{ "%.2f"|format(total_geral) }}
+
+</th>
+
+</tr>
+
+</tfoot>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

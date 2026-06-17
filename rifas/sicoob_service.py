@@ -15,15 +15,15 @@ def get_sicoob_token():
     if _sicoob_token_cache["access_token"] and time.time() < _sicoob_token_cache["expires_at"]:
         return _sicoob_token_cache["access_token"]
 
-    client_id = current_app.config.get("SICOOB_CLIENT_ID")
-    client_secret = current_app.config.get("SICOOB_CLIENT_SECRET")
-    token_url = current_app.config.get("SICOOB_TOKEN_URL")
+    client_id = current_app.config.get("SICREDI_CLIENT_ID")
+    client_secret = current_app.config.get("SICREDI_CLIENT_SECRET")
+    token_url = current_app.config.get("SICREDI_TOKEN_URL")
 
-    cert_path = current_app.config.get("SICOOB_CERT_PATH")
-    key_path = current_app.config.get("SICOOB_KEY_PATH")
+    cert_path = current_app.config.get("SICREDI_CERT_PATH")
+    key_path = current_app.config.get("SICREDI_KEY_PATH")
 
     if not all([client_id, client_secret, token_url, cert_path, key_path]):
-        raise Exception("Configuração do Sicoob incompleta.")
+        raise Exception("Configuração do Sicredi incompleta.")
 
     response = requests.post(
         token_url,

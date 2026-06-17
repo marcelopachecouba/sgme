@@ -68,6 +68,16 @@ class Config:
     if not PUBLIC_BASE_URL:
         PUBLIC_BASE_URL = 'http://localhost:5000'
     PIX_PROVIDER = os.environ.get('PIX_PROVIDER', 'manual').strip().strip('"\'').lower()
+
+    SICREDI_CLIENT_ID = os.environ.get("SICREDI_CLIENT_ID")
+    SICREDI_CLIENT_SECRET = os.environ.get("SICREDI_CLIENT_SECRET")
+    SICREDI_TOKEN_URL = os.environ.get("SICREDI_TOKEN_URL")
+    SICREDI_API_URL = os.environ.get("SICREDI_API_URL")
+    SICREDI_CERT_PATH = os.environ.get("SICREDI_CERT_PATH")
+    SICREDI_KEY_PATH = os.environ.get("SICREDI_KEY_PATH")
+
+
+
     PIX_API_KEY = os.environ.get('PIX_API_KEY', '').strip()
     PIX_ACCESS_TOKEN = os.environ.get('PIX_ACCESS_TOKEN', '').strip()
     PIX_USER_ID = os.environ.get('PIX_USER_ID', '').strip()

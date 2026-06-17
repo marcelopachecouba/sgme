@@ -882,3 +882,4 @@ def imprimir_lote_rifas():
     db.session.commit()
 
     return send_file(caminho_pdf, as_attachment=True)
+

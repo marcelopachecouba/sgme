@@ -5,6 +5,7 @@ from rifas.models import PagamentoRifa, Rifa
 import logging
 import json
 from rifas.services import montar_mensagem_pagamento
+from Contribuicoes.services import confirmar_pagamento_pix
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,10 @@ def webhook_pix_sicredi():
             ).scalar_one_or_none()
 
             if not pagamento:
+                contribuicao = confirmar_pagamento_pix(pix)
+                if contribuicao:
+                    logger.info(f"Contribuicao confirmada txid={txid} valor={contribuicao.valor}")
+                    continue
                 logger.warning(f"Pagamento não encontrado txid={txid}")
                 continue
 

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<h3>
+
+Cadastro de Dizimistas
+
+</h3>
+
+<form>
+
+<div class="row">
+
+<div class="col-md-6">
+
+<input
+
+class="form-control"
+
+name="pesquisa"
+
+placeholder="Nome ou CPF"
+
+value="{{ pesquisa }}">
+
+</div>
+
+<div class="col-md-2">
+
+<button
+
+class="btn btn-success">
+
+Pesquisar
+
+</button>
+
+</div>
+
+<div class="col-md-4 text-end">
+
+<a
+
+href="{{ url_for('contribuicoes.novo_dizimista') }}"
+
+class="btn btn-primary">
+
+Novo Dizimista
+
+</a>
+
+</div>
+
+</div>
+
+</form>
+
+<br>
+
+<table class="table table-striped">
+
+<thead>
+
+<tr>
+
+<th>Nome</th>
+
+<th>CPF</th>
+
+<th>Telefone</th>
+
+<th>Comunidade</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for d in lista %}
+
+<tr>
+
+<td>
+
+{{ d.nome }}
+
+</td>
+
+<td>
+
+{{ d.cpf }}
+
+</td>
+
+<td>
+
+{{ d.telefone }}
+
+</td>
+
+<td>
+
+{{ d.comunidade.nome if d.comunidade else '' }}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<div class="card shadow">
+
+<div class="card-header bg-primary text-white">
+
+<h4>
+
+Cadastro de Comunidade
+
+</h4>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST">
+
+<div class="row">
+
+<div class="col-md-6">
+
+<label>Nome da Comunidade</label>
+
+<input
+type="text"
+name="nome"
+class="form-control"
+value="{{ comunidade.nome if comunidade else '' }}"
+required>
+
+</div>
+
+<div class="col-md-2">
+
+<label>Código</label>
+
+<input
+type="text"
+name="codigo"
+class="form-control"
+value="{{ comunidade.codigo if comunidade else '' }}">
+
+</div>
+
+<div class="col-md-4">
+
+<label>TXID</label>
+
+<input
+type="text"
+name="txid"
+class="form-control"
+value="{{ comunidade.txid if comunidade else '' }}">
+
+</div>
+
+</div>
+
+<br>
+
+<div class="row">
+
+<div class="col-md-4">
+
+<label>Tipo de Arrecadação</label>
+
+<select
+name="tipo_id"
+class="form-select"
+required>
+
+<option value="">Selecione...</option>
+
+{% for tipo in tipos %}
+
+<option
+value="{{ tipo.id }}"
+{% if comunidade and comunidade.tipo_id==tipo.id %}
+selected
+{% endif %}>
+
+{{ tipo.descricao }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<div class="col-md-4">
+
+<label>Chave Pix</label>
+
+<input
+type="text"
+name="chave_pix"
+class="form-control"
+value="{{ comunidade.chave_pix if comunidade else '01172466000480' }}">
+
+</div>
+
+<div class="col-md-4">
+
+<label>Responsável</label>
+
+<input
+type="text"
+name="responsavel"
+class="form-control"
+value="{{ comunidade.responsavel if comunidade else '' }}">
+
+</div>
+
+</div>
+
+<br>
+
+<div class="row">
+
+<div class="col-md-4">
+
+<label>Telefone</label>
+
+<input
+type="text"
+name="telefone"
+class="form-control"
+value="{{ comunidade.telefone if comunidade else '' }}">
+
+</div>
+
+<div class="col-md-4">
+
+<label>Cor</label>
+
+<input
+type="color"
+name="cor"
+class="form-control form-control-color"
+value="{{ comunidade.cor if comunidade else '#198754' }}">
+
+</div>
+
+<div class="col-md-4">
+
+<label>Status</label>
+
+<select
+name="ativa"
+class="form-select">
+
+<option value="1"
+{% if not comunidade or comunidade.ativa %}
+selected
+{% endif %}>
+Ativa
+</option>
+
+<option value="0"
+{% if comunidade and not comunidade.ativa %}
+selected
+{% endif %}>
+Inativa
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<hr>
+
+<button
+type="submit"
+class="btn btn-success">
+
+💾 Salvar
+
+</button>
+
+<a
+href="{{ url_for('ofertas.comunidades') }}"
+class="btn btn-secondary">
+
+Voltar
+
+</a>
+
+{% if comunidade %}
+
+<a
+href="{{ url_for('ofertas.gerar_qrcode', id=comunidade.id) }}"
+class="btn btn-primary">
+
+📱 Gerar QRCode
+
+</a>
+
+<a
+href="{{ url_for('ofertas.imprimir_qrcode', id=comunidade.id) }}"
+target="_blank"
+class="btn btn-primary btn-sm">
+
+🖨 Imprimir
+
+</a>
+
+
+{% endif %}
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

@@ -9,6 +9,9 @@
 <a href="{{ url_for('rifas_admin.admin_rifas') }}">Rifas</a>
 <a href="{{ url_for('rifas_admin.admin_equipes_vendedores') }}">Equipes e Vendedores</a>
 <a href="{{ url_for('rifas_admin.acesso_rifas_secretaria') }}">Acesso Rifas</a>
+
+<hr class="text-white">
+
 <a href="{{ url_for('estatisticas.confiabilidade') }}">Confiabilidade</a>
 <a href="/minhas-escalas">Minhas Escalas</a>
 <a href="#" onclick="solicitarPermissaoPush(); return false;">Permissao de Push</a>
@@ -36,4 +39,78 @@
 
 <hr class="text-white">
 
-<a href="{{ url_for('auth.logout') }}">Sair</a>
+<a data-bs-toggle="collapse"
+   href="#menuOfertas"
+   role="button"
+   class="text-white text-decoration-none">
+
+    💰 OFERTAS PIX ▼
+
+</a>
+
+<div class="collapse show" id="menuOfertas">
+
+    <a href="{{ url_for('ofertas.dashboard') }}">📊 Dashboard</a>
+
+    <a href="{{ url_for('ofertas.ranking_comunidades') }}">
+        🏆 Ranking
+    </a>
+
+    <a href="{{ url_for('ofertas.comunidades') }}">
+        🏛 Comunidades
+    </a>
+
+    <a href="{{ url_for('ofertas.importar_pix') }}">
+        ⬇ Importar PIX
+    </a>
+
+    <a href="{{ url_for('ofertas.ofertas') }}">
+        💵 PIX Recebidos
+    </a>
+
+    <a href="{{ url_for('ofertas.relatorios') }}">
+        📑 Relatórios
+    </a>
+
+</div>
+
+<hr class="text-white">
+
+<a data-bs-toggle="collapse"
+   href="#menuContribuicoes"
+   role="button"
+   class="text-white text-decoration-none">
+
+    ❤️ CONTRIBUIÇÕES ▼
+
+</a>
+
+<div class="collapse show" id="menuContribuicoes">
+
+    <a href="{{ url_for('contribuicoes.dashboard') }}">
+        📊 Dashboard
+    </a>
+
+    <a href="{{ url_for('contribuicoes.consultar') }}">
+        🔍 Consultar CPF
+    </a>
+
+    <a href="{{ url_for('contribuicoes.consultar') }}">
+        ❤️ Contribuições
+    </a>
+
+    <a href="{{ url_for('contribuicoes.ranking') }}">
+        🏆 Ranking
+    </a>
+
+    <a href="{{ url_for('contribuicoes.relatorios') }}">
+        📑 Relatórios
+    </a>
+
+</div>
+
+<hr class="text-white">
+
+<a href="{{ url_for('auth.logout') }}">
+    🚪 Sair
+</a>

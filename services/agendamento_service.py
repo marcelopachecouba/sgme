@@ -5,6 +5,7 @@ from services.notification_manager import NotificationManager
 from services.whatsapp_service import enviar_lembretes_whatsapp
 
 from rifas.services import cancelar_pagamentos_expirados
+from Contribuicoes.scheduler import registrar_agendamentos_contribuicoes
 from extensions import db
 from datetime import datetime
 
@@ -67,6 +68,8 @@ def registrar_agendamentos(scheduler, app):
         misfire_grace_time=60,
         id="expirar_rifas",
     )
+
+    registrar_agendamentos_contribuicoes(scheduler, app)
 
     scheduler.start()
 

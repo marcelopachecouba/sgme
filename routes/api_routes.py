@@ -59,3 +59,50 @@ def enviar_lembretes_whatsapp_agora():
     )
 
     return jsonify(resultado)
+import json
+import requests
+from flask import current_app
+from rifas.sicoob_service import get_sicoob_token
+
+@api_bp.route("/teste_pix")
+def teste_pix():
+
+    import requests
+    import json
+
+    token = get_sicoob_token()
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    url = current_app.config["SICREDI_API_URL"] + "/pix"
+
+    params = {
+        "inicio": "2026-06-17T00:00:00-03:00",
+        "fim": "2026-06-17T14:59:59-03:00"
+    }
+    r = requests.get(
+        url,
+        headers=headers,
+        params=params,
+        cert=(
+            current_app.config["SICREDI_CERT_PATH"],
+            current_app.config["SICREDI_KEY_PATH"]
+        ),
+        timeout=30
+    )
+
+    dados = r.json()
+
+    pix_com_txid = [
+        pix for pix in dados.get("pix", [])
+        if pix.get("txid")
+    ]
+
+    return "<pre>" + json.dumps(
+        dados,
+        indent=4,
+        ensure_ascii=False
+    ) + "</pre>"
+
