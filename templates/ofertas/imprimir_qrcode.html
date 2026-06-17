@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<title>QRCode</title>
+
+<style>
+
+body{
+
+    text-align:center;
+
+    font-family:Arial;
+
+}
+
+img{
+
+    width:300px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>
+
+{{ comunidade.nome }}
+
+
+</h2>
+
+<img
+src="{{ url_for('ofertas.gerar_qrcode', id=comunidade.id) }}">
+
+<h3>
+
+Faça sua Oferta via PIX
+
+</h3>
+
+<h4>
+
+Chave Pix: {{ comunidade.chave_pix }}
+
+</h4>
+
+<h5>
+
+TXID: {{ comunidade.txid }}
+
+</h5>
+
+
+<script>
+
+window.print();
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-3">
+
+<div class="card">
+
+<div class="card-header bg-success text-white">
+
+<h4>Importar PIX Sicredi</h4>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST">
+
+<div class="row">
+
+<div class="col-md-4">
+
+<label>Data Inicial</label>
+
+<input
+type="date"
+name="data_inicial"
+class="form-control"
+required>
+
+</div>
+
+<div class="col-md-4">
+
+<label>Data Final</label>
+
+<input
+type="date"
+name="data_final"
+class="form-control"
+required>
+
+</div>
+
+<div class="col-md-4">
+
+<br>
+
+<button
+class="btn btn-success">
+
+Importar PIX
+
+</button>
+
+</div>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

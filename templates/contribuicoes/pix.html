@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-4" style="max-width:760px;">
+
+{% if contribuicao.status == "pago" %}
+
+<div class="card shadow-lg border-success">
+
+    <div class="card-body text-center">
+
+        <h2 class="text-success">
+            🟢 PAGAMENTO CONFIRMADO
+        </h2>
+
+        <div style="font-size:90px;">
+            ✅
+        </div>
+
+        <h4 class="mt-3">
+            Sua contribuição foi recebida com sucesso!
+        </h4>
+
+        <hr>
+
+        <h5>
+            Olá <b>{{ contribuicao.dizimista.nome }}</b> 😊
+        </h5>
+
+        <p>
+            Recebemos sua contribuição e ela foi registrada
+            automaticamente em nosso sistema.
+        </p>
+
+        <p>
+            🙏 Muito obrigado pela sua fidelidade e generosidade.
+        </p>
+
+        <p>
+            Sua contribuição ajuda na evangelização,
+            manutenção da Igreja, obras sociais,
+            celebrações e ações pastorais.
+        </p>
+
+        <div class="alert alert-success">
+
+            <h5>
+                📖 Tipo:
+                <b>{{ contribuicao.categoria.descricao }}</b>
+            </h5>
+
+            <h5>
+                💰 Valor:
+                <b>R$ {{ "%.2f"|format(contribuicao.valor) }}</b>
+            </h5>
+
+            <h5>
+                📅 Competência:
+                <b>{{ contribuicao.competencia }}</b>
+            </h5>
+
+            <h5>
+                🏛️ Comunidade:
+                <b>{{ contribuicao.comunidade.nome }}</b>
+            </h5>
+
+        </div>
+
+        <div class="alert alert-light">
+
+            <b>
+                "Cada um contribua segundo tiver decidido em seu coração,
+                não com tristeza ou por obrigação,
+                pois Deus ama quem dá com alegria."
+            </b>
+
+            <br>
+
+            <b>2 Coríntios 9,7</b>
+
+        </div>
+
+        <h5>
+            ❤️ Que Deus abençoe você e sua família!
+        </h5>
+
+        <div class="mt-4">
+
+            <a
+                href="{{ url_for('contribuicoes.comprovante_pdf', contribuicao_id=contribuicao.id) }}"
+                class="btn btn-danger">
+
+                📄 Baixar Comprovante
+
+            </a>
+
+            <a
+                href="{{ url_for('contribuicoes.historico', dizimista_id=contribuicao.dizimista_id) }}"
+                class="btn btn-success">
+
+                📜 Meu Histórico
+
+            </a>
+
+            <a
+                href="{{ url_for('contribuicoes.consultar') }}"
+                class="btn btn-primary">
+
+                🏠 Nova Contribuição
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% else %}
+
+<div class="card shadow-sm">
+
+    <div class="card-header bg-success text-white">
+
+        <h4 class="mb-0">
+
+            PIX Gerado
+
+        </h4>
+
+    </div>
+
+    <div class="card-body text-center">
+
+        <h5>
+
+            {{ contribuicao.categoria.descricao }}
+
+            -
+
+            R$
+
+            {{ "%.2f"|format(contribuicao.valor) }}
+
+        </h5>
+
+        <p class="text-muted">
+
+            TXID:
+            {{ contribuicao.txid }}
+
+        </p>
+
+        {% if contribuicao.qr_code_base64 %}
+
+        <img
+
+            class="img-fluid mb-3"
+
+            style="max-width:280px"
+
+            src="data:image/png;base64,{{ contribuicao.qr_code_base64 }}"
+
+            alt="QR Code PIX"
+
+        >
+
+        {% endif %}
+
+        <textarea
+
+            id="pix"
+
+            class="form-control"
+
+            rows="4"
+
+            readonly
+
+        >{{ contribuicao.copia_cola_pix }}</textarea>
+
+        <div class="mt-3">
+
+            <button
+
+                class="btn btn-success"
+
+                onclick="copiarPix()"
+
+            >
+
+                📋 Copiar PIX
+
+            </button>
+
+            <button
+
+                class="btn btn-primary"
+
+                onclick="verificarPagamento()"
+
+            >
+
+                🔄 Verificar Pagamento
+
+            </button>
+
+        </div>
+
+        <div
+
+            id="pix-status"
+
+            class="alert alert-warning mt-4"
+
+        >
+
+            ⏳ Aguardando pagamento...
+
+        </div>
+
+        <div class="mt-3">
+
+            <a
+
+                class="btn btn-outline-secondary"
+
+                href="{{ url_for('contribuicoes.contribuicao', dizimista_id=contribuicao.dizimista_id) }}"
+
+            >
+
+                Nova Contribuição
+
+            </a>
+
+            <form
+
+                method="POST"
+
+                style="display:inline"
+
+                action="{{ url_for('contribuicoes.segunda_via_pix', contribuicao_id=contribuicao.id) }}"
+
+            >
+
+                <button
+
+                    class="btn btn-outline-success"
+
+                >
+
+                    Gerar Novo PIX
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+function copiarPix(){
+
+    let texto = document.getElementById("pix");
+
+    texto.select();
+
+    texto.setSelectionRange(0,99999);
+
+    document.execCommand("copy");
+
+    alert("PIX Copia e Cola copiado com sucesso!");
+
+}
+
+function verificarPagamento(){
+
+    document.getElementById("pix-status").className="alert alert-info mt-4";
+
+    document.getElementById("pix-status").innerHTML="🔄 Consultando pagamento...";
+
+    fetch(
+
+        "{{ url_for('contribuicoes.verificar_pix_manual', contribuicao_id=contribuicao.id) }}"
+
+    )
+
+    .then(r=>r.json())
+
+    .then(data=>{
+
+        if(data.sucesso){
+
+            location.reload();
+
+        }
+
+        else{
+
+            document.getElementById("pix-status").className="alert alert-warning mt-4";
+
+            document.getElementById("pix-status").innerHTML="⏳ Pagamento ainda não localizado.";
+
+        }
+
+    })
+
+    .catch(function(){
+
+        document.getElementById("pix-status").className="alert alert-danger mt-4";
+
+        document.getElementById("pix-status").innerHTML="❌ Erro ao consultar o pagamento.";
+
+    });
+
+}
+
+let timer = setInterval(function(){
+
+    fetch(
+        "{{ url_for('contribuicoes.status', contribuicao_id=contribuicao.id) }}"
+    )
+
+    .then(r=>r.json())
+
+    .then(data=>{
+
+        if(data.pago){
+
+            clearInterval(timer);
+
+            document.getElementById("pix-status").className =
+                "alert alert-success mt-4";
+
+            document.getElementById("pix-status").innerHTML =
+                "🟢 Pagamento confirmado! Atualizando...";
+
+            setTimeout(function(){
+
+                location.reload();
+
+            },800);
+
+        }
+
+    })
+
+    .catch(function(){
+
+    });
+
+},2000);
+
+</script>
+
+{% endif %}
+
+</div>
+
+{% endblock %}
