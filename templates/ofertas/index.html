@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="text-center mb-5">
+
+        <h1 class="display-5 text-success">
+            💰 Módulo de Ofertas Comunidades
+        </h1>
+
+        <p class="text-muted">
+            Gerenciamento de ofertas recebidas via PIX
+        </p>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.dashboard') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-success">
+
+                    <div class="card-body text-center">
+
+                        <h1>📊</h1>
+
+                        <h4>Dashboard</h4>
+
+                        <p class="text-muted">
+                            Resumo das ofertas recebidas,
+                            gráficos e indicadores.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.ofertas') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-primary">
+
+                    <div class="card-body text-center">
+
+                        <h1>💵</h1>
+
+                        <h4>PIX Recebidos</h4>
+
+                        <p class="text-muted">
+                            Consulta completa de todos os
+                            pagamentos importados.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.importar_pix') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-warning">
+
+                    <div class="card-body text-center">
+
+                        <h1>⬇️</h1>
+
+                        <h4>Importar PIX</h4>
+
+                        <p class="text-muted">
+                            Importa automaticamente os PIX
+                            recebidos no Sicredi.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.comunidades') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-info">
+
+                    <div class="card-body text-center">
+
+                        <h1>🏛️</h1>
+
+                        <h4>Comunidades</h4>
+
+                        <p class="text-muted">
+                            Cadastro e gerenciamento
+                            das comunidades.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.ranking_comunidades') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-danger">
+
+                    <div class="card-body text-center">
+
+                        <h1>🏆</h1>
+
+                        <h4>Ranking</h4>
+
+                        <p class="text-muted">
+                            Ranking das comunidades
+                            por arrecadação.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.relatorios') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-secondary">
+
+                    <div class="card-body text-center">
+
+                        <h1>📑</h1>
+
+                        <h4>Relatórios</h4>
+
+                        <p class="text-muted">
+                            Emissão de relatórios
+                            analíticos e sintéticos.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="text-center mb-5">
+
+        <h1 class="display-5 text-danger">
+            ❤️ Módulo de Contribuições
+        </h1>
+
+        <p class="text-muted">
+            Gestão completa dos Dizimistas e Contribuições Online
+        </p>
+
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.dashboard') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-danger">
+
+                    <div class="card-body text-center">
+
+                        <h1>📊</h1>
+
+                        <h4>Dashboard</h4>
+
+                        <p class="text-muted">
+                            Indicadores gerais das contribuições,
+                            arrecadação e estatísticas.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.consultar') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-primary">
+
+                    <div class="card-body text-center">
+
+                        <h1>🔍</h1>
+
+                        <h4>Consultar Dizimista</h4>
+
+                        <p class="text-muted">
+                            Consulta por CPF para localizar
+                            o cadastro do dizimista.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.relatorios') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-success">
+
+                    <div class="card-body text-center">
+
+                        <h1>📑</h1>
+
+                        <h4>Relatórios</h4>
+
+                        <p class="text-muted">
+                            Emissão de relatórios sintéticos,
+                            analíticos e financeiros.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.ranking') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-warning">
+
+                    <div class="card-body text-center">
+
+                        <h1>🏆</h1>
+
+                        <h4>Ranking</h4>
+
+                        <p class="text-muted">
+                            Ranking dos maiores contribuintes
+                            por período.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.cadastro') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-info">
+
+                    <div class="card-body text-center">
+
+                        <h1>👥</h1>
+
+                        <h4>Dizimistas</h4>
+
+                        <p class="text-muted">
+                            Cadastro completo dos dizimistas
+                            e suas comunidades.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.consultar') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-secondary">
+
+                    <div class="card-body text-center">
+
+                        <h1>❤️</h1>
+
+                        <h4>Nova Contribuição</h4>
+
+                        <p class="text-muted">
+                            Gerar PIX e registrar
+                            uma nova contribuição online.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

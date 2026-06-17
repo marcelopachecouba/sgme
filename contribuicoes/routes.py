@@ -392,3 +392,11 @@ def status(contribuicao_id):
     return jsonify({
         "pago": False
     })
+
+@contribuicoes_bp.route("/inicio")
+def inicio():
+
+    return render_template(
+        "contribuicoes/index.html"
+    )
+

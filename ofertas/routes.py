@@ -1278,5 +1278,10 @@ def importar_pix_automatico():
 
     return f"{total} PIX importados automaticamente."
 
+@ofertas_bp.route("/", methods=["GET"])
+def inicio():
 
+    return render_template(
+        "ofertas/index.html"
+    )
 
