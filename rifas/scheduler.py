@@ -1,5 +1,5 @@
-from Contribuicoes.services import verificar_contribuicoes_pendentes
-from Ofertas.routes import importar_pix_automatico
+from contribuicoes.services import verificar_contribuicoes_pendentes
+from ofertas.routes import importar_pix_automatico
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from extensions import db

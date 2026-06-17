@@ -1,5 +1,5 @@
 
-from Ofertas.sicredi_service import buscar_pix_sicredi
+from ofertas.sicredi_service import buscar_pix_sicredi
 from datetime import datetime, timedelta, timezone
 
 from models import OfertaRecebida

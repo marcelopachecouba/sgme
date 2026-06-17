@@ -5,7 +5,7 @@ from rifas.models import PagamentoRifa, Rifa
 import logging
 import json
 from rifas.services import montar_mensagem_pagamento
-from Contribuicoes.services import confirmar_pagamento_pix
+from contribuicoes.services import confirmar_pagamento_pix
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ from flask import current_app
 from flask import flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_login import login_required
 
-from Contribuicoes import contribuicoes_bp
+from contribuicoes import contribuicoes_bp
 from extensions import db
 from models import Comunidade
 
@@ -30,8 +30,8 @@ from .services import (
 from flask import jsonify
 from extensions import db
 
-from Contribuicoes.services import confirmar_pagamento_pix
-from Contribuicoes.models import Contribuicao
+from contribuicoes.services import confirmar_pagamento_pix
+from contribuicoes.models import Contribuicao
 
 
 from rifas.payments import get_pix_gateway
@@ -297,7 +297,7 @@ def gerar_pix():
 )
 def verificar_pix_manual(contribuicao_id):
 
-    from Contribuicoes.services import verificar_contribuicao
+    from contribuicoes.services import verificar_contribuicao
 
     pago = verificar_contribuicao(
         contribuicao_id

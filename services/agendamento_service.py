@@ -5,7 +5,7 @@ from services.notification_manager import NotificationManager
 from services.whatsapp_service import enviar_lembretes_whatsapp
 
 from rifas.services import cancelar_pagamentos_expirados
-from Contribuicoes.scheduler import registrar_agendamentos_contribuicoes
+from contribuicoes.scheduler import registrar_agendamentos_contribuicoes
 from extensions import db
 from datetime import datetime
 

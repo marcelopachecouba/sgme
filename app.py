@@ -1,4 +1,4 @@
-from Contribuicoes import contribuicoes_bp
+from contribuicoes import contribuicoes_bp
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -42,7 +42,7 @@ from routes.notificacoes_routes import notificacao_bp
 from routes.observacoes_lembrete_routes import observacoes_lembrete_bp
 from datetime import timedelta
 
-from Ofertas import ofertas_bp
+from ofertas import ofertas_bp
 
 
 
