@@ -1149,49 +1149,36 @@ def imprimir_pdf():
     )
 
 #Rotina IMportação Pix
+
 @ofertas_bp.route("/importar_pix_automatico")
 def importar_pix_automatico():
 
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
 
     TZ_BR = ZoneInfo("America/Sao_Paulo")
 
-    # ===========================
-    # Último PIX importado
-    # ===========================
-
-    ultima_oferta = (
+    ultima = (
         OfertaRecebida.query
-        .order_by(
-            OfertaRecebida.datahora.desc()
-        )
+        .order_by(OfertaRecebida.datahora.desc())
         .first()
     )
 
-    if ultima_oferta:
+    if ultima:
 
-        # margem de segurança
-        inicio = (
-            ultima_oferta.datahora -
-            timedelta(seconds=10)
-        )
+        inicio_dt = ultima.datahora - timedelta(seconds=10)
 
     else:
 
-        inicio = (
-            datetime.now(TZ_BR).replace(
-                tzinfo=None
-            ) -
-            timedelta(days=30)
+        inicio_dt = (
+            datetime.now(TZ_BR).replace(tzinfo=None)
+            - timedelta(days=2)
         )
 
     agora = datetime.now(TZ_BR)
 
     inicio_api = (
-        inicio.strftime(
-            "%Y-%m-%dT%H:%M:%S"
-        )
+        inicio_dt.strftime("%Y-%m-%dT%H:%M:%S")
         + "-03:00"
     )
 
@@ -1199,31 +1186,26 @@ def importar_pix_automatico():
         "%Y-%m-%dT%H:%M:%S-03:00"
     )
 
-    print("====================================")
-    print("IMPORTAÇÃO AUTOMÁTICA DE OFERTAS")
-    print("UTC........:", datetime.now(timezone.utc))
-    print("BRASIL.....:", agora)
-    print("INICIO API.:", inicio_api)
-    print("FIM API....:", fim_api)
-    print("====================================")
+    print("===================================")
+    print("IMPORTAÇÃO AUTOMÁTICA DE PIX")
+    print("INÍCIO :", inicio_api)
+    print("FIM    :", fim_api)
+    print("===================================")
 
     try:
 
         lista = buscar_pix_sicredi(
-
             inicio=inicio_api,
-
             fim=fim_api
-
         )
 
     except Exception as e:
 
-        print("ERRO API PIX:", str(e))
+        print("ERRO API:", str(e))
 
-        return "Erro API PIX"
+        return str(e)
 
-    print("PIX RETORNADOS:", len(lista))
+    print("PIX RECEBIDOS:", len(lista))
 
     comunidades = {
 
@@ -1242,30 +1224,21 @@ def importar_pix_automatico():
     for pix in lista:
 
         txid = (
-
-            pix.get("txid")
-
-            or ""
-
+            pix.get("txid") or ""
         ).strip().upper()
 
         if not txid:
 
             ignorados += 1
-
             continue
 
         comunidade = comunidades.get(txid)
 
         if comunidade is None:
 
-            print(
-                "TXID NÃO ENCONTRADO:",
-                txid
-            )
+            print("TXID NÃO ENCONTRADO:", txid)
 
             ignorados += 1
-
             continue
 
         endtoendid = pix.get(
@@ -1274,73 +1247,43 @@ def importar_pix_automatico():
         )
 
         existe = OfertaRecebida.query.filter_by(
-
             endtoendid=endtoendid
-
         ).first()
 
         if existe:
 
             duplicados += 1
-
             continue
 
         oferta = OfertaRecebida()
 
         oferta.txid = txid
-
         oferta.endtoendid = endtoendid
 
         oferta.codigo_autenticacao = (
-
-            pix.get(
-                "codigoAutenticacao"
-            )
-
-            or
-
-            pix.get(
-                "idTransacao"
-            )
-
+            pix.get("codigoAutenticacao")
+            or pix.get("idTransacao")
             or ""
-
         )
 
         oferta.valor = float(
-
-            pix.get(
-                "valor",
-                0
-            )
-
+            pix.get("valor", 0)
         )
 
-        horario = pix.get(
-            "horario"
-        )
+        horario = pix.get("horario")
 
         if horario:
 
             try:
 
                 utc = datetime.fromisoformat(
-
-                    horario.replace(
-                        "Z",
-                        "+00:00"
-                    )
-
+                    horario.replace("Z", "+00:00")
                 )
 
                 oferta.datahora = utc.astimezone(
-
                     TZ_BR
-
                 ).replace(
-
                     tzinfo=None
-
                 )
 
             except Exception:
@@ -1367,35 +1310,26 @@ def importar_pix_automatico():
         oferta.payload = pix
 
         oferta.comunidade_id = comunidade.id
-
         oferta.tipo_id = comunidade.tipo_id
 
-        db.session.add(
-            oferta
-        )
+        db.session.add(oferta)
 
         total += 1
 
         print(
-
-            f"IMPORTADO -> "
-
-            f"{txid} | "
-
+            f"IMPORTADO: {txid} | "
             f"{oferta.valor:.2f} | "
-
             f"{endtoendid}"
-
         )
 
     db.session.commit()
 
-    print("====================================")
+    print("===================================")
     print("PIX RETORNADOS :", len(lista))
     print("IMPORTADOS     :", total)
     print("DUPLICADOS     :", duplicados)
     print("IGNORADOS      :", ignorados)
-    print("====================================")
+    print("===================================")
 
     return f"""
     <h2>Importação concluída</h2>

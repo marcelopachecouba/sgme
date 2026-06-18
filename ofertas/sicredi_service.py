@@ -1,29 +1,45 @@
 import requests
+import json
+
 from flask import current_app
+
 from rifas.sicoob_service import get_sicoob_token
 
-#Rotina Importação Pix
+
 def buscar_pix_sicredi(inicio, fim):
 
     token = get_sicoob_token()
 
     headers = {
+
         "Authorization": f"Bearer {token}"
+
     }
 
     url = current_app.config["SICREDI_API_URL"] + "/pix"
 
     pagina = 0
+
     todos_pix = []
 
     while True:
 
         params = {
+
             "inicio": inicio,
+
             "fim": fim,
+
             "paginaAtual": pagina,
+
             "itensPorPagina": 100
+
         }
+
+        print("=================================")
+        print("PAGINA:", pagina)
+        print("PARAMS:", params)
+        print("=================================")
 
         r = requests.get(
 
@@ -45,27 +61,106 @@ def buscar_pix_sicredi(inicio, fim):
 
         )
 
-        dados = r.json()
+        print("STATUS:", r.status_code)
+
+        print("URL:", r.url)
+
+        print("RESPOSTA:")
+
+        print(r.text)
+
+        if r.status_code != 200:
+
+            raise Exception(
+
+                f"Erro Sicredi {r.status_code}: {r.text}"
+
+            )
+
+        try:
+
+            dados = r.json()
+
+        except Exception:
+
+            print("JSON inválido")
+
+            break
+
+        pix = dados.get(
+
+            "pix",
+
+            []
+
+        )
 
         todos_pix.extend(
-            dados.get("pix", [])
+
+            pix
+
         )
 
         pag = (
-            dados.get("parametros", {})
-                .get("paginacao", {})
+
+            dados.get(
+
+                "parametros",
+
+                {}
+
+            ).get(
+
+                "paginacao",
+
+                {}
+
+            )
+
         )
 
-        print(pag)
-        print(len(dados.get("pix", [])))
+        print(
 
-        if pagina >= pag.get(
-            "quantidadeDePaginas",
-            1
-        ) - 1:
+            "PIX:",
+
+            len(pix)
+
+        )
+
+        print(
+
+            "PAGINAÇÃO:",
+
+            pag
+
+        )
+
+        if pagina >= (
+
+            pag.get(
+
+                "quantidadeDePaginas",
+
+                1
+
+            ) - 1
+
+        ):
 
             break
 
         pagina += 1
+
+    print("=================================")
+
+    print(
+
+        "TOTAL PIX:",
+
+        len(todos_pix)
+
+    )
+
+    print("=================================")
 
     return todos_pix
