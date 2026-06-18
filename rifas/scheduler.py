@@ -70,14 +70,24 @@ def start_scheduler(app):
         minutes=2
     )
 
+   # scheduler.add_job(
+    #    func=job_importar_ofertas,
+     #   args=[app],
+      #  trigger="cron",
+    #    hour="6,12,18,21",
+    #    minute=0,
+    #    id="importacao_ofertas"
+    #)
+
     scheduler.add_job(
         func=job_importar_ofertas,
         args=[app],
-        trigger="cron",
-        hour="6,12,18,21",
-        minute=0,
-        id="importacao_ofertas"
+        trigger="interval",
+        minutes=2,
+        id="importacao_ofertas",
+        replace_existing=True
     )
+
 
     #scheduler.add_job(
         #func=job_verificar_contribuicoes,

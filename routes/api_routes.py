@@ -59,16 +59,58 @@ def enviar_lembretes_whatsapp_agora():
     )
 
     return jsonify(resultado)
+
 import json
 import requests
 from flask import current_app
 from rifas.sicoob_service import get_sicoob_token
 
-@api_bp.route("/teste_pix")
+@api_bp.route("/teste_pix", methods=["GET", "POST"])
 def teste_pix():
 
     import requests
     import json
+    from datetime import datetime
+
+    if request.method == "GET":
+
+        hoje = datetime.now().strftime("%Y-%m-%d")
+
+        return f"""
+        <form method="POST">
+
+            Data Inicial:<br>
+            <input type="date" name="data_inicial" value="{hoje}">
+
+            <br><br>
+
+            Data Final:<br>
+            <input type="date" name="data_final" value="{hoje}">
+
+            <br><br>
+
+            <button type="submit">
+                Consultar PIX
+            </button>
+
+        </form>
+        """
+
+    data_inicial = request.form["data_inicial"]
+    data_final = request.form["data_final"]
+
+    agora = datetime.now()
+
+    inicio = data_inicial + "T00:00:00-03:00"
+
+    # Se a data final é hoje, usa o horário atual
+    if data_final == agora.strftime("%Y-%m-%d"):
+
+        fim = agora.strftime("%Y-%m-%dT%H:%M:%S-03:00")
+
+    else:
+
+        fim = data_final + "T23:59:59-03:00"
 
     token = get_sicoob_token()
 
@@ -79,30 +121,38 @@ def teste_pix():
     url = current_app.config["SICREDI_API_URL"] + "/pix"
 
     params = {
-        "inicio": "2026-06-17T00:00:00-03:00",
-        "fim": "2026-06-17T14:59:59-03:00"
+        "inicio": inicio,
+        "fim": fim
     }
+
     r = requests.get(
+
         url,
+
         headers=headers,
+
         params=params,
+
         cert=(
+
             current_app.config["SICREDI_CERT_PATH"],
+
             current_app.config["SICREDI_KEY_PATH"]
+
         ),
+
         timeout=30
+
     )
 
     dados = r.json()
 
-    pix_com_txid = [
-        pix for pix in dados.get("pix", [])
-        if pix.get("txid")
-    ]
-
     return "<pre>" + json.dumps(
-        dados,
-        indent=4,
-        ensure_ascii=False
-    ) + "</pre>"
 
+        dados,
+
+        indent=4,
+
+        ensure_ascii=False
+
+    ) + "</pre>"

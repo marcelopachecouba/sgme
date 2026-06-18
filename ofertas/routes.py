@@ -463,16 +463,30 @@ def importar_pix():
 
     data_inicial = request.form["data_inicial"]
     data_final = request.form["data_final"]
+  
+    agora = datetime.now()
 
     inicio = datetime.strptime(
         data_inicial,
         "%Y-%m-%d"
     ).strftime("%Y-%m-%dT00:00:00-03:00")
 
-    fim = datetime.strptime(
-        data_final,
-        "%Y-%m-%d"
-    ).strftime("%Y-%m-%dT23:59:59-03:00")
+    # Se a data final é hoje, usa a hora atual
+    if data_final == agora.strftime("%Y-%m-%d"):
+
+        fim = agora.strftime(
+            "%Y-%m-%dT%H:%M:%S-03:00"
+        )
+
+    else:
+
+        fim = datetime.strptime(
+            data_final,
+            "%Y-%m-%d"
+        ).strftime(
+            "%Y-%m-%dT23:59:59-03:00"
+        )
+
 
     print("=================================")
     print("IMPORTANDO PIX")
@@ -1142,30 +1156,62 @@ def importar_pix_automatico():
     # Último PIX importado
     ultima_oferta = (
         OfertaRecebida.query
-        .order_by(OfertaRecebida.datahora.desc())
+        .order_by(
+            OfertaRecebida.datahora.desc()
+        )
         .first()
     )
 
     if ultima_oferta:
 
+        # margem de segurança
         inicio = (
-            ultima_oferta.datahora +
-            timedelta(seconds=1)
+            ultima_oferta.datahora -
+            timedelta(seconds=10) 
         )
 
     else:
 
-        # Primeira importação
-        inicio = datetime.now() - timedelta(days=30)
+        inicio = (
+            datetime.now() -
+            timedelta(days=30)
+        )
 
-    fim = datetime.now()
+    agora = datetime.now()
 
-    lista = buscar_pix_sicredi(
+    inicio_api = inicio.strftime(
+        "%Y-%m-%dT%H:%M:%S-03:00"
+    )
 
-        inicio.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    fim_api = agora.strftime(
+        "%Y-%m-%dT%H:%M:%S-03:00"
+    )
 
-        fim.strftime("%Y-%m-%dT%H:%M:%SZ")
+    print("=================================")
+    print("IMPORTAÇÃO AUTOMÁTICA PIX")
+    print("INÍCIO :", inicio_api)
+    print("FIM    :", fim_api)
+    print("=================================")
 
+    try:
+
+        lista = buscar_pix_sicredi(
+
+            inicio=inicio_api,
+
+            fim=fim_api
+
+        )
+
+    except Exception as e:
+
+        print("Erro API PIX:", str(e))
+
+        return 0
+
+    print(
+        "PIX retornados:",
+        len(lista)
     )
 
     comunidades = {
@@ -1180,26 +1226,36 @@ def importar_pix_automatico():
 
     total = 0
 
+    ignorados = 0
+
+    duplicados = 0
+
     for pix in lista:
 
-        txid = pix.get(
-            "txid",
-            ""
+        txid = (
+            pix.get("txid") or ""
         ).strip().upper()
 
         if not txid:
+
+            ignorados += 1
+
             continue
 
-        comunidade = comunidades.get(txid)
+        comunidade = comunidades.get(
+            txid
+        )
 
         if comunidade is None:
 
             print(
-                "PIX ignorado:",
+                "TXID não encontrado:",
                 txid
             )
 
-            continue        
+            ignorados += 1
+
+            continue
 
         endtoendid = pix.get(
             "endToEndId",
@@ -1213,51 +1269,76 @@ def importar_pix_automatico():
         ).first()
 
         if existe:
+
+            duplicados += 1
+
             continue
 
         oferta = OfertaRecebida()
 
-        oferta.endtoendid = endtoendid
-
-        oferta.codigo_autenticacao = pix.get(
-            "codigoAutenticacao",
-            pix.get(
-                "idTransacao",
-                ""
-            )
-        )
-
         oferta.txid = txid
 
+        oferta.endtoendid = endtoendid
+
+        oferta.codigo_autenticacao = (
+
+            pix.get(
+                "codigoAutenticacao"
+            )
+
+            or
+
+            pix.get(
+                "idTransacao"
+            )
+
+            or ""
+
+        )
+
         oferta.valor = float(
+
             pix.get(
                 "valor",
                 0
             )
+
         )
 
-        horario = pix.get("horario")
+        horario = pix.get(
+            "horario"
+        )
 
         if horario:
 
-            utc = datetime.fromisoformat(
+            try:
 
-                horario.replace(
-                    "Z",
-                    "+00:00"
+                utc = datetime.fromisoformat(
+
+                    horario.replace(
+                        "Z",
+                        "+00:00"
+                    )
+
                 )
 
-            )
+                oferta.datahora = utc.astimezone(
 
-            oferta.datahora = utc.astimezone(
+                    timezone(
+                        timedelta(hours=-3)
+                    )
 
-                timezone(
-                    timedelta(hours=-3)
+                ).replace(
+                    tzinfo=None
                 )
 
-            ).replace(
-                tzinfo=None
-            )
+            except:
+
+                oferta.datahora = datetime.now()
+
+        else:
+
+            oferta.datahora = datetime.now()
 
         oferta.chave_pix = pix.get(
             "chave",
@@ -1270,13 +1351,35 @@ def importar_pix_automatico():
 
         oferta.tipo_id = comunidade.tipo_id
 
-        db.session.add(oferta)
+        db.session.add(
+            oferta
+        )
 
         total += 1
 
+        print(
+
+            f"IMPORTADO -> "
+
+            f"{txid} | "
+
+            f"{oferta.valor:.2f} | "
+
+            f"{endtoendid}"
+
+        )
+
     db.session.commit()
 
-    return f"{total} PIX importados automaticamente."
+    print("=================================")
+    print("PIX RETORNADOS :", len(lista))
+    print("IMPORTADOS     :", total)
+    print("DUPLICADOS     :", duplicados)
+    print("IGNORADOS      :", ignorados)
+    print("=================================")
+
+    return total
+
 
 @ofertas_bp.route("/", methods=["GET"])
 def inicio():
