@@ -70,11 +70,14 @@ def teste_pix():
 
     import requests
     import json
-    from datetime import datetime
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+
+    TZ_BR = ZoneInfo("America/Sao_Paulo")
 
     if request.method == "GET":
 
-        hoje = datetime.now().strftime("%Y-%m-%d")
+        hoje = datetime.now(TZ_BR).strftime("%Y-%m-%d")
 
         return f"""
         <form method="POST">
@@ -99,18 +102,20 @@ def teste_pix():
     data_inicial = request.form["data_inicial"]
     data_final = request.form["data_final"]
 
-    agora = datetime.now()
+    agora = datetime.now(TZ_BR)
 
-    inicio = data_inicial + "T00:00:00-03:00"
+    inicio = f"{data_inicial}T00:00:00-03:00"
 
-    # Se a data final é hoje, usa o horário atual
-    if data_final == agora.strftime("%Y-%m-%d"):
+    # Se consultar o dia atual, usa o horário atual do Brasil
+    if data_final == agora.date().isoformat():
 
-        fim = agora.strftime("%Y-%m-%dT%H:%M:%S-03:00")
+        fim = agora.strftime(
+            "%Y-%m-%dT%H:%M:%S-03:00"
+        )
 
     else:
 
-        fim = data_final + "T23:59:59-03:00"
+        fim = f"{data_final}T23:59:59-03:00"
 
     token = get_sicoob_token()
 
@@ -124,6 +129,14 @@ def teste_pix():
         "inicio": inicio,
         "fim": fim
     }
+
+    print("================================")
+    print("UTC..........:", datetime.now(timezone.utc))
+    print("Brasil.......:", agora)
+    print("Inicio.......:", inicio)
+    print("Fim..........:", fim)
+    print("Parametros...:", params)
+    print("================================")
 
     r = requests.get(
 
@@ -145,7 +158,21 @@ def teste_pix():
 
     )
 
-    dados = r.json()
+    print("STATUS:", r.status_code)
+    print("URL:", r.url)
+    print("RESPOSTA:", r.text)
+
+    try:
+
+        dados = r.json()
+
+    except Exception:
+
+        return (
+            "<pre>" +
+            r.text +
+            "</pre>"
+        )
 
     return "<pre>" + json.dumps(
 
