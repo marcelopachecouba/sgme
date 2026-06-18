@@ -78,7 +78,7 @@ def start_scheduler(app):
     #    minute=0,
     #    id="importacao_ofertas"
     #)
-
+    # Rotina importação Pix
     scheduler.add_job(
         func=job_importar_ofertas,
         args=[app],

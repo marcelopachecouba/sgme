@@ -1148,6 +1148,7 @@ def imprimir_pdf():
 
     )
 
+#Rotina IMportação Pix
 @ofertas_bp.route("/importar_pix_automatico")
 def importar_pix_automatico():
 

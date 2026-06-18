@@ -2,7 +2,7 @@ import requests
 from flask import current_app
 from rifas.sicoob_service import get_sicoob_token
 
-
+#Rotina Importação Pix
 def buscar_pix_sicredi(inicio, fim):
 
     token = get_sicoob_token()
