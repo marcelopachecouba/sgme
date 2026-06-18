@@ -1153,8 +1153,14 @@ def imprimir_pdf():
 def importar_pix_automatico():
 
     from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
 
+    TZ_BR = ZoneInfo("America/Sao_Paulo")
+
+    # ===========================
     # Último PIX importado
+    # ===========================
+
     ultima_oferta = (
         OfertaRecebida.query
         .order_by(
@@ -1168,31 +1174,38 @@ def importar_pix_automatico():
         # margem de segurança
         inicio = (
             ultima_oferta.datahora -
-            timedelta(seconds=10) 
+            timedelta(seconds=10)
         )
 
     else:
 
         inicio = (
-            datetime.now() -
+            datetime.now(TZ_BR).replace(
+                tzinfo=None
+            ) -
             timedelta(days=30)
         )
 
-    agora = datetime.now()
+    agora = datetime.now(TZ_BR)
 
-    inicio_api = inicio.strftime(
-        "%Y-%m-%dT%H:%M:%S-03:00"
+    inicio_api = (
+        inicio.strftime(
+            "%Y-%m-%dT%H:%M:%S"
+        )
+        + "-03:00"
     )
 
     fim_api = agora.strftime(
         "%Y-%m-%dT%H:%M:%S-03:00"
     )
 
-    print("=================================")
-    print("IMPORTAÇÃO AUTOMÁTICA PIX")
-    print("INÍCIO :", inicio_api)
-    print("FIM    :", fim_api)
-    print("=================================")
+    print("====================================")
+    print("IMPORTAÇÃO AUTOMÁTICA DE OFERTAS")
+    print("UTC........:", datetime.now(timezone.utc))
+    print("BRASIL.....:", agora)
+    print("INICIO API.:", inicio_api)
+    print("FIM API....:", fim_api)
+    print("====================================")
 
     try:
 
@@ -1206,14 +1219,11 @@ def importar_pix_automatico():
 
     except Exception as e:
 
-        print("Erro API PIX:", str(e))
+        print("ERRO API PIX:", str(e))
 
-        return 0
+        return "Erro API PIX"
 
-    print(
-        "PIX retornados:",
-        len(lista)
-    )
+    print("PIX RETORNADOS:", len(lista))
 
     comunidades = {
 
@@ -1226,15 +1236,17 @@ def importar_pix_automatico():
     }
 
     total = 0
-
-    ignorados = 0
-
     duplicados = 0
+    ignorados = 0
 
     for pix in lista:
 
         txid = (
-            pix.get("txid") or ""
+
+            pix.get("txid")
+
+            or ""
+
         ).strip().upper()
 
         if not txid:
@@ -1243,14 +1255,12 @@ def importar_pix_automatico():
 
             continue
 
-        comunidade = comunidades.get(
-            txid
-        )
+        comunidade = comunidades.get(txid)
 
         if comunidade is None:
 
             print(
-                "TXID não encontrado:",
+                "TXID NÃO ENCONTRADO:",
                 txid
             )
 
@@ -1325,21 +1335,29 @@ def importar_pix_automatico():
 
                 oferta.datahora = utc.astimezone(
 
-                    timezone(
-                        timedelta(hours=-3)
-                    )
+                    TZ_BR
 
+                ).replace(
+
+                    tzinfo=None
+
+                )
+
+            except Exception:
+
+                oferta.datahora = datetime.now(
+                    TZ_BR
                 ).replace(
                     tzinfo=None
                 )
 
-            except:
-
-                oferta.datahora = datetime.now()
-
         else:
 
-            oferta.datahora = datetime.now()
+            oferta.datahora = datetime.now(
+                TZ_BR
+            ).replace(
+                tzinfo=None
+            )
 
         oferta.chave_pix = pix.get(
             "chave",
@@ -1372,15 +1390,24 @@ def importar_pix_automatico():
 
     db.session.commit()
 
-    print("=================================")
+    print("====================================")
     print("PIX RETORNADOS :", len(lista))
     print("IMPORTADOS     :", total)
     print("DUPLICADOS     :", duplicados)
     print("IGNORADOS      :", ignorados)
-    print("=================================")
+    print("====================================")
 
-    return total
+    return f"""
+    <h2>Importação concluída</h2>
 
+    PIX retornados: {len(lista)}<br>
+
+    PIX importados: {total}<br>
+
+    Duplicados: {duplicados}<br>
+
+    Ignorados: {ignorados}
+    """
 
 @ofertas_bp.route("/", methods=["GET"])
 def inicio():
