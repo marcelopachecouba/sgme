@@ -1,5 +1,5 @@
 from contribuicoes.services import verificar_contribuicoes_pendentes
-from ofertas.routes import importar_pix_automatico
+from ofertas.services import importar_pix_automatico
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from extensions import db
@@ -115,24 +115,27 @@ def job_importar_ofertas(app):
 
     with app.app_context():
 
-        print(
-            f"[{datetime.utcnow()}] Importando PIX das ofertas..."
-        )
+        print("###########################")
+        print("JOB IMPORTAÇÃO OFERTAS")
+        print(datetime.now())
+        print("###########################")
 
         try:
 
-            importar_pix_automatico()
+            total = importar_pix_automatico()
 
             db.session.commit()
+
+            print(
+                f"{total} PIX importados."
+            )
 
         except Exception as e:
 
             db.session.rollback()
 
-            print(
-                "Erro importação ofertas:",
-                str(e)
-            )
+            print(e)
+
 
 def job_verificar_contribuicoes(app):
 
