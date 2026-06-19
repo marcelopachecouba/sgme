@@ -6,6 +6,7 @@ from services.whatsapp_service import enviar_lembretes_whatsapp
 
 from rifas.services import cancelar_pagamentos_expirados
 from contribuicoes.scheduler import registrar_agendamentos_contribuicoes
+from ofertas.services import importar_pix_automatico
 from extensions import db
 from datetime import datetime
 
@@ -23,6 +24,33 @@ def executar_lembretes_whatsapp_agendados(app):
             resultado["ministros_sem_telefone"],
             resultado["falhas"],
         )
+
+
+def job_importar_ofertas(app):
+
+    with app.app_context():
+
+        print("###########################")
+        print("JOB IMPORTAÇÃO OFERTAS")
+        print(datetime.now())
+        print("###########################")
+
+        try:
+
+            total = importar_pix_automatico()
+
+            db.session.commit()
+
+            print(
+                f"{total} PIX importados."
+            )
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print(e)
+
 
 
 def registrar_agendamentos(scheduler, app):
@@ -68,6 +96,16 @@ def registrar_agendamentos(scheduler, app):
         misfire_grace_time=60,
         id="expirar_rifas",
     )
+
+    scheduler.add_job(
+        func=job_importar_ofertas,
+        args=[app],
+        trigger="interval",
+        minutes=2,
+        id="importacao_ofertas",
+        replace_existing=True
+    )
+
 
     registrar_agendamentos_contribuicoes(scheduler, app)
 
