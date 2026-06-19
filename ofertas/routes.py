@@ -450,10 +450,12 @@ def imprimir_qrcode(id):
     "/importar_pix",
     methods=["GET", "POST"]
 )
-
 def importar_pix():
 
     from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+
+    TZ_BR = ZoneInfo("America/Sao_Paulo")
 
     if request.method == "GET":
 
@@ -463,40 +465,11 @@ def importar_pix():
 
     data_inicial = request.form["data_inicial"]
     data_final = request.form["data_final"]
-  
-    agora = datetime.now()
 
-    inicio = datetime.strptime(
-        data_inicial,
-        "%Y-%m-%d"
-    ).strftime("%Y-%m-%dT00:00:00-03:00")
-
-    # Se a data final é hoje, usa a hora atual
-    if data_final == agora.strftime("%Y-%m-%d"):
-
-        fim = agora.strftime(
-            "%Y-%m-%dT%H:%M:%S-03:00"
-        )
-
-    else:
-
-        fim = datetime.strptime(
-            data_final,
-            "%Y-%m-%d"
-        ).strftime(
-            "%Y-%m-%dT23:59:59-03:00"
-        )
-
-
-    print("=================================")
-    print("IMPORTANDO PIX")
-    print("INICIO:", inicio)
-    print("FIM:", fim)
-    print("=================================")
-
-    lista = buscar_pix_sicredi(
-        inicio=inicio,
-        fim=fim
+    agora = datetime.now(
+        timezone.utc
+    ).astimezone(
+        TZ_BR
     )
 
     comunidades = {
@@ -507,82 +480,155 @@ def importar_pix():
 
     total = 0
 
-    for pix in lista:
+    dia = datetime.strptime(
+        data_inicial,
+        "%Y-%m-%d"
+    )
 
-        txid = (pix.get("txid") or "").strip().upper()
+    ultimo = datetime.strptime(
+        data_final,
+        "%Y-%m-%d"
+    )
 
-        if not txid:
-            continue
+    while dia <= ultimo:
 
-        comunidade = comunidades.get(txid)
-
-        if comunidade is None:
-            print("Comunidade não encontrada:", txid)
-            continue
-
-        endtoendid = pix.get("endToEndId", "")
-
-        if OfertaRecebida.query.filter_by(
-            endtoendid=endtoendid
-        ).first():
-            continue
-
-        oferta = OfertaRecebida()
-
-        oferta.txid = txid
-        oferta.endtoendid = endtoendid
-
-        oferta.codigo_autenticacao = (
-            pix.get("codigoAutenticacao")
-            or pix.get("idTransacao")
-            or ""
+        inicio = dia.strftime(
+            "%Y-%m-%dT00:00:00-03:00"
         )
 
-        oferta.valor = float(
-            pix.get("valor", 0)
-        )
+        # Se for hoje usa a hora atual
+        if dia.date() == agora.date():
 
-        horario = pix.get("horario")
-
-        if horario:
-
-            try:
-
-                utc = datetime.fromisoformat(
-                    horario.replace("Z", "+00:00")
-                )
-
-                oferta.datahora = utc.astimezone(
-                    timezone(timedelta(hours=-3))
-                ).replace(tzinfo=None)
-
-            except Exception:
-
-                oferta.datahora = datetime.now()
+            fim = agora.strftime(
+                "%Y-%m-%dT%H:%M:%S-03:00"
+            )
 
         else:
 
-            oferta.datahora = datetime.now()
+            fim = dia.strftime(
+                "%Y-%m-%dT23:59:59-03:00"
+            )
 
-        oferta.chave_pix = pix.get(
-            "chave",
-            ""
+        print("=================================")
+        print("IMPORTANDO PIX")
+        print("INICIO:", inicio)
+        print("FIM:", fim)
+        print("=================================")
+
+        lista = buscar_pix_sicredi(
+            inicio=inicio,
+            fim=fim
         )
 
-        oferta.payload = pix
+        for pix in lista:
 
-        oferta.comunidade_id = comunidade.id
-        oferta.tipo_id = comunidade.tipo_id
+            txid = (
+                pix.get("txid") or ""
+            ).strip().upper()
 
-        db.session.add(oferta)
+            if not txid:
+                continue
 
-        total += 1
+            comunidade = comunidades.get(txid)
 
-        print(
-            f"IMPORTADO: {txid} - "
-            f"{oferta.valor} - "
-            f"{endtoendid}"
-        )
+            if comunidade is None:
+
+                print(
+                    "Comunidade não encontrada:",
+                    txid
+                )
+
+                continue
+
+            endtoendid = pix.get(
+                "endToEndId",
+                ""
+            )
+
+            if OfertaRecebida.query.filter_by(
+                endtoendid=endtoendid
+            ).first():
+
+                continue
+
+            oferta = OfertaRecebida()
+
+            oferta.txid = txid
+
+            oferta.endtoendid = endtoendid
+
+            oferta.codigo_autenticacao = (
+
+                pix.get("codigoAutenticacao")
+
+                or
+
+                pix.get("idTransacao")
+
+                or ""
+
+            )
+
+            oferta.valor = float(
+                pix.get(
+                    "valor",
+                    0
+                )
+            )
+
+            horario = pix.get(
+                "horario"
+            )
+
+            if horario:
+
+                try:
+
+                    utc = datetime.fromisoformat(
+
+                        horario.replace(
+                            "Z",
+                            "+00:00"
+                        )
+
+                    )
+
+                    oferta.datahora = utc.astimezone(
+                        TZ_BR
+                    ).replace(
+                        tzinfo=None
+                    )
+
+                except Exception:
+
+                    oferta.datahora = agora.replace(
+                        tzinfo=None
+                    )
+
+            else:
+
+                oferta.datahora = agora.replace(
+                    tzinfo=None
+                )
+
+            oferta.chave_pix = pix.get(
+                "chave",
+                ""
+            )
+
+            oferta.payload = pix
+
+            oferta.comunidade_id = comunidade.id
+
+            oferta.tipo_id = comunidade.tipo_id
+
+            db.session.add(
+                oferta
+            )
+
+            total += 1
+
+        dia += timedelta(days=1)
 
     db.session.commit()
 
@@ -1159,55 +1205,30 @@ def importar_pix_automatico():
 
     TZ_BR = ZoneInfo("America/Sao_Paulo")
 
-    # Horário atual convertido corretamente
-    agora = datetime.now(
-        timezone.utc
-    ).astimezone(
-        TZ_BR
+    # Hora atual correta no Brasil
+    agora = (
+        datetime.now(timezone.utc)
+        .astimezone(TZ_BR)
     )
 
-    ultima = (
-        OfertaRecebida.query
-        .order_by(
-            OfertaRecebida.datahora.desc()
-        )
-        .first()
+    # Consulta sempre as últimas 6 horas
+    inicio_dt = (
+        agora - timedelta(hours=6)
     )
 
-    if ultima:
-
-        inicio_dt = (
-            ultima.datahora -
-            timedelta(seconds=10)
-        )
-
-    else:
-
-        inicio_dt = (
-            agora.replace(
-                tzinfo=None
-            ) -
-            timedelta(days=2)
-        )
-
-    inicio_api = (
-        inicio_dt.strftime(
-            "%Y-%m-%dT%H:%M:%S"
-        )
-        + "-03:00"
+    inicio_api = inicio_dt.strftime(
+        "%Y-%m-%dT%H:%M:%S-03:00"
     )
 
-    fim_api = agora.isoformat(
-        timespec="seconds"
+    fim_api = agora.strftime(
+        "%Y-%m-%dT%H:%M:%S-03:00"
     )
 
-    print("=================================")
-    print("IMPORTAÇÃO AUTOMÁTICA")
-    print("UTC.......:", datetime.now(timezone.utc))
-    print("BRASIL....:", agora)
-    print("INICIO API:", inicio_api)
-    print("FIM API...:", fim_api)
-    print("=================================")
+    print("===================================")
+    print("IMPORTAÇÃO AUTOMÁTICA PIX")
+    print("INÍCIO:", inicio_api)
+    print("FIM   :", fim_api)
+    print("===================================")
 
     try:
 
@@ -1221,7 +1242,7 @@ def importar_pix_automatico():
 
     except Exception as e:
 
-        print(e)
+        print("ERRO API PIX:", str(e))
 
         return str(e)
 
@@ -1248,15 +1269,18 @@ def importar_pix_automatico():
         if not txid:
 
             ignorados += 1
-
             continue
 
         comunidade = comunidades.get(txid)
 
         if comunidade is None:
 
-            ignorados += 1
+            print(
+                "Comunidade não encontrada:",
+                txid
+            )
 
+            ignorados += 1
             continue
 
         endtoendid = pix.get(
@@ -1265,11 +1289,12 @@ def importar_pix_automatico():
         )
 
         if OfertaRecebida.query.filter_by(
+
             endtoendid=endtoendid
+
         ).first():
 
             duplicados += 1
-
             continue
 
         oferta = OfertaRecebida()
@@ -1291,34 +1316,44 @@ def importar_pix_automatico():
         )
 
         oferta.valor = float(
+
             pix.get(
                 "valor",
                 0
             )
+
         )
 
         horario = pix.get("horario")
 
         if horario:
 
-            utc = datetime.fromisoformat(
+            try:
 
-                horario.replace(
-                    "Z",
-                    "+00:00"
+                utc = datetime.fromisoformat(
+
+                    horario.replace(
+                        "Z",
+                        "+00:00"
+                    )
+
                 )
 
-            )
+                oferta.datahora = utc.astimezone(
 
-            oferta.datahora = utc.astimezone(
+                    TZ_BR
 
-                TZ_BR
+                ).replace(
 
-            ).replace(
+                    tzinfo=None
 
-                tzinfo=None
+                )
 
-            )
+            except Exception:
+
+                oferta.datahora = agora.replace(
+                    tzinfo=None
+                )
 
         else:
 
@@ -1337,38 +1372,26 @@ def importar_pix_automatico():
 
         oferta.tipo_id = comunidade.tipo_id
 
-        db.session.add(
-            oferta
-        )
+        db.session.add(oferta)
 
         total += 1
 
         print(
-            "IMPORTADO:",
-            txid,
-            oferta.valor
+            f"IMPORTADO: {txid} - "
+            f"{oferta.valor:.2f}"
         )
 
     db.session.commit()
 
-    print("==========================")
-    print("PIX API:", len(lista))
-    print("IMPORTADOS:", total)
-    print("DUPLICADOS:", duplicados)
-    print("IGNORADOS:", ignorados)
-    print("==========================")
+    print("===================================")
+    print("PIX API.....:", len(lista))
+    print("IMPORTADOS..:", total)
+    print("DUPLICADOS..:", duplicados)
+    print("IGNORADOS...:", ignorados)
+    print("===================================")
 
-    return f"""
-    <h2>Importação concluída</h2>
+    return f"{total} PIX importados automaticamente."
 
-    PIX API: {len(lista)}<br>
-
-    Importados: {total}<br>
-
-    Duplicados: {duplicados}<br>
-
-    Ignorados: {ignorados}
-    """
 
 @ofertas_bp.route("/", methods=["GET"])
 def inicio():
