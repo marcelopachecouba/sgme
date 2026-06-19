@@ -101,7 +101,7 @@ def registrar_agendamentos(scheduler, app):
         func=job_importar_ofertas,
         args=[app],
         trigger="interval",
-        minutes=60,
+        minutes=2,
         id="importacao_ofertas",
         replace_existing=True
     )

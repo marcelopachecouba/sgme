@@ -1092,3 +1092,25 @@ class OfertaRecebida(db.Model):
         "TipoArrecadacao",
         foreign_keys=[tipo_id]
     )
+
+class ControleImportacaoPix(db.Model):
+
+    __tablename__ = "controle_importacao_pix"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    ultima_consulta = db.Column(
+        db.DateTime
+    )
+
+    ultima_execucao = db.Column(
+        db.DateTime
+    )
+
+    total_importados = db.Column(
+        db.Integer,
+        default=0
+    )

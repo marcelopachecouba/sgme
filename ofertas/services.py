@@ -1,75 +1,83 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from extensions import db
 
 from models import (
     OfertaRecebida,
-    Comunidade
+    Comunidade,
+    ControleImportacaoPix
 )
 
 from ofertas.sicredi_service import buscar_pix_sicredi
 
-def importar_pix_automatico():
 
-    from datetime import datetime, timedelta, timezone
-    from zoneinfo import ZoneInfo
+def importar_pix_automatico():
 
     TZ_BR = ZoneInfo("America/Sao_Paulo")
 
-    # ===========================
-    # Última contribuição gravada
-    # ===========================
+    # ====================================
+    # Hora atual do Brasil
+    # ====================================
 
-    ultima = (
-        OfertaRecebida.query
-        .order_by(
-            OfertaRecebida.datahora.desc()
-        )
-        .first()
+    agora = (
+        datetime.now(timezone.utc)
+        .astimezone(TZ_BR)
+        .replace(tzinfo=None)
     )
 
-    if ultima:
+    # ====================================
+    # Controle da última consulta
+    # ====================================
 
-        # margem de segurança
-        inicio_dt = (
-            ultima.datahora -
-            timedelta(seconds=10)
-        )
+    controle = ControleImportacaoPix.query.get(1)
 
-        inicio_dt = inicio_dt.replace(
-            tzinfo=TZ_BR
-        )
+    if controle is None:
 
-    else:
+        controle = ControleImportacaoPix()
 
-        # primeira importação
-        inicio_dt = (
-            datetime.now(TZ_BR)
-            - timedelta(days=30)
-        )
+        controle.id = 1
+        controle.ultima_consulta = agora
+        controle.ultima_execucao = agora
+        controle.total_importados = 0
 
-    # horário atual oficial do Brasil
-    agora = datetime.now(TZ_BR)
+        db.session.add(controle)
+        db.session.commit()
 
-    # nunca consulta horário futuro
+    inicio_dt = controle.ultima_consulta
+
+    # Segurança caso exista data futura
+
     if inicio_dt > agora:
+
         inicio_dt = agora - timedelta(minutes=1)
 
-    inicio_api = inicio_dt.isoformat(
-        timespec="seconds"
+    # Segurança caso fique muito tempo parado
+
+    if agora - inicio_dt > timedelta(hours=2):
+
+        inicio_dt = agora - timedelta(hours=2)
+
+    inicio_api = (
+        inicio_dt.strftime(
+            "%Y-%m-%dT%H:%M:%S"
+        )
+        + "-03:00"
     )
 
-    fim_api = agora.isoformat(
-        timespec="seconds"
+    fim_api = (
+        agora.strftime(
+            "%Y-%m-%dT%H:%M:%S"
+        )
+        + "-03:00"
     )
 
-    print("===================================")
+    print("====================================")
     print("IMPORTAÇÃO AUTOMÁTICA PIX")
-    print("ULTIMA OFERTA :", ultima.datahora if ultima else "Nenhuma")
-    print("INICIO API    :", inicio_api)
-    print("FIM API       :", fim_api)
-    print("===================================")
+    print("ULTIMA CONSULTA :", controle.ultima_consulta)
+    print("INICIO API..... :", inicio_api)
+    print("FIM API........ :", fim_api)
+    print("====================================")
 
     try:
 
@@ -85,7 +93,7 @@ def importar_pix_automatico():
 
         print("ERRO API PIX:", str(e))
 
-        return str(e)
+        return 0
 
     comunidades = {
 
@@ -104,12 +112,17 @@ def importar_pix_automatico():
     for pix in lista:
 
         txid = (
-            pix.get("txid") or ""
+
+            pix.get("txid")
+
+            or ""
+
         ).strip().upper()
 
         if not txid:
 
             ignorados += 1
+
             continue
 
         comunidade = comunidades.get(txid)
@@ -122,6 +135,7 @@ def importar_pix_automatico():
             )
 
             ignorados += 1
+
             continue
 
         endtoendid = pix.get(
@@ -136,6 +150,7 @@ def importar_pix_automatico():
         ).first():
 
             duplicados += 1
+
             continue
 
         oferta = OfertaRecebida()
@@ -185,22 +200,16 @@ def importar_pix_automatico():
                     TZ_BR
 
                 ).replace(
-
                     tzinfo=None
-
                 )
 
             except Exception:
 
-                oferta.datahora = agora.replace(
-                    tzinfo=None
-                )
+                oferta.datahora = agora
 
         else:
 
-            oferta.datahora = agora.replace(
-                tzinfo=None
-            )
+            oferta.datahora = agora
 
         oferta.chave_pix = pix.get(
             "chave",
@@ -218,17 +227,33 @@ def importar_pix_automatico():
         total += 1
 
         print(
-            f"IMPORTADO: {txid} - "
+
+            f"IMPORTADO -> "
+
+            f"{txid} | "
+
             f"{oferta.valor:.2f}"
+
         )
+
+    # ====================================
+    # Atualiza controle
+    # ====================================
+
+    controle.ultima_consulta = agora
+
+    controle.ultima_execucao = agora
+
+    controle.total_importados += total
 
     db.session.commit()
 
-    print("===================================")
-    print("PIX API.....:", len(lista))
-    print("IMPORTADOS..:", total)
-    print("DUPLICADOS..:", duplicados)
-    print("IGNORADOS...:", ignorados)
-    print("===================================")
+    print("====================================")
+    print("PIX API..... :", len(lista))
+    print("IMPORTADOS.. :", total)
+    print("DUPLICADOS.. :", duplicados)
+    print("IGNORADOS... :", ignorados)
+    print("PRÓXIMA CONSULTA A PARTIR DE:", controle.ultima_consulta)
+    print("====================================")
 
-    return total 
+    return total
