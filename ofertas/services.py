@@ -17,29 +17,58 @@ def importar_pix_automatico():
 
     TZ_BR = ZoneInfo("America/Sao_Paulo")
 
-    # Hora atual correta no Brasil
-    agora = (
-        datetime.now(timezone.utc)
-        .astimezone(TZ_BR)
+    # ===========================
+    # Última contribuição gravada
+    # ===========================
+
+    ultima = (
+        OfertaRecebida.query
+        .order_by(
+            OfertaRecebida.datahora.desc()
+        )
+        .first()
     )
 
-    # Consulta sempre as últimas 6 horas
-    inicio_dt = (
-        agora - timedelta(hours=6)
+    if ultima:
+
+        # margem de segurança
+        inicio_dt = (
+            ultima.datahora -
+            timedelta(seconds=10)
+        )
+
+        inicio_dt = inicio_dt.replace(
+            tzinfo=TZ_BR
+        )
+
+    else:
+
+        # primeira importação
+        inicio_dt = (
+            datetime.now(TZ_BR)
+            - timedelta(days=30)
+        )
+
+    # horário atual oficial do Brasil
+    agora = datetime.now(TZ_BR)
+
+    # nunca consulta horário futuro
+    if inicio_dt > agora:
+        inicio_dt = agora - timedelta(minutes=1)
+
+    inicio_api = inicio_dt.isoformat(
+        timespec="seconds"
     )
 
-    inicio_api = inicio_dt.strftime(
-        "%Y-%m-%dT%H:%M:%S-03:00"
-    )
-
-    fim_api = agora.strftime(
-        "%Y-%m-%dT%H:%M:%S-03:00"
+    fim_api = agora.isoformat(
+        timespec="seconds"
     )
 
     print("===================================")
     print("IMPORTAÇÃO AUTOMÁTICA PIX")
-    print("INÍCIO:", inicio_api)
-    print("FIM   :", fim_api)
+    print("ULTIMA OFERTA :", ultima.datahora if ultima else "Nenhuma")
+    print("INICIO API    :", inicio_api)
+    print("FIM API       :", fim_api)
     print("===================================")
 
     try:
