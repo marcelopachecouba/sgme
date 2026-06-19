@@ -1195,7 +1195,7 @@ def imprimir_pdf():
     )
 
 #Rotina IMportação Pix
-from ofertas.services import importar_pix_automatico_service
+from ofertas.services import importar_pix_automatico
 
 @ofertas_bp.route("/importar_pix_automatico")
 def importar_pix_automatico():
