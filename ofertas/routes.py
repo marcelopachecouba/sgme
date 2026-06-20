@@ -18,6 +18,7 @@ from extensions import db
 
 from models import (
     Comunidade,
+    ComunidadePix,
     TipoArrecadacao,
     OfertaRecebida
 )
@@ -32,13 +33,16 @@ ofertas_bp = Blueprint(
 @ofertas_bp.route("/comunidades")
 def comunidades():
 
-    lista = Comunidade.query.order_by(
+    comunidades = Comunidade.query.order_by(
         Comunidade.nome
     ).all()
 
     return render_template(
-        "ofertas/comunidades.html",
-        lista=lista
+
+        "ofertas/comunidade_pix.html",
+
+        comunidades=comunidades
+
     )
 
 from models import Comunidade, TipoArrecadacao
@@ -61,9 +65,6 @@ def comunidade_nova():
 
         c.nome = request.form["nome"]
         c.codigo = request.form["codigo"]
-        c.txid = request.form["txid"]
-        c.tipo_id = request.form["tipo_id"]
-        c.chave_pix = request.form["chave_pix"]
         c.responsavel = request.form["responsavel"]
         c.telefone = request.form["telefone"]
         c.cor = request.form["cor"]
@@ -87,7 +88,36 @@ def comunidade_nova():
 )
 def editar_comunidade(id):
 
-    c = Comunidade.query.get_or_404(id)
+    comunidade = Comunidade.query.get_or_404(id)
+
+    if request.method == "POST":
+
+        comunidade.nome = request.form["nome"]
+
+        comunidade.codigo = request.form["codigo"]
+
+        comunidade.responsavel = request.form["responsavel"]
+
+        comunidade.telefone = request.form["telefone"]
+
+        comunidade.cor = request.form["cor"]
+
+        comunidade.ativa = (
+            request.form.get("ativa") == "1"
+        )
+
+        db.session.commit()
+
+        flash(
+            "Comunidade alterada com sucesso.",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "ofertas.comunidades"
+            )
+        )
 
     tipos = TipoArrecadacao.query.filter_by(
         ativo=True
@@ -95,38 +125,22 @@ def editar_comunidade(id):
         TipoArrecadacao.descricao
     ).all()
 
-    if request.method == "POST":
-
-        c.nome = request.form["nome"]
-
-        c.codigo = request.form["codigo"].upper()
-
-        c.txid = request.form["txid"].upper()
-
-        c.tipo_id = request.form["tipo_id"]
-
-        c.chave_pix = request.form["chave_pix"]
-
-        c.responsavel = request.form["responsavel"]
-
-        c.telefone = request.form["telefone"]
-
-        c.cor = request.form["cor"]
-
-        c.ativa = request.form.get("ativa") == "1"
-
-        db.session.commit()
-
-        flash("Registro alterado.")
-
-        return redirect(
-            url_for("ofertas.comunidades")
-        )
+    pix = ComunidadePix.query.filter_by(
+        comunidade_id=comunidade.id
+    ).order_by(
+        ComunidadePix.descricao
+    ).all()
 
     return render_template(
+
         "ofertas/comunidade_form.html",
-        comunidade=c,
-        tipos=tipos
+
+        comunidade=comunidade,
+
+        tipos=tipos,
+
+        pix=pix
+
     )
 
 @ofertas_bp.route(
@@ -283,7 +297,7 @@ def gerar_qrcode(id):
 
     import os
 
-    comunidade = Comunidade.query.get_or_404(id)
+    comunidade = ComunidadePix.query.get_or_404(id)
 
     payload = gerar_pix(
 
@@ -436,7 +450,7 @@ def relatorios():
 @ofertas_bp.route("/imprimir_qrcode/<int:id>")
 def imprimir_qrcode(id):
 
-    comunidade = Comunidade.query.get_or_404(id)
+    comunidade = ComunidadePix.query.get_or_404(id)
 
     return render_template(
 
@@ -1033,3 +1047,232 @@ def inicio():
         "ofertas/index.html"
     )
 
+@ofertas_bp.route("/comunidades_pix")
+def comunidades_pix():
+
+    comunidades = Comunidade.query.order_by(
+
+        Comunidade.nome
+
+    ).all()
+
+    return render_template(
+
+        "ofertas/comunidades_pix.html",
+
+        comunidades=comunidades
+
+    )
+
+@ofertas_bp.route(
+    "/pix/novo",
+    methods=["GET","POST"]
+)
+def comunidade_pix_novo():
+
+    comunidades = Comunidade.query.order_by(
+        Comunidade.nome
+    ).all()
+
+    tipos = TipoArrecadacao.query.filter_by(
+        ativo=True
+    ).order_by(
+        TipoArrecadacao.descricao
+    ).all()
+
+    comunidade_id = request.args.get(
+        "comunidade",
+        type=int
+    )
+
+    if request.method == "POST":
+
+        c = ComunidadePix()
+
+        c.comunidade_id = int(
+            request.form["comunidade_id"]
+        )
+
+        c.tipo_id = int(
+            request.form["tipo_id"]
+        )
+
+        c.descricao = request.form[
+            "descricao"
+        ]
+
+        c.txid = request.form[
+            "txid"
+        ].upper()
+
+        c.chave_pix = request.form[
+            "chave_pix"
+        ]
+
+        c.ativo = (
+            request.form.get("ativo") == "1"
+        )
+
+        db.session.add(c)
+
+        db.session.commit()
+
+        flash(
+            "PIX cadastrado com sucesso.",
+            "success"
+        )
+
+        return redirect(
+
+            url_for(
+
+                "ofertas.editar_comunidade",
+
+                id=c.comunidade_id
+
+            )
+
+        )
+
+    return render_template(
+
+        "ofertas/comunidade_pix_form.html",
+
+        comunidades=comunidades,
+
+        tipos=tipos,
+
+        comunidade_id=comunidade_id,
+
+        registro=None,
+
+        editando=False
+
+    )
+
+@ofertas_bp.route(
+    "/pix/<int:id>",
+    methods=["GET", "POST"]
+)
+def editar_pix(id):
+
+    registro = ComunidadePix.query.get_or_404(id)
+
+    comunidades = Comunidade.query.order_by(
+        Comunidade.nome
+    ).all()
+
+    tipos = TipoArrecadacao.query.filter_by(
+        ativo=True
+    ).order_by(
+        TipoArrecadacao.descricao
+    ).all()
+
+    if request.method == "POST":
+
+        registro.comunidade_id = int(
+            request.form["comunidade_id"]
+        )
+
+        registro.tipo_id = int(
+            request.form["tipo_id"]
+        )
+
+        registro.descricao = request.form[
+            "descricao"
+        ].strip()
+
+        registro.txid = request.form[
+            "txid"
+        ].strip().upper()
+
+        registro.chave_pix = request.form[
+            "chave_pix"
+        ].strip()
+
+        registro.ativo = (
+            request.form.get("ativo") == "1"
+        )
+
+        db.session.commit()
+
+        flash(
+            "PIX alterado com sucesso.",
+            "success"
+        )
+
+        return redirect(
+
+            url_for(
+
+                "ofertas.editar_comunidade",
+
+                id=registro.comunidade_id
+
+            )
+
+        )
+
+    return render_template(
+
+        "ofertas/comunidade_pix_form.html",
+
+        registro=registro,
+
+        comunidades=comunidades,
+
+        tipos=tipos,
+
+        editando=True
+
+    )
+
+@ofertas_bp.route(
+    "/pix/excluir/<int:id>"
+)
+def excluir_pix(id):
+
+    registro = ComunidadePix.query.get_or_404(id)
+
+    comunidade_id = registro.comunidade_id
+
+    db.session.delete(registro)
+
+    db.session.commit()
+
+    flash("PIX excluído.")
+
+    return redirect(
+
+        url_for(
+
+            "ofertas.editar_comunidade",
+
+            id=comunidade_id
+
+        )
+
+    )
+
+@ofertas_bp.route(
+    "/comunidade/<int:id>/pix"
+)
+def comunidade_pix_grid(id):
+
+    pix = ComunidadePix.query.filter_by(
+
+        comunidade_id=id
+
+    ).order_by(
+
+        ComunidadePix.descricao
+
+    ).all()
+
+    return render_template(
+
+        "ofertas/pix_grid.html",
+
+        pix=pix
+
+    )

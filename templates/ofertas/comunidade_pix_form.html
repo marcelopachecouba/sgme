@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<div class="card shadow">
+
+<div class="card-header bg-primary text-white">
+
+<h4 class="mb-0">
+
+💰 Cadastro PIX da Comunidade
+
+</h4>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST">
+
+<div class="row">
+
+<div class="col-md-6">
+
+<label class="fw-bold">
+
+Comunidade
+
+</label>
+
+<select
+name="comunidade_id"
+class="form-select form-select-lg">
+
+{% for c in comunidades %}
+
+<option
+value="{{ c.id }}"
+{% if registro and registro.comunidade_id==c.id %}
+selected
+{% elif comunidade_id and comunidade_id==c.id %}
+selected
+{% endif %}>
+
+{{ c.nome }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<div class="col-md-6">
+
+<label class="fw-bold">
+
+Tipo de Arrecadação
+
+</label>
+
+<select
+name="tipo_id"
+class="form-select form-select-lg">
+
+{% for t in tipos %}
+
+<option
+value="{{ t.id }}"
+{% if registro and registro.tipo_id==t.id %}
+selected
+{% endif %}>
+
+{{ t.descricao }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+</div>
+
+<br>
+
+<div class="row">
+
+<div class="col-md-6">
+
+<label class="fw-bold">
+
+Descrição
+
+</label>
+
+<input
+type="text"
+name="descricao"
+class="form-control form-control-lg"
+placeholder="Ex.: Oferta Dominical"
+
+value="{{ registro.descricao if registro else '' }}">
+
+</div>
+
+<div class="col-md-6">
+
+<label class="fw-bold">
+
+TXID
+
+</label>
+
+<input
+type="text"
+name="txid"
+class="form-control form-control-lg"
+
+style="text-transform:uppercase"
+
+value="{{ registro.txid if registro else '' }}">
+
+</div>
+
+</div>
+
+<br>
+
+<div class="row">
+
+<div class="col-md-9">
+
+<label class="fw-bold">
+
+Chave PIX
+
+</label>
+
+<input
+type="text"
+name="chave_pix"
+class="form-control form-control-lg"
+
+value="{{ registro.chave_pix if registro else '' }}">
+
+</div>
+
+<div class="col-md-3">
+
+<label class="fw-bold">
+
+Status
+
+</label>
+
+<select
+name="ativo"
+class="form-select form-select-lg">
+
+<option
+value="1"
+{% if not registro or registro.ativo %}
+selected
+{% endif %}>
+
+🟢 Ativo
+
+</option>
+
+<option
+value="0"
+{% if registro and not registro.ativo %}
+selected
+{% endif %}>
+
+🔴 Inativo
+
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<hr>
+
+<div class="text-end">
+
+<a
+href="{{ url_for('ofertas.editar_comunidade', id=registro.comunidade_id if registro else comunidade_id) }}"
+class="btn btn-secondary">
+
+Cancelar
+
+</a>
+
+<button
+class="btn btn-success">
+
+💾 Salvar Cadastro
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

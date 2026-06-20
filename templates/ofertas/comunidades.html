@@ -50,10 +50,6 @@
 
                         <th>Comunidade</th>
 
-                        <th width="180">Tipo</th>
-
-                        <th width="140">TXID</th>
-
                         <th>Responsável</th>
 
                         <th width="140">Telefone</th>
@@ -82,22 +78,6 @@
                         <td>
 
                             {{ c.nome }}
-
-                        </td>
-
-                        <td>
-
-                            {% if c.tipo %}
-
-                                {{ c.tipo.descricao }}
-
-                            {% endif %}
-
-                        </td>
-
-                        <td>
-
-                            {{ c.txid }}
 
                         </td>
 
@@ -150,23 +130,6 @@
 
                             </a>
 
-                            <a
-                                href="{{ url_for('ofertas.gerar_qrcode',id=c.id) }}"
-                                class="btn btn-success btn-sm">
-
-                                QRCode
-
-                            </a>
-
-                            <a
-                                href="{{ url_for('ofertas.imprimir_qrcode', id=c.id) }}"
-                                target="_blank"
-                                class="btn btn-primary btn-sm">
-
-                                🖨 Imprimir
-
-                            </a>
-                            
 
                         </td>
 

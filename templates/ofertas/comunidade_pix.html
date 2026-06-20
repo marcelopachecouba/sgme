@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+#gridComunidades tbody tr{
+    cursor:pointer;
+}
+
+#gridComunidades tbody tr:hover{
+    background:#dff5e1;
+}
+
+#gridComunidades tbody tr.selecionado{
+    background:#b9e7be !important;
+    font-weight:bold;
+}
+
+</style>
+
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+<div class="container-fluid mt-3">
+
+<div class="card shadow">
+
+<div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+
+<h4 class="mb-0">
+
+🏛 Comunidades / PIX
+
+</h4>
+
+<div>
+
+<a
+href="{{ url_for('ofertas.comunidade_nova') }}"
+class="btn btn-light">
+
+➕ Nova Comunidade
+
+</a>
+
+<a
+id="btnNovoPix"
+href="#"
+class="btn btn-warning">
+
+💰 Novo PIX
+
+</a>
+
+</div>
+
+</div>
+
+<div class="card-body">
+
+<table
+id="gridComunidades"
+class="table table-hover table-striped table-bordered">
+
+<thead class="table-success">
+
+<tr>
+
+<th width="60">
+
+ID
+
+</th>
+
+<th>
+
+Comunidade
+
+</th>
+
+<th>
+
+Responsável
+
+</th>
+
+<th>
+
+Telefone
+
+</th>
+
+<th width="120">
+
+Status
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for c in comunidades %}
+
+<tr
+
+onclick="carregarPix({{ c.id }},this)">
+
+<td>
+
+{{ c.id }}
+
+</td>
+
+<td>
+
+{{ c.nome }}
+
+</td>
+
+<td>
+
+{{ c.responsavel }}
+
+</td>
+
+<td>
+
+{{ c.telefone }}
+
+</td>
+
+<td>
+
+{% if c.ativa %}
+
+<span class="badge bg-success">
+
+Ativa
+
+</span>
+
+{% else %}
+
+<span class="badge bg-danger">
+
+Inativa
+
+</span>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<hr>
+
+<div class="d-flex justify-content-between">
+
+<h4 id="tituloPix">
+
+💰 PIX cadastrados
+
+</h4>
+
+</div>
+
+<div id="pixComunidade">
+
+<div class="alert alert-info">
+
+Selecione uma comunidade.
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+function carregarPix(id,linha){
+
+    document.querySelectorAll(
+
+        "#gridComunidades tbody tr"
+
+    ).forEach(
+
+        r=>r.classList.remove("selecionado")
+
+    );
+
+    linha.classList.add(
+
+        "selecionado"
+
+    );
+
+    let nome = linha.cells[1].innerText;
+
+    document.getElementById(
+
+        "tituloPix"
+
+    ).innerHTML =
+
+    "💰 PIX cadastrados - "
+
+    + nome;
+
+    document.getElementById(
+
+        "btnNovoPix"
+
+    ).href =
+
+    "{{ url_for('ofertas.comunidade_pix_novo') }}?comunidade="
+
+    + id;
+
+    document.getElementById(
+
+        "pixComunidade"
+
+    ).innerHTML =
+
+    "<div class='text-center p-5'><div class='spinner-border text-success'></div><br><br>Carregando...</div>";
+
+    fetch(
+
+        "/ofertas/comunidade/"
+
+        + id +
+
+        "/pix"
+
+    )
+
+    .then(
+
+        response=>response.text()
+
+    )
+
+    .then(
+
+        html=>{
+
+            document.getElementById(
+
+                "pixComunidade"
+
+            ).innerHTML=html;
+
+        }
+
+    );
+
+}
+
+window.onload=function(){
+
+    let primeira=
+
+    document.querySelector(
+
+        "#gridComunidades tbody tr"
+
+    );
+
+    if(primeira){
+
+        primeira.click();
+
+    }
+
+}
+
+</script>
+
+{% endblock %}

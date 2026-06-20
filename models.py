@@ -1114,3 +1114,64 @@ class ControleImportacaoPix(db.Model):
         db.Integer,
         default=0
     )
+
+
+class ComunidadePix(db.Model):
+
+    __tablename__ = "comunidade_pix"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    comunidade_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "comunidades.id"
+        ),
+        nullable=False
+    )
+
+    tipo_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "tipos_arrecadacao.id"
+        ),
+        nullable=False
+    )
+
+    descricao = db.Column(
+        db.String(100)
+    )
+
+    txid = db.Column(
+        db.String(80),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    chave_pix = db.Column(
+        db.String(200)
+    )
+
+    ativo = db.Column(
+        db.Boolean,
+        default=True
+    )
+
+    data_cadastro = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    comunidade = db.relationship(
+        "Comunidade",
+        backref="pix"
+    )
+
+    tipo = db.relationship(
+        "TipoArrecadacao",
+        backref="pix"
+    )

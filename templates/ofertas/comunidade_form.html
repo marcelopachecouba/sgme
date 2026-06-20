@@ -2,15 +2,27 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+<div class="container-fluid mt-3">
 
 <div class="card shadow">
 
 <div class="card-header bg-primary text-white">
- 
-<h4>
 
-Cadastro de Comunidade
+<h4 class="mb-0">
+
+🏛 Cadastro de Comunidade
 
 </h4>
 
@@ -24,96 +36,53 @@ Cadastro de Comunidade
 
 <div class="col-md-6">
 
-<label>Nome da Comunidade</label>
+<label class="fw-bold">
+
+Comunidade
+
+</label>
 
 <input
 type="text"
 name="nome"
 class="form-control"
+
 value="{{ comunidade.nome if comunidade else '' }}"
+
 required>
 
 </div>
 
 <div class="col-md-2">
 
-<label>Código</label>
+<label class="fw-bold">
+
+Código
+
+</label>
 
 <input
 type="text"
 name="codigo"
 class="form-control"
+
 value="{{ comunidade.codigo if comunidade else '' }}">
 
 </div>
 
 <div class="col-md-4">
 
-<label>TXID</label>
+<label class="fw-bold">
 
-<input
-type="text"
-name="txid"
-class="form-control"
-value="{{ comunidade.txid if comunidade else '' }}">
+Responsável
 
-</div>
-
-</div>
-
-<br>
-
-<div class="row">
-
-<div class="col-md-4">
-
-<label>Tipo de Arrecadação</label>
-
-<select
-name="tipo_id"
-class="form-select"
-required>
-
-<option value="">Selecione...</option>
-
-{% for tipo in tipos %}
-
-<option
-value="{{ tipo.id }}"
-{% if comunidade and comunidade.tipo_id==tipo.id %}
-selected
-{% endif %}>
-
-{{ tipo.descricao }}
-
-</option>
-
-{% endfor %}
-
-</select>
-
-</div>
-
-<div class="col-md-4">
-
-<label>Chave Pix</label>
-
-<input
-type="text"
-name="chave_pix"
-class="form-control"
-value="{{ comunidade.chave_pix if comunidade else '01172466000480' }}">
-
-</div>
-
-<div class="col-md-4">
-
-<label>Responsável</label>
+</label>
 
 <input
 type="text"
 name="responsavel"
 class="form-control"
+
 value="{{ comunidade.responsavel if comunidade else '' }}">
 
 </div>
@@ -124,99 +93,274 @@ value="{{ comunidade.responsavel if comunidade else '' }}">
 
 <div class="row">
 
-<div class="col-md-4">
+<div class="col-md-3">
 
-<label>Telefone</label>
+<label class="fw-bold">
+
+Telefone
+
+</label>
 
 <input
 type="text"
 name="telefone"
 class="form-control"
+
 value="{{ comunidade.telefone if comunidade else '' }}">
 
 </div>
 
-<div class="col-md-4">
+<div class="col-md-2">
 
-<label>Cor</label>
+<label class="fw-bold">
+
+Cor
+
+</label>
 
 <input
 type="color"
 name="cor"
+
 class="form-control form-control-color"
+
 value="{{ comunidade.cor if comunidade else '#198754' }}">
 
 </div>
 
-<div class="col-md-4">
+<div class="col-md-2">
 
-<label>Status</label>
+<label class="fw-bold">
+
+Status
+
+</label>
 
 <select
 name="ativa"
+
 class="form-select">
 
 <option value="1"
+
 {% if not comunidade or comunidade.ativa %}
+
 selected
+
 {% endif %}>
+
 Ativa
+
 </option>
 
 <option value="0"
+
 {% if comunidade and not comunidade.ativa %}
+
 selected
+
 {% endif %}>
+
 Inativa
+
 </option>
 
 </select>
 
 </div>
 
-</div>
+<div class="col-md-5">
 
-<hr>
+<br>
 
 <button
-type="submit"
-class="btn btn-success">
+class="btn btn-success w-100">
 
-💾 Salvar
+💾 Salvar Comunidade
 
 </button>
 
-<a
-href="{{ url_for('ofertas.comunidades') }}"
-class="btn btn-secondary">
+</div>
 
-Voltar
+</div>
 
-</a>
+</form>
 
 {% if comunidade %}
 
+<hr>
+
+<div class="d-flex justify-content-between align-items-center">
+
+<h4>
+
+💰 PIX Cadastrados
+
+</h4>
+
 <a
-href="{{ url_for('ofertas.gerar_qrcode', id=comunidade.id) }}"
+
+href="{{ url_for('ofertas.comunidade_pix_novo') }}?comunidade={{ comunidade.id }}"
+
 class="btn btn-primary">
 
-📱 Gerar QRCode
+➕ Novo PIX
 
 </a>
 
-<a
-href="{{ url_for('ofertas.imprimir_qrcode', id=comunidade.id) }}"
-target="_blank"
-class="btn btn-primary btn-sm">
+</div>
 
-🖨 Imprimir
+<br>
 
-</a>
+<table class="table table-hover table-bordered">
 
+<thead class="table-primary">
+
+<tr>
+
+<th>Descrição</th>
+
+<th>Tipo</th>
+
+<th>TXID</th>
+
+<th>Chave PIX</th>
+
+<th>Status</th>
+
+<th width="260">
+
+Ações
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for p in pix %}
+
+<tr>
+
+<td>
+
+{{ p.descricao }}
+
+</td>
+
+<td>
+
+{{ p.tipo.descricao }}
+
+</td>
+
+<td>
+
+{{ p.txid }}
+
+</td>
+
+<td>
+
+{{ p.chave_pix }}
+
+</td>
+
+<td>
+
+{% if p.ativo %}
+
+<span class="badge bg-success">
+
+Ativo
+
+</span>
+
+{% else %}
+
+<span class="badge bg-danger">
+
+Inativo
+
+</span>
 
 {% endif %}
 
-</form>
+</td>
+
+<td>
+
+<a
+
+href="{{ url_for('ofertas.editar_pix',id=p.id) }}"
+
+class="btn btn-warning btn-sm">
+
+✏️
+
+</a>
+
+<a
+
+href="{{ url_for('ofertas.excluir_pix',id=p.id) }}"
+
+class="btn btn-danger btn-sm"
+
+onclick="return confirm('Excluir este PIX?')">
+
+🗑️
+
+</a>
+
+<a
+
+href="{{ url_for('ofertas.gerar_qrcode',id=p.id) }}"
+
+class="btn btn-success btn-sm">
+
+📷
+
+</a>
+
+<a
+
+href="{{ url_for('ofertas.imprimir_qrcode',id=p.id) }}"
+
+target="_blank"
+
+class="btn btn-primary btn-sm">
+
+🖨️
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+{% if pix|length == 0 %}
+
+<tr>
+
+<td colspan="6" class="text-center">
+
+Nenhum PIX cadastrado.
+
+</td>
+
+</tr>
+
+{% endif %}
+
+</tbody>
+
+</table>
+
+{% endif %}
 
 </div>
 

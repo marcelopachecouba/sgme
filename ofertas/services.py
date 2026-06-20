@@ -5,7 +5,7 @@ from extensions import db
 
 from models import (
     OfertaRecebida,
-    Comunidade,
+    ComunidadePix,
     ControleImportacaoPix
 )
 
@@ -95,16 +95,6 @@ def importar_pix_automatico():
 
         return 0
 
-    comunidades = {
-
-        c.txid.strip().upper(): c
-
-        for c in Comunidade.query.all()
-
-        if c.txid
-
-    }
-
     total = 0
     duplicados = 0
     ignorados = 0
@@ -125,12 +115,19 @@ def importar_pix_automatico():
 
             continue
 
-        comunidade = comunidades.get(txid)
+        registro = (
+            ComunidadePix.query
+            .filter_by(
+                txid=txid.upper(),
+                ativo=True
+            )
+            .first()
+        )
 
-        if comunidade is None:
+        if registro is None:
 
             print(
-                "Comunidade não encontrada:",
+                "TXID NÃO CADASTRADO:",
                 txid
             )
 
@@ -171,14 +168,12 @@ def importar_pix_automatico():
 
         )
 
-        oferta.valor = float(
+        oferta.valor = float(pix.get("valor",0))
 
-            pix.get(
-                "valor",
-                0
-            )
-
-        )
+        oferta.pagador = (
+            pix.get("devedor", {})
+            .get("nome", "")
+        )        
 
         horario = pix.get("horario")
 
@@ -211,19 +206,17 @@ def importar_pix_automatico():
 
             oferta.datahora = agora
 
-        oferta.chave_pix = pix.get(
-            "chave",
-            ""
-        )
-
         oferta.payload = pix
 
-        oferta.comunidade_id = comunidade.id
+        oferta.comunidade_id = registro.comunidade_id
 
-        oferta.tipo_id = comunidade.tipo_id
+        oferta.tipo_id = registro.tipo_id
+
+        oferta.chave_pix = registro.chave_pix        
+
 
         db.session.add(oferta)
-
+        
         total += 1
 
         print(
@@ -240,7 +233,7 @@ def importar_pix_automatico():
     # Atualiza controle
     # ====================================
 
-    controle.ultima_consulta = agora
+    controle.ultima_consulta = agora - timedelta(seconds=5)
 
     controle.ultima_execucao = agora
 
