@@ -235,14 +235,14 @@ class SicrediPixGateway:
         self.cert = (cert_path, key_path) if cert_path and key_path else None
 
         # 🔍 DEBUG (pode remover depois)
-        print("DEBUG SICREDI INIT:")
-        print("CLIENT_ID:", self.client_id)
-        print("SECRET:", self.client_secret)
-        print("TOKEN_URL:", self.token_url)
-        print("API_URL:", self.base_url)
-        print("CERT:", cert_path)
-        print("KEY:", key_path)
-        print("PIX:", self.pix_key)
+      #  print("DEBUG SICREDI INIT:")
+       # print("CLIENT_ID:", self.client_id)
+       # print("SECRET:", self.client_secret)
+       # print("TOKEN_URL:", self.token_url)
+       # print("API_URL:", self.base_url)
+       # print("CERT:", cert_path)
+       # print("KEY:", key_path)
+       # print("PIX:", self.pix_key)
 
         # 🔒 VALIDAÇÃO
         if not all([

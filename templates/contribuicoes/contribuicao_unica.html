@@ -1,0 +1,719 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid mt-2">
+
+<div class="card shadow">
+
+<div class="card-header bg-success text-white">
+
+<h5 class="mb-0">
+
+❤️ Contribuições
+
+</h5>
+
+</div>
+
+<div class="card-body">
+
+<form id="formPrincipal">
+
+<div class="card border-primary mb-3">
+
+<div class="card-header">
+
+🔎 Localizar Fiel
+
+</div>
+
+<div class="card-body">
+
+<div class="row">
+
+<div class="col-8">
+
+<label>CPF</label>
+
+<input
+id="cpf"
+name="cpf"
+class="form-control">
+
+</div>
+
+<div class="col-4">
+
+<label>&nbsp;</label>
+
+<button
+type="button"
+id="btnPesquisar"
+class="btn btn-primary w-100">
+
+Buscar
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="blocoDados"
+
+style="display:none">
+
+<div class="card shadow mb-3">
+
+<div class="card-header">
+
+👤 Dados do Fiel
+
+</div>
+
+<div class="card-body">
+
+<div class="mb-2">
+
+<label>Nome</label>
+
+<input
+id="nome"
+name="nome"
+class="form-control">
+
+</div>
+
+<div class="mb-2">
+
+<label>Telefone</label>
+
+<input
+id="telefone"
+name="telefone"
+class="form-control">
+
+</div>
+
+<div class="mb-2">
+
+<label>Whatsapp</label>
+
+<input
+id="whatsapp"
+name="whatsapp"
+class="form-control">
+
+</div>
+
+<div class="mb-2">
+
+<label>Email</label>
+
+<input
+id="email"
+name="email"
+class="form-control">
+
+</div>
+
+<div class="mb-3">
+
+<label>Comunidade</label>
+
+<select
+id="comunidade_id"
+name="comunidade_id"
+class="form-select">
+
+{% for c in comunidades %}
+
+<option value="{{c.id}}">
+
+{{c.nome}}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<button
+type="button"
+id="btnSalvar"
+class="btn btn-success w-100">
+
+💾 Salvar Dados
+
+</button>
+
+</div>
+</div>
+</div>
+
+<div
+id="blocoResumo"
+style="display:none">
+
+<div class="card shadow mb-3">
+
+<div class="card-header bg-info text-white">
+
+📊 Resumo
+
+</div>
+
+<div class="card-body">
+
+<div class="row text-center">
+
+<div class="col-6">
+
+<div>
+
+Total Ano
+
+</div>
+
+<div
+class="total-ano"
+id="totalAno">
+
+0,00
+
+</div>
+
+</div>
+
+<div class="col-6">
+
+<div>
+
+Situação
+
+</div>
+
+<div
+id="situacao">
+
+🟢 Em dia
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="blocoHistorico"
+
+style="display:none">
+
+<div class="card shadow mb-3">
+
+<div class="card-header">
+
+📜 Histórico
+
+</div>
+
+<div class="card-body">
+
+<table
+class="table table-sm"
+
+id="historico">
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="blocoContribuicao"
+
+style="display:none">
+
+<div class="card shadow mb-3">
+
+<div class="card-header bg-warning">
+
+💰 Nova Contribuição
+
+</div>
+
+<div class="card-body">
+
+<div class="mb-2">
+
+<label>Categoria</label>
+
+<select
+name="categoria"
+id="categoria"
+class="form-select">
+
+{% for c in categorias %}
+
+<option value="{{c.codigo}}">
+
+{{c.descricao}}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<div class="mb-2">
+
+<label>Competência</label>
+
+<input
+id="competencia"
+name="competencia"
+class="form-control"
+value="{{ competencia_atual }}">
+</div>
+
+<div class="mb-3">
+
+<label>Valor</label>
+
+<input
+id="valor"
+name="valor"
+class="form-control">
+
+</div>
+
+<button
+type="button"
+id="btnGerarPix"
+class="btn btn-success w-100">
+
+💳 Gerar PIX
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="blocoPix"
+
+style="display:none">
+
+<div class="card shadow">
+
+<div class="card-header bg-primary text-white">
+
+🟢 PIX Gerado
+
+</div>
+
+<div class="card-body text-center">
+
+<img
+id="imgQr"
+
+class="img-fluid"
+
+style="max-width:250px">
+
+<br><br>
+
+<textarea
+
+id="copiaCola"
+
+rows="6"
+
+class="form-control"
+
+style="font-size:12px">
+
+</textarea>
+
+
+<br>
+
+<button
+
+type="button"
+
+id="btnCopiar"
+
+class="btn btn-primary w-100">
+
+Copiar PIX
+
+</button>
+
+<a
+
+id="btnWhatsapp"
+
+target="_blank"
+
+class="btn btn-success w-100 mt-2">
+
+💬 Enviar WhatsApp
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const cpf = document.getElementById("cpf");
+
+const nome = document.getElementById("nome");
+
+const telefone = document.getElementById("telefone");
+
+const whatsapp = document.getElementById("whatsapp");
+
+const email = document.getElementById("email");
+
+const comunidade = document.getElementById("comunidade_id");
+
+const historico = document.getElementById("historico");
+
+
+function limparCampos(){
+
+    nome.value="";
+
+    telefone.value="";
+
+    whatsapp.value="";
+
+    email.value="";
+
+    historico.innerHTML="";
+
+    document.getElementById(
+        "blocoHistorico"
+    ).style.display="none";
+
+    document.getElementById(
+        "blocoContribuicao"
+    ).style.display="none";
+
+    document.getElementById(
+        "blocoPix"
+    ).style.display="none";
+}
+
+
+document.getElementById(
+    "btnPesquisar"
+).onclick=function(){
+
+    fetch(
+
+        "{{ url_for('contribuicoes.buscar_cpf') }}?cpf="+cpf.value
+
+    )
+
+    .then(r=>r.json())
+
+    .then(d=>{
+
+        document.getElementById(
+            "blocoDados"
+        ).style.display="block";
+
+        if(!d.encontrado){
+
+            limparCampos();
+
+            return;
+        }
+
+        nome.value=d.nome;
+
+        telefone.value=d.telefone;
+
+        whatsapp.value=d.whatsapp;
+
+        email.value=d.email;
+
+        comunidade.value=d.comunidade_id;
+
+        document.getElementById(
+            "blocoHistorico"
+        ).style.display="block";
+
+        document.getElementById(
+            "blocoContribuicao"
+        ).style.display="block";
+
+
+        let html=`
+
+        <tr>
+
+            <th>Data</th>
+
+            <th>Categoria</th>
+
+            <th>Comp.</th>
+
+            <th>Valor</th>
+
+        </tr>
+        `;
+
+
+        d.historico.forEach(h=>{
+
+            html+=`
+
+            <tr>
+
+                <td>${h.data}</td>
+
+                <td>${h.categoria}</td>
+
+                <td>${h.competencia}</td>
+
+                <td>R$ ${h.valor}</td>
+
+            </tr>
+
+            `;
+
+        });
+
+        historico.innerHTML=html;
+
+    });
+
+};
+
+
+document.getElementById(
+    "btnSalvar"
+).onclick=function(){
+
+    fetch(
+
+        "{{ url_for('contribuicoes.salvar_dados') }}",
+
+        {
+
+            method:"POST",
+
+            body:new FormData(
+
+                document.getElementById(
+                    "formPrincipal"
+                )
+
+            )
+
+        }
+
+    )
+
+    .then(r=>r.json())
+
+    .then(d=>{
+
+        if(d.sucesso){
+
+            alert(
+                "Dados salvos."
+            );
+
+            document.getElementById(
+                "blocoContribuicao"
+            ).style.display="block";
+
+        }
+
+    });
+
+};
+
+
+document.getElementById(
+    "btnGerarPix"
+).onclick=function(){
+
+    fetch(
+
+        "{{ url_for('contribuicoes.gerar_pix') }}",
+
+        {
+
+            method:"POST",
+
+            body:new FormData(
+
+                document.getElementById(
+                    "formPrincipal"
+                )
+
+            )
+
+        }
+
+    )
+
+    .then(r=>r.json())
+
+    .then(d=>{
+
+        if(d.sucesso){
+
+            document.getElementById(
+                "blocoPix"
+            ).style.display="block";
+
+            document.getElementById(
+                "imgQr"
+            ).src=
+
+            "data:image/png;base64,"+
+
+            d.qr_code;
+
+
+            document.getElementById(
+                "copiaCola"
+            ).value=
+
+            d.copia_cola;
+
+        }
+
+    });
+
+};
+
+
+
+document.getElementById(
+    "btnCopiar"
+).onclick=function(){
+
+    navigator.clipboard.writeText(
+
+        document.getElementById(
+            "copiaCola"
+        ).value
+
+    );
+
+    alert(
+        "PIX copiado."
+    );
+
+};
+
+</script>
+
+<style>
+
+.card{
+    border-radius:18px;
+    border:none;
+}
+
+.card-header{
+    font-weight:600;
+    border-radius:18px 18px 0 0 !important;
+}
+
+.form-control,
+.form-select{
+    border-radius:12px;
+    height:48px;
+}
+
+.btn{
+    border-radius:14px;
+    height:48px;
+    font-weight:600;
+}
+
+#imgQr{
+    max-width:260px;
+}
+
+.badge-pago{
+    background:#198754;
+}
+
+.badge-pendente{
+    background:#ffc107;
+    color:black;
+}
+
+.badge-cancelado{
+    background:#dc3545;
+}
+
+.historico-item{
+
+    border-bottom:1px solid #e8e8e8;
+
+    padding:10px;
+
+}
+
+.valor{
+    font-size:18px;
+    font-weight:bold;
+    color:#198754;
+}
+
+.total-ano{
+    font-size:24px;
+    color:#198754;
+    font-weight:bold;
+}
+
+</style>
+
+
+
+{% endblock %}
+

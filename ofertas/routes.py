@@ -814,17 +814,10 @@ def exportar_excel():
     ws.title = "Ofertas"
 
     ws.append([
-
-        "Data",
-
-        "Comunidade",
-
-        "Tipo",
-
-        "TXID",
-
+        "Data/Hora",
+        "Pagador",
+        "EndToEndId",
         "Valor"
-
     ])
 
     total = 0
@@ -1276,3 +1269,453 @@ def comunidade_pix_grid(id):
         pix=pix
 
     )
+
+from sqlalchemy import func
+
+@ofertas_bp.route(
+    "/relatorio_ofertas",
+    methods=["GET", "POST"]
+)
+def relatorio_ofertas():
+
+    comunidades = Comunidade.query.order_by(
+        Comunidade.nome
+    ).all()
+
+    tipos = TipoArrecadacao.query.order_by(
+        TipoArrecadacao.descricao
+    ).all()
+
+    consulta = OfertaRecebida.query
+
+    data_inicial = None
+    data_final = None
+    comunidade_id = None
+    tipo_id = None
+
+    if request.method == "POST":
+
+        data_inicial = request.form.get(
+            "data_inicial"
+        )
+
+        data_final = request.form.get(
+            "data_final"
+        )
+
+        comunidade_id = request.form.get(
+            "comunidade"
+        )
+
+        tipo_id = request.form.get(
+            "tipo"
+        )
+
+        if data_inicial:
+
+            consulta = consulta.filter(
+
+                OfertaRecebida.datahora >=
+
+                datetime.strptime(
+                    data_inicial,
+                    "%Y-%m-%d"
+                )
+
+            )
+
+        if data_final:
+
+            consulta = consulta.filter(
+
+                OfertaRecebida.datahora <=
+
+                datetime.strptime(
+                    data_final + " 23:59:59",
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+            )
+
+        if comunidade_id:
+
+            consulta = consulta.filter(
+                OfertaRecebida.comunidade_id ==
+                int(comunidade_id)
+            )
+
+        if tipo_id:
+
+            consulta = consulta.filter(
+                OfertaRecebida.tipo_id ==
+                int(tipo_id)
+            )
+
+    lista = consulta.order_by(
+
+        OfertaRecebida.comunidade_id,
+
+        OfertaRecebida.tipo_id,
+
+        OfertaRecebida.datahora
+
+    ).all()
+
+    total = sum(
+        float(x.valor)
+        for x in lista
+    )
+
+    return render_template(
+
+        "ofertas/relatorio_ofertas.html",
+
+        lista=lista,
+
+        comunidades=comunidades,
+
+        tipos=tipos,
+
+        total=total,
+
+        data_inicial=data_inicial,
+
+        data_final=data_final,
+
+        comunidade_id=comunidade_id,
+
+        tipo_id=tipo_id
+
+    )
+
+@ofertas_bp.route("/exportar_excel_ofertas")
+def exportar_excel_ofertas():
+
+    grupos, total_geral = obter_dados_relatorio(
+
+        request.args.get("data_inicial"),
+        request.args.get("data_final"),
+        request.args.get("comunidade"),
+        request.args.get("tipo")
+
+    )
+
+    wb = Workbook()
+
+    ws = wb.active
+
+    ws.title = "Relatório"
+
+    linha = 1
+
+    for comunidade, tipos in grupos.items():
+
+        ws.cell(
+            linha,
+            1,
+            comunidade
+        )
+
+        linha += 1
+
+        total_comunidade = 0
+
+        for tipo, itens in tipos.items():
+
+            ws.cell(
+                linha,
+                2,
+                tipo
+            )
+
+            linha += 1
+
+            ws.append([
+                "Data",
+                "Pagador",
+                "TXID",
+                "Valor"
+            ])
+
+            linha += 1
+
+            subtotal = 0
+
+            for o in itens:
+
+                ws.append([
+                    o.datahora.strftime("%d/%m/%Y %H:%M:%S"),
+                    o.pagador or "",
+                    o.endtoendid,
+                    float(o.valor)
+                ])
+
+                subtotal += float(o.valor)
+
+                linha += 1
+
+            ws.append([
+                "",
+                "",
+                f"Subtotal {tipo}",
+                subtotal
+            ])
+
+            linha += 1
+
+            total_comunidade += subtotal
+
+        ws.append([
+            "",
+            "",
+            "Total Comunidade",
+            total_comunidade
+        ])
+
+        linha += 2
+
+    ws.append([
+        "",
+        "",
+        "TOTAL GERAL",
+        total_geral
+    ])
+
+    arquivo = BytesIO()
+
+    wb.save(arquivo)
+
+    arquivo.seek(0)
+
+    return send_file(
+        arquivo,
+        as_attachment=True,
+        download_name="Ofertas.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle
+)
+
+from reportlab.lib.styles import getSampleStyleSheet
+
+@ofertas_bp.route("/exportar_pdf_ofertas")
+def exportar_pdf_ofertas():
+
+    grupos, total_geral = obter_dados_relatorio(
+
+        request.args.get("data_inicial"),
+        request.args.get("data_final"),
+        request.args.get("comunidade"),
+        request.args.get("tipo")
+
+    )
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(buffer)
+
+    styles = getSampleStyleSheet()
+
+    elementos = []
+
+    elementos.append(
+        Paragraph(
+            "RELATÓRIO DE OFERTAS",
+            styles["Title"]
+        )
+    )
+
+    elementos.append(
+        Spacer(1,12)
+    )
+
+    for comunidade, tipos in grupos.items():
+
+        elementos.append(
+            Paragraph(
+                comunidade,
+                styles["Heading2"]
+            )
+        )
+
+        total_comunidade = 0
+
+        for tipo, itens in tipos.items():
+
+            elementos.append(
+                Paragraph(
+                    tipo,
+                    styles["Heading3"]
+                )
+            )
+
+            dados = [[
+                "Data/Hora",
+                "Pagador",
+                "EndToEndId",
+                "Valor"
+            ]]
+
+            subtotal = 0
+
+            for o in itens:
+
+                valor = float(o.valor)
+
+                subtotal += valor
+
+                dados.append([
+                    o.datahora.strftime("%d/%m/%Y %H:%M:%S"),
+                    o.pagador or "",
+                    o.endtoendid,
+                    f"R$ {valor:.2f}"
+                ])
+
+            dados.append([
+                "",
+                "",
+                f"Subtotal {tipo}",
+                f"R$ {subtotal:.2f}"
+            ])
+
+            tabela = Table(
+                dados,
+                colWidths=[
+                    100,
+                    100,
+                    250,
+                    70
+                ]
+            )
+
+
+            tabela.setStyle(
+                TableStyle([
+                    ("GRID",(0,0),(-1,-1),1,colors.black),
+                    ("BACKGROUND",(0,0),(-1,0),colors.lightgrey)
+                ])
+            )
+
+            elementos.append(tabela)
+
+            elementos.append(
+                Spacer(1,8)
+            )
+
+            total_comunidade += subtotal
+
+        elementos.append(
+            Paragraph(
+                f"Total da Comunidade: R$ {total_comunidade:.2f}",
+                styles["Heading4"]
+            )
+        )
+
+        elementos.append(
+            Spacer(1,12)
+        )
+
+    elementos.append(
+        Paragraph(
+            f"TOTAL GERAL: R$ {total_geral:.2f}",
+            styles["Title"]
+        )
+    )
+
+    doc.build(elementos)
+
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=False,
+        download_name="Ofertas.pdf",
+        mimetype="application/pdf"
+    )
+
+from collections import OrderedDict
+
+def obter_dados_relatorio(
+    data_inicial=None,
+    data_final=None,
+    comunidade_id=None,
+    tipo_id=None
+):
+
+    consulta = OfertaRecebida.query
+
+    if data_inicial:
+        consulta = consulta.filter(
+            OfertaRecebida.datahora >=
+            datetime.strptime(
+                data_inicial,
+                "%Y-%m-%d"
+            )
+        )
+
+    if data_final:
+        consulta = consulta.filter(
+            OfertaRecebida.datahora <=
+            datetime.strptime(
+                data_final + " 23:59:59",
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
+
+    if comunidade_id:
+        consulta = consulta.filter(
+            OfertaRecebida.comunidade_id ==
+            int(comunidade_id)
+        )
+
+    if tipo_id:
+        consulta = consulta.filter(
+            OfertaRecebida.tipo_id ==
+            int(tipo_id)
+        )
+
+    lista = consulta.order_by(
+        OfertaRecebida.comunidade_id,
+        OfertaRecebida.tipo_id,
+        OfertaRecebida.datahora
+    ).all()
+
+    grupos = OrderedDict()
+
+    total_geral = 0
+
+    for o in lista:
+
+        comunidade = (
+            o.comunidade.nome
+            if o.comunidade else
+            "SEM COMUNIDADE"
+        )
+
+        tipo = (
+            o.tipo.descricao
+            if o.tipo else
+            "SEM TIPO"
+        )
+
+        grupos.setdefault(
+            comunidade,
+            OrderedDict()
+        )
+
+        grupos[comunidade].setdefault(
+            tipo,
+            []
+        )
+
+        grupos[comunidade][tipo].append(o)
+
+        total_geral += float(o.valor)
+
+    return grupos, total_geral

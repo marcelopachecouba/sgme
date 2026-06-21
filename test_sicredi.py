@@ -23,14 +23,14 @@ with app.app_context():
 
     gateway = SicrediPixGateway()
 
-    print("CERT EXISTS:", os.path.exists(os.getenv("SICREDI_CERT_PATH")))
-    print("KEY EXISTS:", os.path.exists(os.getenv("SICREDI_KEY_PATH")))
-    print("CLIENT_ID:", os.getenv("SICREDI_CLIENT_ID"))
-    print("SECRET:", os.getenv("SICREDI_CLIENT_SECRET"))
-    print("TOKEN_URL:", os.getenv("SICREDI_TOKEN_URL"))
-    print("API_URL:", os.getenv("SICREDI_API_URL"))
-    print("CERT:", os.getenv("SICREDI_CERT_PATH"))
-    print("KEY:", os.getenv("SICREDI_KEY_PATH"))
+   # print("CERT EXISTS:", os.path.exists(os.getenv("SICREDI_CERT_PATH")))
+   # print("KEY EXISTS:", os.path.exists(os.getenv("SICREDI_KEY_PATH")))
+   # print("CLIENT_ID:", os.getenv("SICREDI_CLIENT_ID"))
+   # print("SECRET:", os.getenv("SICREDI_CLIENT_SECRET"))
+   # print("TOKEN_URL:", os.getenv("SICREDI_TOKEN_URL"))
+   # print("API_URL:", os.getenv("SICREDI_API_URL"))
+   # print("CERT:", os.getenv("SICREDI_CERT_PATH"))
+   # print("KEY:", os.getenv("SICREDI_KEY_PATH"))
 
     gateway = SicrediPixGateway()
 
