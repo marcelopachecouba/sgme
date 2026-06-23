@@ -44,7 +44,7 @@
 </h4>
 
 <div>
-
+{% if session["administrador"] %}
 <a
 href="{{ url_for('ofertas.comunidade_nova') }}"
 class="btn btn-light">
@@ -52,14 +52,17 @@ class="btn btn-light">
 ➕ Nova Comunidade
 
 </a>
+{% endif %}
 
 <a
+
 id="btnNovoPix"
 href="#"
+
 class="btn btn-warning">
-
+{% if session["administrador"] %}
 💰 Novo PIX
-
+{% endif %}
 </a>
 
 </div>
@@ -101,11 +104,13 @@ Telefone
 </th>
 
 <th width="120">
-
 Status
-
 </th>
 
+
+<th width="180">
+Ações
+</th>
 </tr>
 
 </thead>
@@ -159,6 +164,35 @@ Ativa
 Inativa
 
 </span>
+
+{% endif %}
+
+</td>
+
+<td>
+
+{% if session["administrador"] %}
+
+<div class="btn-group">
+
+<a
+href="{{ url_for('ofertas.editar_comunidade',id=c.id) }}"
+class="btn btn-warning btn-sm">
+
+✏️
+
+</a>
+
+<a
+href="{{ url_for('ofertas.excluir_comunidade',id=c.id) }}"
+class="btn btn-danger btn-sm"
+onclick="return confirm('Deseja excluir esta comunidade?')">
+
+🗑️
+
+</a>
+
+</div>
 
 {% endif %}
 

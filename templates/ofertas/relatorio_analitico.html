@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+<div class="container-fluid mt-3">
+
+<div class="card shadow">
+
+<div class="card-header bg-success text-white">
+
+<h4>
+
+Relatório Analítico de Ofertas
+
+</h4>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST">
+
+<div class="row">
+
+<div class="col-md-2">
+
+<label>Data Inicial</label>
+
+<input
+type="date"
+name="data_inicial"
+class="form-control"
+value="{{data_inicial}}">
+
+</div>
+
+<div class="col-md-2">
+
+<label>Data Final</label>
+
+<input
+type="date"
+name="data_final"
+class="form-control"
+value="{{data_final}}">
+
+</div>
+{% if session["administrador"] %}
+
+<div class="col-md-3">
+
+<label>Comunidade</label>
+
+<select
+name="comunidade_id"
+class="form-control">
+
+<option value="">Todas</option>
+
+{% for c in comunidades %}
+
+<option
+value="{{c.id}}"
+{% if comunidade_id|string==c.id|string %}
+selected
+{% endif %}>
+
+{{ c.nome }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+
+<div class="col-md-3">
+
+<label>Tipo</label>
+
+<select
+name="tipo_id"
+class="form-control">
+
+<option value="">Todos</option>
+
+{% for t in tipos %}
+
+<option
+value="{{ t.id }}"
+{% if tipo_id|string == t.id|string %}
+selected
+{% endif %}>
+
+{{ t.descricao }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+{% endif %}
+<div class="col-md-2">
+
+<br>
+
+<button
+class="btn btn-success w-100">
+
+Pesquisar
+
+</button>
+
+</div>
+
+</div>
+
+</form>
+
+<hr>
+
+<a
+
+href="{{ url_for(
+'ofertas.relatorio_analitico_pdf',
+data_inicial=data_inicial,
+data_final=data_final,
+comunidade_id=comunidade_id,
+tipo_id=tipo_id
+) }}"
+
+target="_blank"
+
+class="btn btn-danger">
+
+PDF
+
+</a>
+
+<hr>
+
+<div class="table-responsive">
+
+<table class="table table-bordered table-hover table-striped">
+
+<thead class="table-dark">
+
+<tr>
+
+<th>Data/Hora</th>
+
+<th>Comunidade</th>
+
+
+
+<th>Tipo</th>
+
+<th class="text-end">
+
+Valor
+
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for o in lista %}
+
+<tr>
+
+<td>
+
+{{ o.datahora.strftime("%d/%m/%Y %H:%M:%S") }}
+
+</td>
+
+<td>
+
+{{ o.comunidade.nome if o.comunidade }}
+
+</td>
+
+<td>
+
+{{ o.tipo.descricao if o.tipo }}
+
+</td>
+
+<td class="text-end">
+
+R$ {{ "%.2f"|format(o.valor) }}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+<tfoot>
+
+<tr class="table-primary">
+
+<th colspan="3">
+
+TOTAL GERAL
+
+</th>
+
+<th class="text-end">
+
+R$ {{ "%.2f"|format(total) }}
+
+</th>
+
+</tr>
+
+</tfoot>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

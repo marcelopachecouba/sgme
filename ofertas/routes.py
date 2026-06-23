@@ -1,7 +1,7 @@
-
+from .utils import login_ofertas_required
 from ofertas.sicredi_service import buscar_pix_sicredi
 from datetime import datetime, timedelta, timezone
-
+from sqlalchemy.orm import sessionmaker
 from models import OfertaRecebida
 
 from flask import (
@@ -31,15 +31,24 @@ ofertas_bp = Blueprint(
 
 
 @ofertas_bp.route("/comunidades")
+@login_ofertas_required
 def comunidades():
 
-    comunidades = Comunidade.query.order_by(
-        Comunidade.nome
-    ).all()
+    if session.get("administrador"):
+
+        comunidades = Comunidade.query.order_by(
+            Comunidade.nome
+        ).all()
+
+    else:
+
+        comunidades = Comunidade.query.filter_by(
+            id=session["comunidade_id"]
+        ).all()
 
     return render_template(
 
-        "ofertas/comunidade_pix.html",
+         "ofertas/comunidade_pix.html",
 
         comunidades=comunidades
 
@@ -51,6 +60,7 @@ from models import Comunidade, TipoArrecadacao
     "/comunidades/novo",
     methods=["GET","POST"]
 )
+@login_ofertas_required
 def comunidade_nova():
 
     tipos = TipoArrecadacao.query.filter_by(
@@ -69,6 +79,9 @@ def comunidade_nova():
         c.telefone = request.form["telefone"]
         c.cor = request.form["cor"]
         c.ativa = request.form.get("ativa") == "1"
+        c.senha_acesso = request.form["senha_acesso"]
+        c.administrador = (request.form.get("administrador") == "1")
+        c.acesso_restrito = (request.form.get("acesso_restrito") == "1")        
 
         db.session.add(c)
         db.session.commit()
@@ -86,25 +99,37 @@ def comunidade_nova():
     "/comunidades/<int:id>",
     methods=["GET", "POST"]
 )
+@login_ofertas_required
 def editar_comunidade(id):
 
     comunidade = Comunidade.query.get_or_404(id)
 
+    if (
+        not session.get("administrador")
+        and
+        comunidade.id != session["comunidade_id"]
+    ):
+
+        flash(
+            "Acesso negado.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("ofertas.inicio")
+        )
+
     if request.method == "POST":
 
         comunidade.nome = request.form["nome"]
-
         comunidade.codigo = request.form["codigo"]
-
         comunidade.responsavel = request.form["responsavel"]
-
         comunidade.telefone = request.form["telefone"]
-
         comunidade.cor = request.form["cor"]
-
-        comunidade.ativa = (
-            request.form.get("ativa") == "1"
-        )
+        comunidade.ativa = (request.form.get("ativa") == "1")
+        comunidade.senha_acesso = request.form["senha_acesso"]
+        comunidade.administrador = (request.form.get("administrador") == "1")
+        comunidade.acesso_restrito = (request.form.get("acesso_restrito") == "1")        
 
         db.session.commit()
 
@@ -146,9 +171,25 @@ def editar_comunidade(id):
 @ofertas_bp.route(
     "/comunidades/excluir/<int:id>"
 )
+@login_ofertas_required
 def excluir_comunidade(id):
 
     c = Comunidade.query.get_or_404(id)
+
+    if (
+        not session.get("administrador")
+        and
+        c.id != session["comunidade_id"]
+    ):
+
+        flash(
+            "Acesso negado.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("ofertas.inicio")
+        )
 
     db.session.delete(c)
 
@@ -293,6 +334,7 @@ def gerar_pix(
 # -----------------------
 
 @ofertas_bp.route("/qrcode/<int:id>")
+@login_ofertas_required
 def gerar_qrcode(id):
 
     import os
@@ -367,13 +409,21 @@ def gerar_qrcode(id):
 
 
 @ofertas_bp.route("/recebidas")
+@login_ofertas_required
 def ofertas():
 
-    lista = OfertaRecebida.query.order_by(
+    consulta = OfertaRecebida.query
 
+    if not session.get("administrador"):
+
+        consulta = consulta.filter(
+            OfertaRecebida.comunidade_id ==
+            session["comunidade_id"]
+        )
+
+    lista = consulta.order_by(
         OfertaRecebida.datahora.desc()
-
-    ).all()
+    ).all()    
 
     return render_template(
 
@@ -384,6 +434,7 @@ def ofertas():
     )
 
 @ofertas_bp.route("/relatorios", methods=["GET", "POST"])
+@login_ofertas_required
 def relatorios():
 
     comunidades = Comunidade.query.order_by(
@@ -395,6 +446,16 @@ def relatorios():
     ).all()
 
     consulta = OfertaRecebida.query
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+            OfertaRecebida.comunidade_id==
+            session["comunidade_id"]
+
+        )
 
     if request.method == "POST":
 
@@ -448,6 +509,7 @@ def relatorios():
     )
 
 @ofertas_bp.route("/imprimir_qrcode/<int:id>")
+@login_ofertas_required
 def imprimir_qrcode(id):
 
     comunidade = ComunidadePix.query.get_or_404(id)
@@ -463,6 +525,7 @@ def imprimir_qrcode(id):
 from ofertas.services import importar_pix_automatico as importar_pix_service
 
 @ofertas_bp.route("/importar_pix")
+@login_ofertas_required
 def importar_pix():
 
     total = importar_pix_service()
@@ -477,6 +540,7 @@ def importar_pix():
     )
 
 @ofertas_bp.route("/relatorio_comunidade", methods=["GET", "POST"])
+@login_ofertas_required
 def relatorio_comunidade():
 
     consulta = db.session.query(
@@ -494,6 +558,13 @@ def relatorio_comunidade():
         OfertaRecebida.comunidade_id == Comunidade.id
 
     )
+
+    if not session.get("administrador"):
+
+        consulta = consulta.filter(
+            OfertaRecebida.comunidade_id ==
+            session["comunidade_id"]
+        )    
 
     if request.method == "POST":
 
@@ -537,6 +608,7 @@ def relatorio_comunidade():
 from sqlalchemy import func
 
 @ofertas_bp.route("/dashboard", methods=["GET", "POST"])
+@login_ofertas_required
 def dashboard():
 
     data_inicial = None
@@ -544,6 +616,18 @@ def dashboard():
     comunidade_id = None
 
     consulta = OfertaRecebida.query
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
 
     comunidades_lista = Comunidade.query.order_by(
         Comunidade.nome
@@ -604,6 +688,16 @@ def dashboard():
 
     )
 
+    if not session.get("administrador"):
+
+        ranking = ranking.filter(
+
+            OfertaRecebida.comunidade_id ==
+
+            session["comunidade_id"]
+
+        )    
+
     if data_inicial:
 
         ranking = ranking.filter(
@@ -661,12 +755,14 @@ def dashboard():
 
 
 @ofertas_bp.route("/ranking", methods=["GET", "POST"])
+@login_ofertas_required
 def ranking_comunidades():
 
     data_inicial = None
     data_final = None
 
     consulta = db.session.query(
+
 
         Comunidade.id,
 
@@ -687,6 +783,13 @@ def ranking_comunidades():
         OfertaRecebida.comunidade_id == Comunidade.id
 
     )
+
+    if not session.get("administrador"):
+
+        consulta = consulta.filter(
+            OfertaRecebida.comunidade_id ==
+            session["comunidade_id"]
+        )    
 
     if request.method == "POST":
 
@@ -761,6 +864,7 @@ from io import BytesIO
 
 
 @ofertas_bp.route("/exportar_excel")
+@login_ofertas_required
 def exportar_excel():
 
     data_inicial = request.args.get("data_inicial")
@@ -768,6 +872,20 @@ def exportar_excel():
     comunidade_id = request.args.get("comunidade")
 
     consulta = OfertaRecebida.query
+
+
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
 
     if data_inicial:
 
@@ -885,6 +1003,7 @@ from reportlab.lib import colors
 
 
 @ofertas_bp.route("/imprimir_pdf")
+@login_ofertas_required
 def imprimir_pdf():
 
     data_inicial = request.args.get("data_inicial")
@@ -892,6 +1011,18 @@ def imprimir_pdf():
     comunidade_id = request.args.get("comunidade")
 
     consulta = OfertaRecebida.query
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
 
     if data_inicial:
 
@@ -1026,6 +1157,7 @@ def imprimir_pdf():
 from ofertas.services import importar_pix_automatico
 
 @ofertas_bp.route("/importar_pix_automatico")
+@login_ofertas_required
 def importar_pix_automatico():
 
     total = importar_pix_automatico()
@@ -1034,6 +1166,7 @@ def importar_pix_automatico():
 
 
 @ofertas_bp.route("/", methods=["GET"])
+@login_ofertas_required
 def inicio():
 
     return render_template(
@@ -1041,6 +1174,7 @@ def inicio():
     )
 
 @ofertas_bp.route("/comunidades_pix")
+@login_ofertas_required
 def comunidades_pix():
 
     comunidades = Comunidade.query.order_by(
@@ -1061,6 +1195,7 @@ def comunidades_pix():
     "/pix/novo",
     methods=["GET","POST"]
 )
+@login_ofertas_required
 def comunidade_pix_novo():
 
     comunidades = Comunidade.query.order_by(
@@ -1147,9 +1282,25 @@ def comunidade_pix_novo():
     "/pix/<int:id>",
     methods=["GET", "POST"]
 )
+@login_ofertas_required
 def editar_pix(id):
 
     registro = ComunidadePix.query.get_or_404(id)
+
+    if (
+        not session.get("administrador")
+        and
+        registro.comunidade_id != session["comunidade_id"]
+    ):
+
+        flash(
+            "Acesso negado.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("ofertas.inicio")
+        )    
 
     comunidades = Comunidade.query.order_by(
         Comunidade.nome
@@ -1223,9 +1374,26 @@ def editar_pix(id):
 @ofertas_bp.route(
     "/pix/excluir/<int:id>"
 )
+@login_ofertas_required
 def excluir_pix(id):
 
     registro = ComunidadePix.query.get_or_404(id)
+
+    if (
+        not session.get("administrador")
+        and
+        registro.comunidade_id != session["comunidade_id"]
+    ):
+
+        flash(
+            "Acesso negado.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("ofertas.inicio")
+        )
+
 
     comunidade_id = registro.comunidade_id
 
@@ -1250,6 +1418,7 @@ def excluir_pix(id):
 @ofertas_bp.route(
     "/comunidade/<int:id>/pix"
 )
+@login_ofertas_required
 def comunidade_pix_grid(id):
 
     pix = ComunidadePix.query.filter_by(
@@ -1276,6 +1445,7 @@ from sqlalchemy import func
     "/relatorio_ofertas",
     methods=["GET", "POST"]
 )
+@login_ofertas_required
 def relatorio_ofertas():
 
     comunidades = Comunidade.query.order_by(
@@ -1287,6 +1457,18 @@ def relatorio_ofertas():
     ).all()
 
     consulta = OfertaRecebida.query
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
 
     data_inicial = None
     data_final = None
@@ -1389,6 +1571,7 @@ def relatorio_ofertas():
     )
 
 @ofertas_bp.route("/exportar_excel_ofertas")
+@login_ofertas_required
 def exportar_excel_ofertas():
 
     grupos, total_geral = obter_dados_relatorio(
@@ -1505,6 +1688,7 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet
 
 @ofertas_bp.route("/exportar_pdf_ofertas")
+@login_ofertas_required
 def exportar_pdf_ofertas():
 
     grupos, total_geral = obter_dados_relatorio(
@@ -1650,6 +1834,18 @@ def obter_dados_relatorio(
 
     consulta = OfertaRecebida.query
 
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
+
     if data_inicial:
         consulta = consulta.filter(
             OfertaRecebida.datahora >=
@@ -1719,3 +1915,332 @@ def obter_dados_relatorio(
         total_geral += float(o.valor)
 
     return grupos, total_geral
+
+@ofertas_bp.route(
+    "/relatorio_analitico",
+    methods=["GET", "POST"]
+)
+@login_ofertas_required
+
+def relatorio_analitico():
+
+    comunidades = Comunidade.query.order_by(
+        Comunidade.nome
+    ).all()
+
+    tipos = TipoArrecadacao.query.filter_by(
+        ativo=True
+    ).order_by(
+        TipoArrecadacao.descricao
+    ).all()
+
+    consulta = OfertaRecebida.query
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
+
+    lista = []
+
+    data_inicial = ""
+    data_final = ""
+    comunidade_id = ""
+    tipo_id = ""
+
+    if request.method == "POST":
+
+        data_inicial = request.form.get(
+            "data_inicial"
+        )
+
+        data_final = request.form.get(
+            "data_final"
+        )
+
+        comunidade_id = request.form.get(
+            "comunidade_id"
+        )
+
+        tipo_id = request.form.get(
+            "tipo_id"
+        )
+
+        if data_inicial:
+            consulta = consulta.filter(
+                OfertaRecebida.datahora >= data_inicial
+            )
+
+        if data_final:
+            consulta = consulta.filter(
+                OfertaRecebida.datahora <=
+                data_final + " 23:59:59"
+            )
+
+        if comunidade_id:
+            consulta = consulta.filter(
+                OfertaRecebida.comunidade_id ==
+                int(comunidade_id)
+            )
+
+        if tipo_id:
+            consulta = consulta.filter(
+                OfertaRecebida.tipo_id ==
+                int(tipo_id)
+            )
+
+        lista = consulta.order_by(
+            OfertaRecebida.datahora.asc()
+        ).all()
+
+    total = sum(
+        float(x.valor)
+        for x in lista
+    )
+
+    return render_template(
+
+        "ofertas/relatorio_analitico.html",
+
+        lista=lista,
+
+        total=total,
+
+        comunidades=comunidades,
+
+        tipos=tipos,
+
+        data_inicial=data_inicial,
+
+        data_final=data_final,
+
+        comunidade_id=comunidade_id,
+
+        tipo_id=tipo_id
+
+    )
+
+
+from flask import send_file, request
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle
+)
+
+from reportlab.lib.pagesizes import landscape, A4
+
+
+@ofertas_bp.route("/relatorio_analitico_pdf")
+@login_ofertas_required
+def relatorio_analitico_pdf():
+
+    consulta = OfertaRecebida.query
+
+    if not session.get(
+        "administrador"
+    ):
+
+        consulta = consulta.filter(
+
+            OfertaRecebida.comunidade_id==
+
+            session["comunidade_id"]
+
+        )
+
+    data_inicial = request.args.get("data_inicial")
+    data_final = request.args.get("data_final")
+    comunidade_id = request.args.get("comunidade_id")
+    tipo_id = request.args.get("tipo_id")
+
+    if data_inicial:
+        consulta = consulta.filter(
+            OfertaRecebida.datahora >= data_inicial
+        )
+
+    if data_final:
+        consulta = consulta.filter(
+            OfertaRecebida.datahora <= data_final + " 23:59:59"
+        )
+
+    if comunidade_id:
+        consulta = consulta.filter(
+            OfertaRecebida.comunidade_id == int(comunidade_id)
+        )
+
+    if tipo_id:
+        consulta = consulta.filter(
+            OfertaRecebida.tipo_id == int(tipo_id)
+        )
+
+    lista = consulta.order_by(
+        OfertaRecebida.datahora.asc()
+    ).all()
+
+    total = sum(float(o.valor) for o in lista)
+
+    dados = [[
+        "Data/Hora",
+        "Comunidade",
+        "Tipo",
+        "Valor"
+    ]]
+
+    for o in lista:
+
+        dados.append([
+
+            o.datahora.strftime("%d/%m/%Y %H:%M:%S"),
+
+            o.comunidade.nome if o.comunidade else "",
+
+            o.tipo.descricao if o.tipo else "",
+
+            f"R$ {float(o.valor):.2f}"
+
+        ])
+
+    dados.append([
+        "",
+        "",
+       
+        "TOTAL",
+        f"R$ {total:.2f}"
+    ])
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4)
+    )
+
+    tabela = Table(dados)
+
+    tabela.setStyle(TableStyle([
+
+        ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+
+        ("BACKGROUND", (0, -1), (-1, -1), colors.lightgreen),
+
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+
+        ("ALIGN", (4, 1), (4, -1), "RIGHT")
+
+    ]))
+
+    doc.build([tabela])
+
+    buffer.seek(0)
+
+    return send_file(
+
+        buffer,
+
+        download_name="relatorio_analitico_ofertas.pdf",
+
+        as_attachment=True,
+
+        mimetype="application/pdf"
+
+    )
+
+from flask import (
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    session
+)
+
+
+@ofertas_bp.route(
+    "/login",
+    methods=["GET", "POST"]
+)
+def login():
+
+    comunidades = (
+        Comunidade.query
+        .filter_by(ativa=True)
+        .order_by(Comunidade.nome)
+        .all()
+    )
+
+    if request.method == "POST":
+
+        comunidade = Comunidade.query.get(
+            request.form["comunidade_id"]
+        )
+
+        senha = request.form["senha"]
+
+        if not comunidade:
+            flash(
+                "Comunidade não encontrada.",
+                "danger"
+            )
+
+        elif comunidade.senha_acesso != senha:
+            flash(
+                "Senha inválida.",
+                "danger"
+            )
+
+        else:
+
+            session["ofertas_logado"] = True
+
+            session["comunidade_id"] = comunidade.id
+
+            session["administrador"] = comunidade.administrador
+
+            session["nome_comunidade"] = comunidade.nome
+
+            return redirect(
+                url_for(
+                    "ofertas.inicio"
+                )
+            )
+
+    return render_template(
+        "ofertas/login.html",
+        comunidades=comunidades
+    )
+
+
+@ofertas_bp.route("/logout")
+def logout():
+
+    session.pop(
+        "ofertas_logado",
+        None
+    )
+
+    session.pop(
+        "comunidade_id",
+        None
+    )
+
+    session.pop(
+        "administrador",
+        None
+    )
+
+    return redirect(
+        url_for(
+            "ofertas.login"
+        )
+    )

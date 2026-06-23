@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+<div class="row justify-content-center">
+
+<div class="col-md-4">
+
+<div class="card shadow">
+
+<div class="card-header bg-success text-white text-center">
+
+<h4>
+
+🔐 Módulo Ofertas
+
+</h4>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST">
+
+<div class="mb-3">
+
+<label>Comunidade</label>
+
+<select
+name="comunidade_id"
+class="form-select"
+required>
+
+<option value="">Selecione...</option>
+
+{% for c in comunidades %}
+
+<option value="{{ c.id }}">
+
+{{ c.nome }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<div class="mb-3">
+
+<label>Senha</label>
+
+<input
+type="password"
+name="senha"
+class="form-control"
+required>
+
+</div>
+
+<button
+class="btn btn-success w-100">
+
+Entrar
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

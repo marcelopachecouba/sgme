@@ -93,94 +93,146 @@ value="{{ comunidade.responsavel if comunidade else '' }}">
 
 <div class="row">
 
-<div class="col-md-3">
+    <div class="col-md-3">
+        <label class="fw-bold">
+            Telefone
+        </label>
 
-<label class="fw-bold">
+        <input
+            type="text"
+            name="telefone"
+            class="form-control"
+            value="{{ comunidade.telefone if comunidade else '' }}">
+    </div>
 
-Telefone
+    <div class="col-md-3">
+        <label class="fw-bold">
+            Senha de acesso
+        </label>
 
-</label>
+        <input
+            type="text"
+            class="form-control"
+            name="senha_acesso"
+            value="{{ comunidade.senha_acesso if comunidade else '' }}">
+    </div>
 
-<input
-type="text"
-name="telefone"
-class="form-control"
+    <div class="col-md-3">
 
-value="{{ comunidade.telefone if comunidade else '' }}">
+        <label class="fw-bold">
+            Administrador
+        </label>
 
+        <select
+            class="form-select"
+            name="administrador">
+
+            <option value="0"
+            {% if comunidade and not comunidade.administrador %}
+            selected
+            {% endif %}>
+                Não
+            </option>
+
+            <option value="1"
+            {% if comunidade and comunidade.administrador %}
+            selected
+            {% endif %}>
+                Sim
+            </option>
+
+        </select>
+
+    </div>
+
+    <div class="col-md-3">
+
+        <label class="fw-bold">
+            Acesso Restrito
+        </label>
+
+        <select
+            class="form-select"
+            name="acesso_restrito">
+
+            <option value="0"
+            {% if comunidade and not comunidade.acesso_restrito %}
+            selected
+            {% endif %}>
+                Não
+            </option>
+
+            <option value="1"
+            {% if comunidade and comunidade.acesso_restrito %}
+            selected
+            {% endif %}>
+                Sim
+            </option>
+
+        </select>
+
+    </div>
 </div>
 
-<div class="col-md-2">
-
-<label class="fw-bold">
-
-Cor
-
-</label>
-
-<input
-type="color"
-name="cor"
-
-class="form-control form-control-color"
-
-value="{{ comunidade.cor if comunidade else '#198754' }}">
-
 </div>
-
-<div class="col-md-2">
-
-<label class="fw-bold">
-
-Status
-
-</label>
-
-<select
-name="ativa"
-
-class="form-select">
-
-<option value="1"
-
-{% if not comunidade or comunidade.ativa %}
-
-selected
-
-{% endif %}>
-
-Ativa
-
-</option>
-
-<option value="0"
-
-{% if comunidade and not comunidade.ativa %}
-
-selected
-
-{% endif %}>
-
-Inativa
-
-</option>
-
-</select>
-
-</div>
-
-<div class="col-md-5">
-
 <br>
 
-<button
-class="btn btn-success w-100">
+<div class="row">
 
-💾 Salvar Comunidade
+    <div class="col-md-2">
 
-</button>
+        <label class="fw-bold">
+            Cor
+        </label>
 
-</div>
+        <input
+            type="color"
+            name="cor"
+            class="form-control form-control-color"
+            value="{{ comunidade.cor if comunidade else '#198754' }}">
+
+    </div>
+
+    <div class="col-md-2">
+
+        <label class="fw-bold">
+            Status
+        </label>
+
+        <select
+            name="ativa"
+            class="form-select">
+
+            <option value="1"
+            {% if not comunidade or comunidade.ativa %}
+            selected
+            {% endif %}>
+                Ativa
+            </option>
+
+            <option value="0"
+            {% if comunidade and not comunidade.ativa %}
+            selected
+            {% endif %}>
+                Inativa
+            </option>
+
+        </select>
+
+    </div>
+
+    <div class="col-md-4">
+
+        <label>&nbsp;</label>
+
+        <button
+            class="btn btn-success w-100">
+
+            💾 Salvar Comunidade
+
+        </button>
+
+    </div>
 
 </div>
 
@@ -301,6 +353,7 @@ class="btn btn-warning btn-sm">
 ✏️
 
 </a>
+
 
 <a
 

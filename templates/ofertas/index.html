@@ -2,6 +2,20 @@
 
 {% block content %}
 
+<div class="text-end">
+
+{{ session["nome_comunidade"] }}
+
+<a
+href="{{ url_for('ofertas.logout') }}"
+class="btn btn-danger btn-sm">
+
+Sair
+
+</a>
+
+</div>
+
 <div class="container mt-4">
 
     <div class="text-center mb-5">
@@ -133,7 +147,7 @@
 
                         <h1>📑</h1>
 
-                        <h4>Relatórios</h4>
+                        <h4>Relatórios por Comunidades</h4>
 
                         <p class="text-muted">
                             Emissão de relatórios
@@ -148,7 +162,35 @@
 
         </div>
 
+        <div class="col-md-4">
+
+            <a href="{{ url_for('ofertas.relatorio_analitico') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-secondary">
+
+                    <div class="card-body text-center">
+
+                        <h1>📑</h1>
+
+                        <h4>Relatórios por Data</h4>
+
+                        <p class="text-muted">
+                            Emissão de relatórios
+                            analíticos e sintéticos.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
     </div>
+
 
 </div>
 

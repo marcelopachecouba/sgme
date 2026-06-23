@@ -61,7 +61,7 @@ Inativo
 </td>
 
 <td>
-
+{% if session.get("administrador") %}
 <a
 
 href="{{ url_for('ofertas.editar_pix',id=p.id) }}"
@@ -81,7 +81,7 @@ class="btn btn-danger btn-sm">
 🗑️
 
 </a>
-
+{% endif %}
 <a
 
 href="{{ url_for('ofertas.gerar_qrcode',id=p.id) }}"

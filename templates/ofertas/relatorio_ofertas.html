@@ -2,6 +2,19 @@
 
 {% block content %}
 
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+
 <div class="container-fluid mt-3">
 
 <div class="card shadow">
@@ -54,33 +67,23 @@ value="{{data_final}}">
 
 </div>
 
+{% if session["administrador"] %}
+
 <div class="col-md-3">
 
-<label>
-
-Comunidade
-
-</label>
+<label>Comunidade</label>
 
 <select
 name="comunidade"
 class="form-control">
 
-<option value="">
-
-Todas
-
-</option>
+<option value="">Todas</option>
 
 {% for c in comunidades %}
 
-<option
-value="{{c.id}}"
-{% if comunidade_id|int==c.id %}
-selected
-{% endif %}>
+<option value="{{ c.id }}">
 
-{{c.nome}}
+{{ c.nome }}
 
 </option>
 
@@ -89,6 +92,8 @@ selected
 </select>
 
 </div>
+
+{% endif %}
 
 <div class="col-md-3">
 

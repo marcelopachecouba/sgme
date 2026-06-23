@@ -52,6 +52,7 @@
 
     <a href="{{ url_for('ofertas.dashboard') }}">📊 Dashboard</a>
 
+    {% if session["administrador"] %}
     <a href="{{ url_for('ofertas.ranking_comunidades') }}">
         🏆 Ranking
     </a>
@@ -63,12 +64,15 @@
     <a href="{{ url_for('ofertas.ofertas') }}">
         💵 PIX Recebidos
     </a>
+    {% endif %}
 
     <a href="{{ url_for('ofertas.relatorio_ofertas') }}">
         📑 Relatórios
     </a>
 
 </div>
+
+
 
 <hr class="text-white">
 

@@ -56,6 +56,8 @@ class="form-control">
 
 </div>
 
+{% if session["administrador"] %}
+
 <div class="col-md-3">
 
 <label>Comunidade</label>
@@ -64,29 +66,20 @@ class="form-control">
 name="comunidade"
 class="form-control">
 
-<option value="">
-
-Todas
-
-</option>
+<option value="">Todas</option>
 
 {% for c in lista_comunidades %}
-
-<option
-value="{{ c.id }}"
-{% if comunidade_id|string == c.id|string %}
-selected
-{% endif %}>
-
+<option value="{{ c.id }}">
 {{ c.nome }}
-
 </option>
-
 {% endfor %}
 
 </select>
 
 </div>
+
+{% endif %}
+
 
 <div class="col-md-2">
 
@@ -242,7 +235,11 @@ if quantidade else 0
 
 <div class="card-header bg-secondary text-white">
 
+{% if session["administrador"] %}
 🏆 Ranking das Comunidades
+{% else %}
+📊 Resumo da Comunidade
+{% endif %}
 
 </div>
 

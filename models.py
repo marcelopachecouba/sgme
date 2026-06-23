@@ -1005,6 +1005,12 @@ class Comunidade(db.Model):
 
     tipo = db.relationship("TipoArrecadacao")
 
+    senha_acesso = db.Column(db.String(255))
+
+    acesso_restrito = db.Column(db.Boolean,default=False)
+
+    administrador = db.Column(db.Boolean,default=False)    
+
 
     def __repr__(self):
         return self.nome
