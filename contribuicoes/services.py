@@ -1,4 +1,4 @@
-
+from flask import session
 import json
 import uuid
 from dataclasses import asdict, dataclass
@@ -430,6 +430,13 @@ def emitir_recibo(contribuicao: Contribuicao) -> ReciboContribuicao:
 def consulta_relatorio(args):
     query = db.select(Contribuicao).where(Contribuicao.status == STATUS_PAGO)
 
+    if not session.get("administrador"):
+
+        query = query.where(
+            Contribuicao.comunidade_id ==
+            session["comunidade_id"]
+        )    
+
     inicio = args.get("inicio")
     fim = args.get("fim")
     if inicio:
@@ -451,57 +458,154 @@ def consulta_relatorio(args):
 
 
 def totais_dashboard():
+
     ensure_categorias_padrao()
-    rows = db.session.execute(
+
+    query = (
         db.select(
             CategoriaContribuicao.codigo,
             CategoriaContribuicao.descricao,
-            func.coalesce(func.sum(Contribuicao.valor), 0),
+            func.coalesce(func.sum(Contribuicao.valor), 0)
         )
-        .join(Contribuicao, Contribuicao.categoria_id == CategoriaContribuicao.id, isouter=True)
-        .where(db.or_(Contribuicao.status == STATUS_PAGO, Contribuicao.id.is_(None)))
-        .group_by(CategoriaContribuicao.codigo, CategoriaContribuicao.descricao)
+        .join(
+            Contribuicao,
+            Contribuicao.categoria_id == CategoriaContribuicao.id,
+            isouter=True
+        )
+        .where(
+            db.or_(
+                Contribuicao.status == STATUS_PAGO,
+                Contribuicao.id.is_(None)
+            )
+        )
+    )
+
+    # filtrar por comunidade
+    if not session.get("administrador"):
+
+        query = query.where(
+            db.or_(
+                Contribuicao.comunidade_id == session["comunidade_id"],
+                Contribuicao.id.is_(None)
+            )
+        )
+
+    rows = db.session.execute(
+
+        query.group_by(
+            CategoriaContribuicao.codigo,
+            CategoriaContribuicao.descricao
+        )
+
     ).all()
-    por_codigo = {row[0]: Decimal(row[2] or 0) for row in rows}
-    return {
-        "dizimo": por_codigo.get("dizimo", Decimal("0.00")),
-        "doacao": por_codigo.get("doacao", Decimal("0.00")),
-        "oferta": por_codigo.get("oferta", Decimal("0.00")),
-        "campanha": por_codigo.get("campanha", Decimal("0.00")),
-        "construcao": por_codigo.get("construcao", Decimal("0.00")),
-        "evangelizacao": por_codigo.get("evangelizacao", Decimal("0.00")),
-        "geral": sum(por_codigo.values(), Decimal("0.00")),
+
+    por_codigo = {
+        row[0]: Decimal(row[2] or 0)
+        for row in rows
     }
 
+    return {
+
+        "dizimo": por_codigo.get("dizimo", Decimal("0.00")),
+
+        "doacao": por_codigo.get("doacao", Decimal("0.00")),
+
+        "oferta": por_codigo.get("oferta", Decimal("0.00")),
+
+        "campanha": por_codigo.get("campanha", Decimal("0.00")),
+
+        "construcao": por_codigo.get("construcao", Decimal("0.00")),
+
+        "evangelizacao": por_codigo.get("evangelizacao", Decimal("0.00")),
+
+        "geral": sum(
+            por_codigo.values(),
+            Decimal("0.00")
+        )
+
+    }
 
 def ranking_por_comunidade(limit=20):
-    return db.session.execute(
+
+    query = (
         db.select(
             Comunidade.nome,
             func.count(Contribuicao.id),
-            func.coalesce(func.sum(Contribuicao.valor), 0),
+            func.coalesce(func.sum(Contribuicao.valor),0)
         )
-        .join(Contribuicao, Contribuicao.comunidade_id == Comunidade.id)
-        .where(Contribuicao.status == STATUS_PAGO)
-        .group_by(Comunidade.nome)
-        .order_by(func.coalesce(func.sum(Contribuicao.valor), 0).desc())
+        .join(
+            Contribuicao,
+            Contribuicao.comunidade_id == Comunidade.id
+        )
+        .where(
+            Contribuicao.status == STATUS_PAGO
+        )
+    )
+
+    if not session.get("administrador"):
+
+        query = query.where(
+            Contribuicao.comunidade_id ==
+            session["comunidade_id"]
+        )
+
+    return db.session.execute(
+
+        query.group_by(
+            Comunidade.nome
+        )
+
+        .order_by(
+            func.sum(
+                Contribuicao.valor
+            ).desc()
+        )
+
         .limit(limit)
+
     ).all()
 
 
 def ranking_por_contribuinte(limit=20):
-    return db.session.execute(
+
+    query = (
         db.select(
             Dizimista.id,
             Dizimista.nome,
             func.count(Contribuicao.id),
-            func.coalesce(func.sum(Contribuicao.valor), 0),
+            func.coalesce(func.sum(Contribuicao.valor),0)
         )
-        .join(Contribuicao, Contribuicao.dizimista_id == Dizimista.id)
-        .where(Contribuicao.status == STATUS_PAGO)
-        .group_by(Dizimista.id, Dizimista.nome)
-        .order_by(func.coalesce(func.sum(Contribuicao.valor), 0).desc())
+        .join(
+            Contribuicao,
+            Contribuicao.dizimista_id == Dizimista.id
+        )
+        .where(
+            Contribuicao.status == STATUS_PAGO
+        )
+    )
+
+    if not session.get("administrador"):
+
+        query = query.where(
+            Dizimista.comunidade_id ==
+            session["comunidade_id"]
+        )
+
+    return db.session.execute(
+
+        query.group_by(
+            Dizimista.id,
+            Dizimista.nome
+        )
+
+        .order_by(
+            func.sum(
+                Contribuicao.valor
+            ).desc()
+        )
+
         .limit(limit)
+
     ).all()
 
 

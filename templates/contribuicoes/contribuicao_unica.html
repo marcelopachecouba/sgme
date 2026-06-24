@@ -176,10 +176,8 @@ style="display:none">
 
 <small>Situação</small>
 
-<h5>
-
-🟢 Em dia
-
+<h5 id="situacao">
+⚪ Novo Cadastro
 </h5>
 
 </div>
@@ -387,15 +385,28 @@ fetch('/contribuicoes/api/buscar-cpf/'+cpf.value)
 
 if(!data.encontrado){
 
-blocoCadastro.style.display='block';
+    // limpa dados do último dizimista pesquisado
+    nome.innerHTML = "";
 
-blocoDados.style.display='none';
+    telefone.innerHTML = "";
 
-blocoContribuicao.style.display='none';
+    comunidade.innerHTML = "";
 
-nomeNovo.focus();
+    totalAno.innerHTML = "R$ 0,00";
 
-return;
+    situacao.innerHTML = "⚪ Novo Cadastro";
+
+    dizimista_id = 0;
+
+    blocoCadastro.style.display='block';
+
+    blocoDados.style.display='block';
+
+    blocoContribuicao.style.display='none';
+
+    nomeNovo.focus();
+
+    return;
 
 }
 
@@ -408,6 +419,8 @@ telefone.innerHTML=data.telefone || '';
 comunidade.innerHTML=data.comunidade || '';
 
 totalAno.innerHTML='R$ '+data.total_ano.toFixed(2);
+
+situacao.innerHTML = "🟢 Em dia";
 
 blocoCadastro.style.display='none';
 
@@ -470,6 +483,10 @@ nome.innerHTML=data.nome;
 telefone.innerHTML=data.telefone;
 
 comunidade.innerHTML=data.comunidade;
+
+totalAno.innerHTML = "R$ 0,00";
+
+situacao.innerHTML = "🟢 Cadastrado";
 
 blocoCadastro.style.display='none';
 

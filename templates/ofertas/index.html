@@ -4,8 +4,6 @@
 
 <div class="text-end">
 
-{{ session["nome_comunidade"] }}
-
 <a
 href="{{ url_for('ofertas.logout') }}"
 class="btn btn-danger btn-sm">
@@ -15,6 +13,37 @@ Sair
 </a>
 
 </div>
+
+<nav class="navbar navbar-dark bg-success">
+
+    <div class="container-fluid">
+
+        <span class="navbar-brand">
+
+            ❤️ Módulo de Ofertas Comunidades
+
+        </span>
+
+        <span class="text-white">
+
+            ⛪ Usuário : {{ session["nome_comunidade"] }}
+
+        </span>
+
+        {% if session["administrador"] %}
+
+            <span class="badge bg-danger">
+
+                ADMINISTRADOR
+
+            </span>
+
+        {% endif %}        
+
+
+    </div>
+
+</nav>
 
 <div class="container mt-4">
 
@@ -136,6 +165,7 @@ Sair
 
         </div>
 
+
         <div class="col-md-4">
 
             <a href="{{ url_for('ofertas.relatorio_ofertas') }}"
@@ -178,6 +208,34 @@ Sair
                         <p class="text-muted">
                             Emissão de relatórios
                             analíticos e sintéticos.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.inicio') }}"
+            class="text-decoration-none">
+
+                <div class="card shadow h-100 border-warning">
+
+                    <div class="card-body text-center">
+
+                        <h1>❤️</h1>
+
+                        <h4>Contribuições</h4>
+
+                        <p class="text-muted">
+
+                            Gestão de dizimistas, contribuições,
+                            dashboard e relatórios.
+
                         </p>
 
                     </div>

@@ -1,7 +1,9 @@
+from flask import session
+from ofertas.utils import login_ofertas_required
+
 from datetime import datetime
 from flask import current_app
 from flask import flash, jsonify, redirect, render_template, request, send_file, url_for
-from flask_login import login_required
 
 from contribuicoes import contribuicoes_bp
 from extensions import db
@@ -37,7 +39,6 @@ from contribuicoes.models import Contribuicao
 from rifas.payments import get_pix_gateway
 
 
-@contribuicoes_bp.route("/", methods=["GET", "POST"])
 @contribuicoes_bp.route("/consultar", methods=["GET", "POST"])
 @contribuicoes_bp.route("/contribuir", methods=["GET", "POST"])
 def consultar():
@@ -157,11 +158,29 @@ def historico(dizimista_id):
 
 
 @contribuicoes_bp.route("/dashboard")
-@login_required
+@login_ofertas_required
 def dashboard():
+    query = db.select(
+        Contribuicao
+    )
+
+    if not session.get("administrador"):
+
+        query = query.where(
+            Contribuicao.comunidade_id ==
+            session["comunidade_id"]
+        )
+
     recentes = db.session.execute(
-        db.select(Contribuicao).order_by(Contribuicao.data_geracao.desc()).limit(20)
+
+        query.order_by(
+            Contribuicao.data_geracao.desc()
+        )
+
+        .limit(20)
+
     ).scalars().all()
+
     return render_template(
         "contribuicoes/dashboard.html",
         totais=totais_dashboard(),
@@ -171,7 +190,7 @@ def dashboard():
 
 
 @contribuicoes_bp.route("/ranking")
-@login_required
+@login_ofertas_required
 def ranking():
     return render_template(
         "contribuicoes/ranking.html",
@@ -181,7 +200,7 @@ def ranking():
 
 
 @contribuicoes_bp.route("/relatorios")
-@login_required
+@login_ofertas_required
 def relatorios():
     contribuicoes = consulta_relatorio(request.args)
     comunidades = Comunidade.query.order_by(Comunidade.nome.asc()).all()
@@ -200,7 +219,7 @@ def relatorios():
 
 
 @contribuicoes_bp.route("/relatorios/excel")
-@login_required
+@login_ofertas_required
 def relatorio_excel():
     output = gerar_excel(consulta_relatorio(request.args))
     return send_file(
@@ -212,7 +231,7 @@ def relatorio_excel():
 
 
 @contribuicoes_bp.route("/relatorios/pdf")
-@login_required
+@login_ofertas_required
 def relatorio_pdf():
     output = gerar_pdf_relatorio(consulta_relatorio(request.args))
     return send_file(output, as_attachment=True, download_name="contribuicoes.pdf", mimetype="application/pdf")
@@ -393,12 +412,13 @@ def status(contribuicao_id):
         "pago": False
     })
 
-@contribuicoes_bp.route("/inicio")
-def inicio():
+#@contribuicoes_bp.route("/inicio")
+#@login_ofertas_required
+#def inicio():
 
-    return render_template(
-        "contribuicoes/index.html"
-    )
+#    return render_template(
+#        "contribuicoes/index.html"
+#    )
 
 @contribuicoes_bp.route("/api/buscar-cpf/<cpf>")
 def api_buscar_cpf(cpf):
@@ -485,6 +505,7 @@ def api_status(id):
     })
 
 @contribuicoes_bp.route("/app")
+@login_ofertas_required
 def app_contribuicoes():
 
     categorias = listar_categorias()
@@ -561,7 +582,7 @@ def api_cadastrar():
         }), 400
 
 @contribuicoes_bp.route("/dizimistas")
-@login_required
+@login_ofertas_required
 def dizimistas():
 
 
@@ -583,8 +604,17 @@ def dizimistas():
 
         )
 
+    consulta = Dizimista.query
+
+    if not session.get("administrador"):
+
+        consulta = consulta.filter(
+            Dizimista.comunidade_id ==
+            session["comunidade_id"]
+        )
+
     dizimistas = (
-        query
+        consulta
         .order_by(Dizimista.nome)
         .all()
     )
@@ -600,13 +630,30 @@ def dizimistas():
     )
 
 @contribuicoes_bp.route("/dizimista/<int:id>")
-@login_required
+@login_ofertas_required
 def ficha_dizimista(id):
 
     dizimista = db.session.get(
         Dizimista,
         id
     )
+
+    if (
+        not session.get("administrador")
+        and
+        dizimista.comunidade_id != session["comunidade_id"]
+    ):
+
+        flash(
+            "Acesso negado.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "contribuicoes.dizimistas"
+            )
+        )    
 
     if dizimista is None:
 
@@ -665,13 +712,30 @@ def ficha_dizimista(id):
     "/editar-dizimista/<int:id>",
     methods=["GET", "POST"]
 )
-@login_required
+@login_ofertas_required
 def editar_dizimista(id):
 
     dizimista = db.session.get(
         Dizimista,
         id
     )
+
+    if (
+        not session.get("administrador")
+        and
+        dizimista.comunidade_id != session["comunidade_id"]
+    ):
+
+        flash(
+            "Acesso negado.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "contribuicoes.dizimistas"
+            )
+        )    
 
     if dizimista is None:
 
@@ -731,4 +795,18 @@ def editar_dizimista(id):
         "contribuicoes/editar_dizimista.html",
         dizimista=dizimista,
         comunidades=comunidades
+    )
+
+@contribuicoes_bp.route("/")
+@login_ofertas_required
+def inicio():
+
+    return render_template(
+        "contribuicoes/index.html",
+
+        usuario=session.get("usuario"),
+
+        administrador=session.get("administrador"),
+
+        comunidade_id=session.get("comunidade_id")
     )

@@ -2,6 +2,49 @@
 
 {% block content %}
 
+<div class="mb-3">
+
+    <a
+        href="{{ url_for('ofertas.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Portal Financeiro
+
+    </a>
+
+</div>
+
+<nav class="navbar navbar-dark bg-success">
+
+    <div class="container-fluid">
+
+        <span class="navbar-brand">
+
+            ❤️ Contribuições
+
+        </span>
+
+        <span class="text-white">
+
+            ⛪ Usuário: {{ session["nome_comunidade"] }}
+
+        </span>
+
+        {% if session["administrador"] %}
+
+            <span class="badge bg-danger">
+
+                ADMINISTRADOR
+
+            </span>
+
+        {% endif %}        
+
+    </div>
+
+</nav>
+
+
 <div class="container mt-4">
 
     <div class="text-center mb-5">
