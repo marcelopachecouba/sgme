@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4" style="max-width:700px">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-warning">
+
+            <h4>
+
+                ✏️ Editar Cadastro
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <form method="post">
+
+                <div class="mb-3">
+
+                    <label>Nome</label>
+
+                    <input
+                        name="nome"
+                        class="form-control"
+                        value="{{ dizimista.nome }}">
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label>Telefone</label>
+
+                    <input
+                        name="telefone"
+                        class="form-control"
+                        value="{{ dizimista.telefone }}">
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label>Whatsapp</label>
+
+                    <input
+                        name="whatsapp"
+                        class="form-control"
+                        value="{{ dizimista.whatsapp }}">
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label>Email</label>
+
+                    <input
+                        name="email"
+                        class="form-control"
+                        value="{{ dizimista.email }}">
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label>Comunidade</label>
+
+                    <select
+                        name="comunidade_id"
+                        class="form-select">
+
+                        {% for c in comunidades %}
+
+                        <option
+                            value="{{ c.id }}"
+                            {% if dizimista.comunidade_id==c.id %}
+                            selected
+                            {% endif %}>
+
+                            {{ c.nome }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <button
+                    class="btn btn-success">
+
+                    Salvar Alterações
+
+                </button>
+
+                <a
+                    href="{{ url_for('contribuicoes.ficha_dizimista', id=dizimista.id) }}"
+                    class="btn btn-secondary">
+
+                    Cancelar
+
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

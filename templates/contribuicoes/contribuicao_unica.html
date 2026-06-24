@@ -1,56 +1,53 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="container-fluid mt-2">
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+
+<div class="alert alert-light text-center">
+
+🙏 Sua contribuição ajuda na evangelização, obras sociais e manutenção da comunidade.
+
+</div>
+
+<div class="container-fluid mt-2 mb-5" style="max-width:700px">
 
 <div class="card shadow">
 
-<div class="card-header bg-success text-white">
+<div class="card-header bg-success text-white text-center">
 
-<h5 class="mb-0">
-
-❤️ Contribuições
-
-</h5>
+<h4>❤️ Contribuição Online</h4>
 
 </div>
 
 <div class="card-body">
 
-<form id="formPrincipal">
+<!-- CPF -->
 
-<div class="card border-primary mb-3">
-
-<div class="card-header">
-
-🔎 Localizar Fiel
-
-</div>
-
-<div class="card-body">
-
-<div class="row">
-
-<div class="col-8">
+<div class="mb-3">
 
 <label>CPF</label>
 
+<div class="input-group">
+
 <input
 id="cpf"
-name="cpf"
-class="form-control">
-
-</div>
-
-<div class="col-4">
-
-<label>&nbsp;</label>
+class="form-control form-control-lg"
+placeholder="Digite seu CPF">
 
 <button
-type="button"
-id="btnPesquisar"
-class="btn btn-primary w-100">
+id="btnBuscar"
+class="btn btn-primary">
 
 Buscar
 
@@ -60,153 +57,130 @@ Buscar
 
 </div>
 
-</div>
 
-</div>
+<!-- CADASTRO -->
 
 <div
-id="blocoDados"
-
+id="blocoCadastro"
 style="display:none">
 
-<div class="card shadow mb-3">
+<div class="card border-warning mb-3">
 
-<div class="card-header">
+<div class="card-header bg-warning">
 
-👤 Dados do Fiel
+👤 Novo Cadastro
 
 </div>
 
 <div class="card-body">
 
-<div class="mb-2">
-
-<label>Nome</label>
+<input
+id="nomeNovo"
+class="form-control mb-2"
+placeholder="Nome completo">
 
 <input
-id="nome"
-name="nome"
-class="form-control">
-
-</div>
-
-<div class="mb-2">
-
-<label>Telefone</label>
+id="telefoneNovo"
+class="form-control mb-2"
+placeholder="Telefone">
 
 <input
-id="telefone"
-name="telefone"
-class="form-control">
-
-</div>
-
-<div class="mb-2">
-
-<label>Whatsapp</label>
+id="whatsappNovo"
+class="form-control mb-2"
+placeholder="WhatsApp">
 
 <input
-id="whatsapp"
-name="whatsapp"
-class="form-control">
+id="emailNovo"
+class="form-control mb-2"
+placeholder="Email">
 
-</div>
+<label class="form-label">
 
-<div class="mb-2">
+⛪ Comunidade
 
-<label>Email</label>
-
-<input
-id="email"
-name="email"
-class="form-control">
-
-</div>
-
-<div class="mb-3">
-
-<label>Comunidade</label>
+</label>
 
 <select
-id="comunidade_id"
-name="comunidade_id"
-class="form-select">
+id="comunidadeNova"
+class="form-select mb-3">
 
-{% for c in comunidades %}
-
-<option value="{{c.id}}">
-
-{{c.nome}}
-
+<option value="">
+Selecione a comunidade
 </option>
 
+{% for c in comunidades %}
+<option value="{{c.id}}">
+{{c.nome}}
+</option>
 {% endfor %}
 
 </select>
 
-</div>
-
 <button
-type="button"
-id="btnSalvar"
+id="btnSalvarCadastro"
 class="btn btn-success w-100">
 
-💾 Salvar Dados
+Salvar e continuar
 
 </button>
 
 </div>
+
 </div>
+
 </div>
+
+
+
+<!-- DADOS -->
 
 <div
-id="blocoResumo"
+id="blocoDados"
 style="display:none">
 
-<div class="card shadow mb-3">
+<div class="card border-success mb-3">
 
-<div class="card-header bg-info text-white">
+<div class="card-body">
 
-📊 Resumo
+<h5 id="nome"></h5>
+
+<div>
+
+📱 <span id="telefone"></span>
 
 </div>
 
-<div class="card-body">
+<div>
+
+⛪ <span id="comunidade"></span>
+
+</div>
+
+<hr>
 
 <div class="row text-center">
 
 <div class="col-6">
 
-<div>
+<small>Total Ano</small>
 
-Total Ano
-
-</div>
-
-<div
-class="total-ano"
-id="totalAno">
+<h5 id="totalAno">
 
 0,00
 
-</div>
+</h5>
 
 </div>
 
 <div class="col-6">
 
-<div>
+<small>Situação</small>
 
-Situação
-
-</div>
-
-<div
-id="situacao">
+<h5>
 
 🟢 Em dia
 
-</div>
+</h5>
 
 </div>
 
@@ -216,57 +190,27 @@ id="situacao">
 
 </div>
 
-</div>
-
-<div
-id="blocoHistorico"
-
-style="display:none">
-
-<div class="card shadow mb-3">
-
-<div class="card-header">
-
-📜 Histórico
-
-</div>
-
-<div class="card-body">
-
-<table
-class="table table-sm"
-
-id="historico">
-
-</table>
-
-</div>
-
-</div>
-
-</div>
+<!-- CONTRIBUIÇÃO -->
 
 <div
 id="blocoContribuicao"
-
 style="display:none">
 
-<div class="card shadow mb-3">
+<div class="card">
 
 <div class="card-header bg-warning">
 
-💰 Nova Contribuição
+💰 Nova contribuição
 
 </div>
 
 <div class="card-body">
 
-<div class="mb-2">
+<div class="mb-3">
 
 <label>Categoria</label>
 
 <select
-name="categoria"
 id="categoria"
 class="form-select">
 
@@ -284,15 +228,15 @@ class="form-select">
 
 </div>
 
-<div class="mb-2">
+<div class="mb-3">
 
 <label>Competência</label>
 
 <input
 id="competencia"
-name="competencia"
 class="form-control"
-value="{{ competencia_atual }}">
+value="{{competencia_atual}}">
+
 </div>
 
 <div class="mb-3">
@@ -301,17 +245,15 @@ value="{{ competencia_atual }}">
 
 <input
 id="valor"
-name="valor"
-class="form-control">
+class="form-control form-control-lg">
 
 </div>
 
 <button
-type="button"
-id="btnGerarPix"
+id="btnPix"
 class="btn btn-success w-100">
 
-💳 Gerar PIX
+💳 GERAR PIX
 
 </button>
 
@@ -321,16 +263,22 @@ class="btn btn-success w-100">
 
 </div>
 
+</div>
+
+</div>
+
+
+<!-- PIX -->
+
 <div
 id="blocoPix"
-
 style="display:none">
 
-<div class="card shadow">
+<div class="card shadow mt-3">
 
 <div class="card-header bg-primary text-white">
 
-🟢 PIX Gerado
+PIX GERADO
 
 </div>
 
@@ -338,49 +286,81 @@ style="display:none">
 
 <img
 id="imgQr"
-
 class="img-fluid"
-
 style="max-width:250px">
 
-<br><br>
-
 <textarea
-
-id="copiaCola"
-
-rows="6"
-
-class="form-control"
-
-style="font-size:12px">
-
+id="pixCopia"
+rows="5"
+class="form-control mt-3"
+readonly>
 </textarea>
 
-
-<br>
-
 <button
+onclick="copiarPix()"
+class="btn btn-primary mt-3 w-100">
 
-type="button"
-
-id="btnCopiar"
-
-class="btn btn-primary w-100">
-
-Copiar PIX
+📋 Copiar PIX
 
 </button>
 
+<div
+id="aguardando"
+class="alert alert-warning mt-3">
+
+⌛ Aguardando pagamento...
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- PAGAMENTO -->
+
+<div
+id="blocoPago"
+style="display:none">
+
+<div class="card border-success mt-3">
+
+<div class="card-body text-center">
+
+<div style="font-size:80px">
+
+✅
+
+</div>
+
+<h3 class="text-success">
+
+Pagamento confirmado
+
+</h3>
+
+<p>
+
+Muito obrigado pela sua generosidade.
+
+</p>
+
 <a
+id="btnComprovante"
+class="btn btn-success">
 
-id="btnWhatsapp"
+📄 Comprovante
 
-target="_blank"
+</a>
 
-class="btn btn-success w-100 mt-2">
+<a
+href="{{ url_for('contribuicoes.consultar') }}"
+class="btn btn-primary">
 
-💬 Enviar WhatsApp
+❤️ Nova contribuição
 
 </a>
 
@@ -390,330 +370,214 @@ class="btn btn-success w-100 mt-2">
 
 </div>
 
-</form>
-
-</div>
-
-</div>
-
-</div>
-
 <script>
 
-const cpf = document.getElementById("cpf");
-
-const nome = document.getElementById("nome");
-
-const telefone = document.getElementById("telefone");
-
-const whatsapp = document.getElementById("whatsapp");
-
-const email = document.getElementById("email");
-
-const comunidade = document.getElementById("comunidade_id");
-
-const historico = document.getElementById("historico");
+let dizimista_id=0;
+let contribuicao_id=0;
+let timerStatus=null;
 
 
-function limparCampos(){
+btnBuscar.onclick=function(){
 
-    nome.value="";
+fetch('/contribuicoes/api/buscar-cpf/'+cpf.value)
 
-    telefone.value="";
+.then(r=>r.json())
 
-    whatsapp.value="";
+.then(data=>{
 
-    email.value="";
+if(!data.encontrado){
 
-    historico.innerHTML="";
+blocoCadastro.style.display='block';
 
-    document.getElementById(
-        "blocoHistorico"
-    ).style.display="none";
+blocoDados.style.display='none';
 
-    document.getElementById(
-        "blocoContribuicao"
-    ).style.display="none";
+blocoContribuicao.style.display='none';
 
-    document.getElementById(
-        "blocoPix"
-    ).style.display="none";
+nomeNovo.focus();
+
+return;
+
+}
+
+dizimista_id=data.id;
+
+nome.innerHTML=data.nome;
+
+telefone.innerHTML=data.telefone || '';
+
+comunidade.innerHTML=data.comunidade || '';
+
+totalAno.innerHTML='R$ '+data.total_ano.toFixed(2);
+
+blocoCadastro.style.display='none';
+
+blocoDados.style.display='block';
+
+blocoContribuicao.style.display='block';
+
+});
+
+};
+
+
+
+btnSalvarCadastro.onclick=function(){
+
+if(comunidadeNova.value==""){
+
+alert("Selecione a comunidade.");
+
+comunidadeNova.focus();
+
+return;
+
+}
+
+fetch('/contribuicoes/api/cadastrar',{
+
+method:'POST',
+
+headers:{
+'Content-Type':'application/json'
+},
+
+body:JSON.stringify({
+
+cpf:cpf.value,
+
+nome:nomeNovo.value,
+
+telefone:telefoneNovo.value,
+
+whatsapp:whatsappNovo.value,
+
+email:emailNovo.value,
+
+comunidade_id:comunidadeNova.value
+
+})
+
+})
+
+.then(r=>r.json())
+
+.then(data=>{
+
+dizimista_id=data.id;
+
+nome.innerHTML=data.nome;
+
+telefone.innerHTML=data.telefone;
+
+comunidade.innerHTML=data.comunidade;
+
+blocoCadastro.style.display='none';
+
+blocoDados.style.display='block';
+
+blocoContribuicao.style.display='block';
+
+});
+
+};
+
+
+
+btnPix.onclick=function(){
+
+fetch('/contribuicoes/api/gerar-pix',{
+
+method:'POST',
+
+headers:{
+'Content-Type':'application/json'
+},
+
+body:JSON.stringify({
+
+dizimista_id:dizimista_id,
+
+categoria:categoria.value,
+
+competencia:competencia.value,
+
+valor:valor.value
+
+})
+
+})
+
+.then(r=>r.json())
+
+.then(data=>{
+
+contribuicao_id=data.id;
+
+imgQr.src='data:image/png;base64,'+data.qr;
+
+pixCopia.value=data.pix;
+
+btnPix.disabled=true;
+blocoPix.style.display='block';
+
+timerStatus=setInterval(verificarPagamento,5000);
+
+});
+
+};
+
+
+
+function verificarPagamento(){
+
+fetch('/contribuicoes/api/status/'+contribuicao_id)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+if(data.status=="pago"){
+
+clearInterval(timerStatus);
+
+blocoPix.style.display='none';
+
+blocoContribuicao.style.display='none';
+
+blocoDados.style.display='none';
+
+blocoPago.style.display='block';
+
+btnPix.disabled=false;
+
+cpf.value='';
+valor.value='';
+
+btnComprovante.href=
+'/contribuicoes/comprovante/'+contribuicao_id;
+
+window.scrollTo({
+top:0,
+behavior:'smooth'
+});
+
+}
+
+});
+
 }
 
 
-document.getElementById(
-    "btnPesquisar"
-).onclick=function(){
+function copiarPix(){
 
-    fetch(
+navigator.clipboard.writeText(
+pixCopia.value
+);
 
-        "{{ url_for('contribuicoes.buscar_cpf') }}?cpf="+cpf.value
+alert('PIX copiado');
 
-    )
-
-    .then(r=>r.json())
-
-    .then(d=>{
-
-        document.getElementById(
-            "blocoDados"
-        ).style.display="block";
-
-        if(!d.encontrado){
-
-            limparCampos();
-
-            return;
-        }
-
-        nome.value=d.nome;
-
-        telefone.value=d.telefone;
-
-        whatsapp.value=d.whatsapp;
-
-        email.value=d.email;
-
-        comunidade.value=d.comunidade_id;
-
-        document.getElementById(
-            "blocoHistorico"
-        ).style.display="block";
-
-        document.getElementById(
-            "blocoContribuicao"
-        ).style.display="block";
-
-
-        let html=`
-
-        <tr>
-
-            <th>Data</th>
-
-            <th>Categoria</th>
-
-            <th>Comp.</th>
-
-            <th>Valor</th>
-
-        </tr>
-        `;
-
-
-        d.historico.forEach(h=>{
-
-            html+=`
-
-            <tr>
-
-                <td>${h.data}</td>
-
-                <td>${h.categoria}</td>
-
-                <td>${h.competencia}</td>
-
-                <td>R$ ${h.valor}</td>
-
-            </tr>
-
-            `;
-
-        });
-
-        historico.innerHTML=html;
-
-    });
-
-};
-
-
-document.getElementById(
-    "btnSalvar"
-).onclick=function(){
-
-    fetch(
-
-        "{{ url_for('contribuicoes.salvar_dados') }}",
-
-        {
-
-            method:"POST",
-
-            body:new FormData(
-
-                document.getElementById(
-                    "formPrincipal"
-                )
-
-            )
-
-        }
-
-    )
-
-    .then(r=>r.json())
-
-    .then(d=>{
-
-        if(d.sucesso){
-
-            alert(
-                "Dados salvos."
-            );
-
-            document.getElementById(
-                "blocoContribuicao"
-            ).style.display="block";
-
-        }
-
-    });
-
-};
-
-
-document.getElementById(
-    "btnGerarPix"
-).onclick=function(){
-
-    fetch(
-
-        "{{ url_for('contribuicoes.gerar_pix') }}",
-
-        {
-
-            method:"POST",
-
-            body:new FormData(
-
-                document.getElementById(
-                    "formPrincipal"
-                )
-
-            )
-
-        }
-
-    )
-
-    .then(r=>r.json())
-
-    .then(d=>{
-
-        if(d.sucesso){
-
-            document.getElementById(
-                "blocoPix"
-            ).style.display="block";
-
-            document.getElementById(
-                "imgQr"
-            ).src=
-
-            "data:image/png;base64,"+
-
-            d.qr_code;
-
-
-            document.getElementById(
-                "copiaCola"
-            ).value=
-
-            d.copia_cola;
-
-        }
-
-    });
-
-};
-
-
-
-document.getElementById(
-    "btnCopiar"
-).onclick=function(){
-
-    navigator.clipboard.writeText(
-
-        document.getElementById(
-            "copiaCola"
-        ).value
-
-    );
-
-    alert(
-        "PIX copiado."
-    );
-
-};
+}
 
 </script>
 
-<style>
-
-.card{
-    border-radius:18px;
-    border:none;
-}
-
-.card-header{
-    font-weight:600;
-    border-radius:18px 18px 0 0 !important;
-}
-
-.form-control,
-.form-select{
-    border-radius:12px;
-    height:48px;
-}
-
-.btn{
-    border-radius:14px;
-    height:48px;
-    font-weight:600;
-}
-
-#imgQr{
-    max-width:260px;
-}
-
-.badge-pago{
-    background:#198754;
-}
-
-.badge-pendente{
-    background:#ffc107;
-    color:black;
-}
-
-.badge-cancelado{
-    background:#dc3545;
-}
-
-.historico-item{
-
-    border-bottom:1px solid #e8e8e8;
-
-    padding:10px;
-
-}
-
-.valor{
-    font-size:18px;
-    font-weight:bold;
-    color:#198754;
-}
-
-.total-ano{
-    font-size:24px;
-    color:#198754;
-    font-weight:bold;
-}
-
-</style>
-
-
-
 {% endblock %}
-

@@ -400,3 +400,335 @@ def inicio():
         "contribuicoes/index.html"
     )
 
+@contribuicoes_bp.route("/api/buscar-cpf/<cpf>")
+def api_buscar_cpf(cpf):
+
+    dizimista = buscar_dizimista_por_cpf(cpf)
+
+    if not dizimista:
+        return jsonify({
+            "encontrado": False
+        })
+
+    historico = historico_dizimista(dizimista.id)[1]
+
+    total_ano = sum(
+        float(c.valor)
+        for c in historico
+        if c.status == "pago"
+    )
+
+    return jsonify({
+
+        "encontrado": True,
+
+        "id": dizimista.id,
+
+        "nome": dizimista.nome,
+
+        "telefone": dizimista.telefone,
+
+        "whatsapp": dizimista.whatsapp,
+
+        "email": dizimista.email,
+
+        "comunidade":
+        dizimista.comunidade.nome
+        if dizimista.comunidade
+        else "",
+
+        "total_ano": total_ano
+
+    })
+
+@contribuicoes_bp.route("/api/gerar-pix", methods=["POST"])
+def api_gerar_pix():
+
+    dados = request.json
+
+    result = gerar_pix_contribuicao(
+
+        dizimista_id=dados["dizimista_id"],
+
+        categoria_codigo=dados["categoria"],
+
+        valor=dados["valor"],
+
+        competencia=dados["competencia"]
+
+    )
+
+    return jsonify({
+
+        "id": result.contribuicao_id,
+
+        "txid": result.txid,
+
+        "qr": result.qr_code_base64,
+
+        "pix": result.copia_cola_pix
+
+    })
+
+@contribuicoes_bp.route("/api/status/<int:id>")
+def api_status(id):
+
+    c = db.session.get(
+        Contribuicao,
+        id
+    )
+
+    return jsonify({
+
+        "status": c.status
+
+    })
+
+@contribuicoes_bp.route("/app")
+def app_contribuicoes():
+
+    categorias = listar_categorias()
+
+    comunidades = (
+        Comunidade.query
+        .filter_by(ativa=True)
+        .order_by(Comunidade.nome)
+        .all()
+    )
+
+    competencia_atual = datetime.now().strftime("%Y-%m")
+
+    return render_template(
+        "contribuicoes/contribuicao_unica.html",
+        categorias=categorias,
+        comunidades=comunidades,
+        competencia_atual=competencia_atual
+    )
+
+@contribuicoes_bp.route("/api/cadastrar", methods=["POST"])
+def api_cadastrar():
+
+
+    dados = request.json
+
+    try:
+
+        dizimista = criar_ou_atualizar_dizimista(
+
+            cpf=dados.get("cpf"),
+
+            nome=dados.get("nome"),
+
+            telefone=dados.get("telefone"),
+
+            whatsapp=dados.get("whatsapp"),
+
+            email=dados.get("email"),
+
+            comunidade_id=dados.get("comunidade_id")
+
+        )
+
+        db.session.commit()
+
+        return jsonify({
+
+            "sucesso": True,
+
+            "id": dizimista.id,
+
+            "nome": dizimista.nome,
+
+            "telefone": dizimista.telefone,
+
+            "comunidade":
+                dizimista.comunidade.nome
+                if dizimista.comunidade
+                else ""
+
+        })
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+
+            "sucesso": False,
+
+            "erro": str(e)
+
+        }), 400
+
+@contribuicoes_bp.route("/dizimistas")
+@login_required
+def dizimistas():
+
+
+    filtro = request.args.get("q", "").strip()
+
+    query = Dizimista.query
+
+    if filtro:
+
+        query = query.filter(
+
+            db.or_(
+
+                Dizimista.nome.ilike(f"%{filtro}%"),
+
+                Dizimista.cpf.ilike(f"%{filtro}%")
+
+            )
+
+        )
+
+    dizimistas = (
+        query
+        .order_by(Dizimista.nome)
+        .all()
+    )
+
+    return render_template(
+
+        "contribuicoes/dizimistas.html",
+
+        dizimistas=dizimistas,
+
+        filtro=filtro
+
+    )
+
+@contribuicoes_bp.route("/dizimista/<int:id>")
+@login_required
+def ficha_dizimista(id):
+
+    dizimista = db.session.get(
+        Dizimista,
+        id
+    )
+
+    if dizimista is None:
+
+        flash(
+            "Dizimista não encontrado.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "contribuicoes.dizimistas"
+            )
+        )
+
+    contribuicoes = (
+        Contribuicao.query
+        .filter_by(
+            dizimista_id=id
+        )
+        .order_by(
+            Contribuicao.data_geracao.desc()
+        )
+        .all()
+    )
+
+    total_ano = sum(
+        float(c.valor)
+        for c in contribuicoes
+        if c.status == "pago"
+    )
+
+    ultima_contribuicao = (
+        contribuicoes[0]
+        if contribuicoes else None
+    )
+
+    ano_atual = datetime.now().year
+
+    return render_template(
+
+        "contribuicoes/ficha_dizimista.html",
+
+        dizimista=dizimista,
+
+        contribuicoes=contribuicoes,
+
+        total_ano=total_ano,
+
+        ultima_contribuicao=ultima_contribuicao,
+
+        ano_atual=ano_atual
+
+    )
+
+@contribuicoes_bp.route(
+    "/editar-dizimista/<int:id>",
+    methods=["GET", "POST"]
+)
+@login_required
+def editar_dizimista(id):
+
+    dizimista = db.session.get(
+        Dizimista,
+        id
+    )
+
+    if dizimista is None:
+
+        flash(
+            "Dizimista não encontrado.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "contribuicoes.dizimistas"
+            )
+        )
+
+    comunidades = (
+        Comunidade.query
+        .order_by(
+            Comunidade.nome
+        )
+        .all()
+    )
+
+    if request.method == "POST":
+
+        try:
+
+            dizimista.nome = request.form.get("nome")
+            dizimista.telefone = request.form.get("telefone")
+            dizimista.whatsapp = request.form.get("whatsapp")
+            dizimista.email = request.form.get("email")
+            dizimista.comunidade_id = request.form.get("comunidade_id")
+
+            db.session.commit()
+
+            flash(
+                "Cadastro atualizado com sucesso.",
+                "success"
+            )
+
+            return redirect(
+                url_for(
+                    "contribuicoes.ficha_dizimista",
+                    id=dizimista.id
+                )
+            )
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            flash(
+                str(e),
+                "danger"
+            )
+
+    return render_template(
+        "contribuicoes/editar_dizimista.html",
+        dizimista=dizimista,
+        comunidades=comunidades
+    )

@@ -20,20 +20,22 @@
 
         <div class="col-md-4">
 
-            <a href="{{ url_for('contribuicoes.dashboard') }}"
+            <a href="{{ url_for('contribuicoes.app_contribuicoes') }}"
                class="text-decoration-none">
 
-                <div class="card shadow h-100 border-danger">
+                <div class="card shadow h-100 border-success">
 
                     <div class="card-body text-center">
 
-                        <h1>📊</h1>
+                        <h1>❤️</h1>
 
-                        <h4>Dashboard</h4>
+                        <h4>Nova Contribuição</h4>
 
                         <p class="text-muted">
-                            Indicadores gerais das contribuições,
-                            arrecadação e estatísticas.
+
+                            Gerar PIX e registrar
+                            uma nova contribuição.
+
                         </p>
 
                     </div>
@@ -46,20 +48,49 @@
 
         <div class="col-md-4">
 
-            <a href="{{ url_for('contribuicoes.consultar') }}"
+            <a href="{{ url_for('contribuicoes.dizimistas') }}"
                class="text-decoration-none">
 
                 <div class="card shadow h-100 border-primary">
 
                     <div class="card-body text-center">
 
-                        <h1>🔍</h1>
+                        <h1>👥</h1>
 
-                        <h4>Consultar Dizimista</h4>
+                        <h4>Dizimistas</h4>
 
                         <p class="text-muted">
-                            Consulta por CPF para localizar
-                            o cadastro do dizimista.
+
+                            Consultar e acessar o histórico
+                            completo dos fiéis.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+        <div class="col-md-4">
+
+            <a href="{{ url_for('contribuicoes.dashboard') }}"
+               class="text-decoration-none">
+
+                <div class="card shadow h-100 border-danger">
+
+                    <div class="card-body text-center">
+
+                        <h1>📊</h1>
+
+                        <h4>Dashboard</h4>
+
+                        <p class="text-muted">
+
+                            Indicadores gerais das contribuições.
+
                         </p>
 
                     </div>
@@ -84,8 +115,9 @@
                         <h4>Relatórios</h4>
 
                         <p class="text-muted">
-                            Emissão de relatórios sintéticos,
-                            analíticos e financeiros.
+
+                            Relatórios financeiros e analíticos.
+
                         </p>
 
                     </div>
@@ -110,60 +142,9 @@
                         <h4>Ranking</h4>
 
                         <p class="text-muted">
-                            Ranking dos maiores contribuintes
-                            por período.
-                        </p>
 
-                    </div>
+                            Ranking dos maiores contribuintes.
 
-                </div>
-
-            </a>
-
-        </div>
-
-        <div class="col-md-4">
-
-            <a href="{{ url_for('contribuicoes.cadastro') }}"
-               class="text-decoration-none">
-
-                <div class="card shadow h-100 border-info">
-
-                    <div class="card-body text-center">
-
-                        <h1>👥</h1>
-
-                        <h4>Dizimistas</h4>
-
-                        <p class="text-muted">
-                            Cadastro completo dos dizimistas
-                            e suas comunidades.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </a>
-
-        </div>
-
-        <div class="col-md-4">
-
-            <a href="{{ url_for('contribuicoes.consultar') }}"
-               class="text-decoration-none">
-
-                <div class="card shadow h-100 border-secondary">
-
-                    <div class="card-body text-center">
-
-                        <h1>❤️</h1>
-
-                        <h4>Nova Contribuição</h4>
-
-                        <p class="text-muted">
-                            Gerar PIX e registrar
-                            uma nova contribuição online.
                         </p>
 
                     </div>

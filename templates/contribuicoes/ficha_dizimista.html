@@ -1,0 +1,378 @@
+<!-- templates/contribuicoes/ficha_dizimista.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+
+<div class="container-fluid mt-3 mb-5" style="max-width:1200px">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-success text-white">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <h4 class="mb-0">
+
+                    👤 Ficha do Dizimista
+
+                </h4>
+
+                <a
+                    href="{{ url_for('contribuicoes.dizimistas') }}"
+                    class="btn btn-light btn-sm">
+
+                    Voltar
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <!-- DADOS DO DIZIMISTA -->
+
+                <div class="col-lg-5">
+
+                    <div class="card border-success mb-3">
+
+                        <div class="card-body">
+
+                            <h4 class="text-success">
+
+                                {{ dizimista.nome }}
+
+                            </h4>
+
+                            <hr>
+
+                            <p>
+                                <strong>CPF:</strong>
+                                {{ dizimista.cpf }}
+                            </p>
+
+                            <p>
+                                <strong>Telefone:</strong>
+                                {{ dizimista.telefone or '' }}
+                            </p>
+
+                            <p>
+                                <strong>Whatsapp:</strong>
+                                {{ dizimista.whatsapp or '' }}
+                            </p>
+
+                            <p>
+                                <strong>Email:</strong>
+                                {{ dizimista.email or '' }}
+                            </p>
+
+                            <p>
+                                <strong>Comunidade:</strong>
+
+                                {% if dizimista.comunidade %}
+                                    {{ dizimista.comunidade.nome }}
+                                {% endif %}
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- RESUMO -->
+
+                <div class="col-lg-7">
+
+                    <div class="row">
+
+                        <div class="col-md-4">
+
+                            <div class="card border-primary text-center mb-3">
+
+                                <div class="card-body">
+
+                                    <small class="text-muted">
+
+                                        Total no Ano
+
+                                    </small>
+
+                                    <h3 class="text-primary">
+
+                                        R$
+                                        {{ "%.2f"|format(total_ano|default(0)) }}
+
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-md-4">
+
+                            <div class="card border-success text-center mb-3">
+
+                                <div class="card-body">
+
+                                    <small class="text-muted">
+
+                                        Contribuições
+
+                                    </small>
+
+                                    <h3 class="text-success">
+
+                                        {{ contribuicoes|length }}
+
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-md-4">
+
+                            <div class="card border-warning text-center mb-3">
+
+                                <div class="card-body">
+
+                                    <small class="text-muted">
+
+                                        Última contribuição
+
+                                    </small>
+
+                                    <h6>
+
+                                        {% if ultima_contribuicao %}
+
+                                            {{ ultima_contribuicao.data_geracao.strftime('%d/%m/%Y') }}
+
+                                        {% else %}
+
+                                            -
+
+                                        {% endif %}
+
+                                    </h6>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- BOTÕES -->
+
+                    <div class="d-grid gap-2">
+
+                        <a
+                            href="{{ url_for('contribuicoes.contribuicao', dizimista_id=dizimista.id) }}"
+                            class="btn btn-success">
+
+                            ❤️ Nova Contribuição
+
+                        </a>
+
+                        <a
+                            href="{{ url_for('contribuicoes.editar_dizimista', id=dizimista.id) }}"
+                            class="btn btn-warning">
+
+                            ✏️ Editar Cadastro
+
+                        </a>
+
+                        <a
+                            href="{{ url_for('contribuicoes.demonstrativo', dizimista_id=dizimista.id, ano=ano_atual) }}"
+                            class="btn btn-primary">
+
+                            📄 Demonstrativo Anual
+
+                        </a>
+
+                        <a
+                            href="{{ url_for('contribuicoes.historico', dizimista_id=dizimista.id) }}"
+                            class="btn btn-secondary">
+
+                            📋 Histórico Completo
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <h5 class="mb-3">
+
+                💰 Últimas Contribuições
+
+            </h5>
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-success">
+
+                    <tr>
+
+                        <th>Data</th>
+
+                        <th>Categoria</th>
+
+                        <th>Competência</th>
+
+                        <th class="text-end">
+
+                            Valor
+
+                        </th>
+
+                        <th>
+
+                            Status
+
+                        </th>
+
+                        <th></th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for c in contribuicoes %}
+
+                    <tr>
+
+                        <td>
+
+                            {{ c.data_geracao.strftime('%d/%m/%Y') }}
+
+                        </td>
+
+                        <td>
+
+                            {{ c.categoria.descricao }}
+
+                        </td>
+
+                        <td>
+
+                            {{ c.competencia }}
+
+                        </td>
+
+                        <td class="text-end">
+
+                            R$ {{ "%.2f"|format(c.valor) }}
+
+                        </td>
+
+                        <td>
+
+                            {% if c.status=="pago" %}
+
+                                <span class="badge bg-success">
+
+                                    Pago
+
+                                </span>
+
+                            {% elif c.status=="pendente" %}
+
+                                <span class="badge bg-warning text-dark">
+
+                                    Pendente
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-secondary">
+
+                                    {{ c.status }}
+
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="{{ url_for('contribuicoes.comprovante', contribuicao_id=c.id) }}"
+                                class="btn btn-outline-primary btn-sm">
+
+                                Comprovante
+
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td
+                            colspan="6"
+                            class="text-center text-muted">
+
+                            Nenhuma contribuição encontrada.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

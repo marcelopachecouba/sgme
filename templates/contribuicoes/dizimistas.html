@@ -1,0 +1,284 @@
+<!-- templates/contribuicoes/dizimistas.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+
+    <a
+        href="{{ url_for(request.blueprint + '.inicio') }}"
+        class="btn btn-outline-primary">
+
+        🏠 Início do Módulo
+
+    </a>
+
+</div>
+
+
+<div class="container-fluid mt-3 mb-5" style="max-width:1200px">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-success text-white">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <h4 class="mb-0">
+
+                    👥 Dizimistas
+
+                </h4>
+
+                <a
+                    href="{{ url_for('contribuicoes.app_contribuicoes') }}"
+                    class="btn btn-light btn-sm">
+
+                    ❤️ Nova Contribuição
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="card-body">
+
+            <!-- PESQUISA -->
+
+            <form method="get">
+
+                <div class="input-group mb-4">
+
+                    <input
+                        type="text"
+                        class="form-control"
+                        name="q"
+                        value="{{ filtro }}"
+                        placeholder="Pesquisar nome ou CPF">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+
+                        🔍 Pesquisar
+
+                    </button>
+
+                </div>
+
+            </form>
+
+            <!-- RESUMO -->
+
+            <div class="row mb-4">
+
+                <div class="col-md-4">
+
+                    <div class="card border-success">
+
+                        <div class="card-body text-center">
+
+                            <small class="text-muted">
+
+                                Total de Dizimistas
+
+                            </small>
+
+                            <h3 class="text-success">
+
+                                {{ dizimistas|length }}
+
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- DESKTOP -->
+
+            <div class="table-responsive d-none d-md-block">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-success">
+
+                    <tr>
+
+                        <th>Nome</th>
+
+                        <th>Telefone</th>
+
+                        <th>Comunidade</th>
+
+                        <th class="text-center">
+
+                            Ações
+
+                        </th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for d in dizimistas %}
+
+                        <tr>
+
+                            <td>
+
+                                <strong>
+
+                                    {{ d.nome }}
+
+                                </strong>
+
+                                <br>
+
+                                <small class="text-muted">
+
+                                    CPF: {{ d.cpf }}
+
+                                </small>
+
+                            </td>
+
+                            <td>
+
+                                {{ d.telefone or '' }}
+
+                            </td>
+
+                            <td>
+
+                                {% if d.comunidade %}
+
+                                    <span class="badge bg-primary">
+
+                                        {{ d.comunidade.nome }}
+
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <a
+                                href="{{ url_for('contribuicoes.ficha_dizimista', id=d.id) }}"
+                                class="btn btn-success">
+
+                                👤 Abrir
+
+                                </a>
+                            </td>
+
+                        </tr>
+
+                    {% else %}
+
+                        <tr>
+
+                            <td colspan="4"
+                                class="text-center text-muted">
+
+                                Nenhum dizimista encontrado.
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- CELULAR -->
+
+            <div class="d-md-none">
+
+                {% for d in dizimistas %}
+
+                <div class="card shadow-sm mb-3">
+
+                    <div class="card-body">
+
+                        <h5 class="text-success">
+
+                            {{ d.nome }}
+
+                        </h5>
+
+                        <div>
+
+                            <small class="text-muted">
+
+                                CPF: {{ d.cpf }}
+
+                            </small>
+
+                        </div>
+
+                        <div>
+
+                            📞 {{ d.telefone or '' }}
+
+                        </div>
+
+                        <div>
+
+                            ⛪
+
+                            {% if d.comunidade %}
+                                {{ d.comunidade.nome }}
+                            {% endif %}
+
+                        </div>
+
+                        <hr>
+
+                        <div class="d-grid">
+
+                            <a
+                                href="{{ url_for('contribuicoes.ficha_dizimista', id=d.id) }}"
+                                class="btn btn-success">
+
+                                👤 Abrir Ficha
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {% else %}
+
+                <div class="alert alert-warning text-center">
+
+                    Nenhum dizimista encontrado.
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
