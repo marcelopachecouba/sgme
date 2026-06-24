@@ -505,7 +505,6 @@ def api_status(id):
     })
 
 @contribuicoes_bp.route("/app")
-@login_ofertas_required
 def app_contribuicoes():
 
     categorias = listar_categorias()

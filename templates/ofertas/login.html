@@ -2,81 +2,160 @@
 
 {% block content %}
 
-<div class="container mt-5">
+<div class="container py-3" style="max-width:430px">
 
-<div class="row justify-content-center">
+    <!-- LOGO -->
 
-<div class="col-md-4">
+    <div class="text-center mb-4">
 
-<div class="card shadow">
+        <img
+            src="{{ url_for('static', filename='img/logo_paroquia.png') }}"
+            class="img-fluid"
+            style="max-height:100px">
 
-<div class="card-header bg-success text-white text-center">
+        <h4 class="mt-3 text-danger mb-1">
 
-<h4>
+            Paróquia Nossa Senhora Aparecida
 
-🔐 Módulo Ofertas
+        </h4>
 
-</h4>
+        <small class="text-muted">
 
-</div>
+            Portal Financeiro Paroquial
 
-<div class="card-body">
+        </small>
 
-<form method="POST">
+    </div>
 
-<div class="mb-3">
+    <!-- CONTRIBUIÇÃO -->
 
-<label>Comunidade</label>
+    <div class="card shadow-sm border-danger rounded-4 mb-3">
 
-<select
-name="comunidade_id"
-class="form-select"
-required>
+        <div class="card-body text-center p-4">
 
-<option value="">Selecione...</option>
+            <div style="font-size:50px">
 
-{% for c in comunidades %}
+                ❤️
 
-<option value="{{ c.id }}">
+            </div>
 
-{{ c.nome }}
+            <h5>
 
-</option>
+                Contribuições Online
 
-{% endfor %}
+            </h5>
 
-</select>
+            <small class="text-muted">
 
-</div>
+                Faça sua contribuição pelo PIX
 
-<div class="mb-3">
+            </small>
 
-<label>Senha</label>
+            <div class="d-grid mt-3">
 
-<input
-type="password"
-name="senha"
-class="form-control"
-required>
+                <a
+                    href="{{ url_for('contribuicoes.app_contribuicoes') }}"
+                    class="btn btn-danger btn-lg rounded-pill">
 
-</div>
+                    Fazer Contribuição
 
-<button
-class="btn btn-success w-100">
+                </a>
 
-Entrar
+            </div>
 
-</button>
+        </div>
 
-</form>
+    </div>
 
-</div>
+    <!-- LOGIN -->
 
-</div>
+    <div class="card shadow rounded-4">
 
-</div>
+        <div class="card-body p-4">
 
-</div>
+            <h5 class="text-center text-primary mb-4">
+
+                🔐 Área Administrativa
+
+            </h5>
+
+            <form method="post">
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        Comunidade
+
+                    </label>
+
+                    <select
+                        name="comunidade_id"
+                        class="form-select rounded-3"
+                        required>
+
+                        <option value="">
+
+                            Selecione...
+
+                        </option>
+
+                        {% for c in comunidades %}
+
+                        <option value="{{ c.id }}">
+
+                            {{ c.nome }}
+
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        Senha
+
+                    </label>
+
+                    <input
+                        type="password"
+                        name="senha"
+                        class="form-control rounded-3"
+                        required>
+
+                </div>
+
+                <div class="d-grid">
+
+                    <button
+                        class="btn btn-primary btn-lg rounded-pill">
+
+                        Entrar
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <div class="text-center mt-4">
+
+        <small class="text-muted">
+
+            SGME © 2026
+
+        </small>
+
+    </div>
 
 </div>
 
