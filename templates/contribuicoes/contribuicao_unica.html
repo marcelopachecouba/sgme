@@ -42,8 +42,10 @@
 
 <input
 id="cpf"
-class="form-control form-control-lg"
-placeholder="Digite seu CPF">
+class="form-control"
+placeholder="Digite seu CPF"
+value="{{ dizimista.cpf if dizimista else '' }}">
+
 
 <button
 id="btnBuscar"
@@ -185,6 +187,19 @@ style="display:none">
 </div>
 
 </div>
+
+</div>
+
+<div class="d-grid mt-3">
+
+    <a
+        id="btnHistorico"
+        
+        class="btn btn-outline-primary">
+
+        📋 Minhas Contribuições
+
+    </a>
 
 </div>
 
@@ -394,6 +409,11 @@ if(!data.encontrado){
 
     totalAno.innerHTML = "R$ 0,00";
 
+    btnHistorico.href =
+    "/contribuicoes/historico_publico/" + data.id;
+
+    btnHistorico.style.display = "none";    
+
     situacao.innerHTML = "⚪ Novo Cadastro";
 
     dizimista_id = 0;
@@ -403,6 +423,8 @@ if(!data.encontrado){
     blocoDados.style.display='block';
 
     blocoContribuicao.style.display='none';
+
+    btnHistorico.style.display = "none";
 
     nomeNovo.focus();
 
@@ -417,6 +439,9 @@ nome.innerHTML=data.nome;
 telefone.innerHTML=data.telefone || '';
 
 comunidade.innerHTML=data.comunidade || '';
+
+document.getElementById("btnHistorico").href =
+"/contribuicoes/historico_publico/" + data.id;
 
 totalAno.innerHTML='R$ '+data.total_ano.toFixed(2);
 
@@ -485,6 +510,11 @@ telefone.innerHTML=data.telefone;
 comunidade.innerHTML=data.comunidade;
 
 totalAno.innerHTML = "R$ 0,00";
+
+btnHistorico.href =
+"/contribuicoes/historico_publico/" + data.id;
+
+btnHistorico.style.display = "none";
 
 situacao.innerHTML = "🟢 Cadastrado";
 
@@ -596,5 +626,19 @@ alert('PIX copiado');
 }
 
 </script>
+
+{% if dizimista %}
+
+<script>
+
+window.onload = function(){
+
+    btnBuscar.click();
+
+}
+
+</script>
+
+{% endif %}
 
 {% endblock %}

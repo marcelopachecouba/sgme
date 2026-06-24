@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-3 mb-5" style="max-width:700px">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h4>
+
+                📋 Minhas Contribuições
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <h5>
+
+                {{ dizimista.nome }}
+
+            </h5>
+
+            <div>
+
+                CPF: {{ dizimista.cpf }}
+
+            </div>
+
+            <div>
+
+                ⛪
+
+                {% if dizimista.comunidade %}
+
+                    {{ dizimista.comunidade.nome }}
+
+                {% endif %}
+
+            </div>
+
+            <hr>
+
+            <div class="alert alert-success">
+
+                <strong>
+
+                    Total do Ano:
+
+                </strong>
+
+                R$ {{ "%.2f"|format(total_ano) }}
+
+            </div>
+
+
+            <div class="card border-success mb-3">
+
+                <div class="card-header bg-success text-white">
+
+                    ❤️ Contribuições por Categoria
+
+                </div>
+
+                <div class="card-body">
+
+                    <table class="table table-sm">
+
+                        {% for categoria, total in resumo_categoria %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ categoria }}
+
+                            </td>
+
+                            <td class="text-end">
+
+                                <strong>
+
+                                    R$ {{ "%.2f"|format(total) }}
+
+                                </strong>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </table>
+
+                </div>
+
+            </div>            
+
+            <div class="table-responsive">
+
+                <table class="table table-hover">
+
+                    <thead class="table-primary">
+
+                        <tr>
+
+                            <th>Data</th>
+
+                            <th>Categoria</th>
+
+                            <th>Valor</th>
+
+                            <th>Status</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    {% for c in contribuicoes %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ c.data_geracao.strftime('%d/%m/%Y') }}
+
+                            </td>
+
+                            <td>
+
+                                {{ c.categoria.descricao }}
+
+                            </td>
+
+                            <td>
+
+                                R$ {{ "%.2f"|format(c.valor) }}
+
+                            </td>
+
+                            <td>
+                                <span class="badge bg-success">
+                                    Pago
+                                </span>
+                            </td>
+                            
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="d-grid mt-3">
+
+                <a
+                    href="{{ url_for('contribuicoes.app_contribuicoes') }}?cpf={{ dizimista.cpf }}"
+                    class="btn btn-danger">
+
+                    ❤️ Nova Contribuição
+
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

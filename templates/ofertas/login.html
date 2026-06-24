@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<div class="container py-3" style="max-width:430px">
+<div class="container py-3" style="max-width:450px">
 
     <!-- LOGO -->
 
@@ -10,48 +10,43 @@
 
         <img
             src="{{ url_for('static', filename='img/logo_paroquia.png') }}"
-            class="img-fluid"
-            style="max-height:100px">
+            class="img-fluid rounded-circle shadow"
+            style="max-height:110px">
 
-        <h4 class="mt-3 text-danger mb-1">
+        <h4 class="mt-3 text-danger">
 
-            Paróquia Nossa Senhora Aparecida
+            Matriz Nossa Senhora Aparecida
 
         </h4>
 
-        <small class="text-muted">
+       <!-- <div class="text-muted">
 
             Portal Financeiro Paroquial
 
-        </small>
+        </div> -->
 
     </div>
 
-    <!-- CONTRIBUIÇÃO -->
 
-    <div class="card shadow-sm border-danger rounded-4 mb-3">
+    <!-- CONTRIBUIÇÃO ONLINE -->
+
+    <div class="card border-danger shadow-sm rounded-4 mb-4">
 
         <div class="card-body text-center p-4">
 
-            <div style="font-size:50px">
+            <h5 class="mt-2">
 
-                ❤️
-
-            </div>
-
-            <h5>
-
-                Contribuições Online
+               ❤️ Contribuições Online
 
             </h5>
 
-            <small class="text-muted">
+            <div class="text-muted mb-3">
 
                 Faça sua contribuição pelo PIX
 
-            </small>
+            </div>
 
-            <div class="d-grid mt-3">
+            <div class="d-grid">
 
                 <a
                     href="{{ url_for('contribuicoes.app_contribuicoes') }}"
@@ -67,7 +62,8 @@
 
     </div>
 
-    <!-- LOGIN -->
+
+    <!-- ÁREA ADMINISTRATIVA -->
 
     <div class="card shadow rounded-4">
 
@@ -146,6 +142,7 @@
         </div>
 
     </div>
+
 
     <div class="text-center mt-4">
 

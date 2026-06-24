@@ -507,6 +507,13 @@ def api_status(id):
 @contribuicoes_bp.route("/app")
 def app_contribuicoes():
 
+    cpf = request.args.get("cpf")
+
+    dizimista = None
+
+    if cpf:
+
+        dizimista = buscar_dizimista_por_cpf(cpf)
     categorias = listar_categorias()
 
     comunidades = (
@@ -522,7 +529,8 @@ def app_contribuicoes():
         "contribuicoes/contribuicao_unica.html",
         categorias=categorias,
         comunidades=comunidades,
-        competencia_atual=competencia_atual
+        competencia_atual=competencia_atual,
+        dizimista=dizimista
     )
 
 @contribuicoes_bp.route("/api/cadastrar", methods=["POST"])
@@ -808,4 +816,89 @@ def inicio():
         administrador=session.get("administrador"),
 
         comunidade_id=session.get("comunidade_id")
+    )
+
+@contribuicoes_bp.route("/historico_publico/<int:id>")
+def historico_publico(id):
+
+    from sqlalchemy import func
+
+    dizimista = db.session.get(
+        Dizimista,
+        id
+    )
+
+    if not dizimista:
+
+        flash(
+            "Dizimista não encontrado.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "contribuicoes.app_contribuicoes"
+            )
+        )
+
+    # Histórico (somente pagos)
+    contribuicoes = (
+        Contribuicao.query
+        .filter(
+            Contribuicao.dizimista_id == id,
+            Contribuicao.status == "pago"
+        )
+        .order_by(
+            Contribuicao.data_geracao.desc()
+        )
+        .all()
+    )
+
+    # Total do ano
+    total_ano = sum(
+        float(c.valor)
+        for c in contribuicoes
+    )
+
+    # Resumo por categoria
+    resumo_categoria = db.session.execute(
+
+        db.select(
+            CategoriaContribuicao.descricao,
+            func.sum(Contribuicao.valor)
+        )
+
+        .join(
+            CategoriaContribuicao,
+            CategoriaContribuicao.id ==
+            Contribuicao.categoria_id
+        )
+
+        .where(
+            Contribuicao.dizimista_id == id,
+            Contribuicao.status == "pago"
+        )
+
+        .group_by(
+            CategoriaContribuicao.descricao
+        )
+
+        .order_by(
+            CategoriaContribuicao.descricao
+        )
+
+    ).all()
+
+    return render_template(
+
+        "contribuicoes/historico_publico.html",
+
+        dizimista=dizimista,
+
+        contribuicoes=contribuicoes,
+
+        total_ano=total_ano,
+
+        resumo_categoria=resumo_categoria
+
     )
